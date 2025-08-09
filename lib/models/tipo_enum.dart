@@ -1,0 +1,35 @@
+enum Tipo {
+  normal('Normal'),
+  planta('Planta'),
+  inseto('Inseto'),
+  venenoso('Venenoso'),
+  fera('Fera'),
+  zumbi('Zumbi'),
+  marinho('Marinho'),
+  voador('Voador'),
+  subterraneo('Subterrâneo'),
+  terrestre('Terrestre'),
+  fogo('Fogo'),
+  gelo('Gelo'),
+  agua('Água'),
+  vento('Vento'),
+  eletrico('Elétrico'),
+  pedra('Pedra'),
+  luz('Luz'),
+  trevas('Trevas'),
+  nostalgico('Nostálgico'),
+  mistico('Místico'),
+  dragao('Dragão'),
+  alien('Alien'),
+  docrates('Dócrates'),
+  fantasma('Fantasma'),
+  psiquico('Psíquico'),
+  magico('Mágico'),
+  tecnologia('Tecnologia'),
+  tempo('Tempo'),
+  desconhecido('Desconhecido'),
+  deus('Deus');
+
+  final String descricao;
+  const Tipo(this.descricao);
+}
