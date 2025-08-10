@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/tipo_enum.dart';
-
-
+import 'tipagem_dano_screen.dart';
 
 class TipagemScreen extends StatelessWidget {
   const TipagemScreen({Key? key}) : super(key: key);
@@ -30,8 +29,9 @@ class TipagemScreen extends StatelessWidget {
             tiposUnicos.putIfAbsent(tipo.descricao, () => tipo);
           }
           final listaTipos = tiposUnicos.values.toList();
+          final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
           return ListView.builder(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPadding),
             itemCount: listaTipos.length,
             itemBuilder: (context, index) {
               final tipo = listaTipos[index];
@@ -75,6 +75,13 @@ class TipagemScreen extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TipagemDanoScreen(tipoSelecionado: tipo),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -113,8 +120,8 @@ String getTipoAsset(Tipo tipo) {
     case Tipo.fantasma: return 'assets/tipagens/icon_tipo_desconhecido.png';
     case Tipo.psiquico: return 'assets/tipagens/icon_tipo_desconhecido.png';
     case Tipo.magico: return 'assets/tipagens/icon_tipo_magico.png';
-    case Tipo.tecnologia: return 'assets/tipagens/icon_tipo_tecnologia.png';
-    case Tipo.tempo: return 'assets/tipagens/icon_tipo_tempo.png';
+  case Tipo.tecnologia: return 'assets/tipagens/icon_tipo_desconhecido.png';
+  case Tipo.tempo: return 'assets/tipagens/icon_tipo_desconhecido.png';
     case Tipo.desconhecido: return 'assets/tipagens/icon_tipo_desconhecido.png';
     case Tipo.deus: return 'assets/tipagens/icon_tipo_deus.png';
   }
