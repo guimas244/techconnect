@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/app_constants.dart';
+import '../../features/splash/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
@@ -11,8 +12,12 @@ import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
   static GoRouter get router => GoRouter(
-    initialLocation: AppConstants.loginRoute,
+    initialLocation: '/',
     routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: AppConstants.loginRoute,
         builder: (context, state) => const LoginScreen(),
