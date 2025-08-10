@@ -6,6 +6,8 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
+import '../../features/tipagem/presentation/drive_config_screen.dart';
+import '../../features/drive/drive_debug_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
@@ -40,6 +42,14 @@ class AppRouter {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: 'drive',
+            builder: (context, state) => const DriveConfigScreen(),
+          ),
+          GoRoute(
+            path: 'drive-debug',
+            builder: (context, state) => const DriveDebugScreen(),
           ),
           GoRoute(
             path: 'monstros',

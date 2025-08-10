@@ -30,12 +30,14 @@ class TipagemEditState {
   final bool isLoading;
   final bool isSaving;
   final String? errorMessage;
+  final String? successMessage;
 
   const TipagemEditState({
     required this.danoRecebido,
     this.isLoading = false,
     this.isSaving = false,
     this.errorMessage,
+    this.successMessage,
   });
 
   TipagemEditState copyWith({
@@ -43,12 +45,14 @@ class TipagemEditState {
     bool? isLoading,
     bool? isSaving,
     String? errorMessage,
+    String? successMessage,
   }) {
     return TipagemEditState(
       danoRecebido: danoRecebido ?? this.danoRecebido,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: errorMessage ?? this.errorMessage,
+      successMessage: successMessage ?? this.successMessage,
     );
   }
 }
@@ -110,11 +114,29 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
   }
 
   Future<void> salvarAlteracoes() async {
-    state = state.copyWith(isSaving: true, errorMessage: null);
+    state = state.copyWith(
+      isSaving: true, 
+      errorMessage: null, 
+      successMessage: null
+    );
     
     try {
       await _repository.salvarDadosTipo(_tipoSelecionado, state.danoRecebido);
-      state = state.copyWith(isSaving: false);
+      
+      // Obter caminho de exportação
+      final caminhoExportacao = await _repository.obterCaminhoExportacao();
+      
+      state = state.copyWith(
+        isSaving: false,
+        successMessage: 'Dados salvos com sucesso!\n\n$caminhoExportacao'
+      );
+      
+      // Remove a mensagem de sucesso após 6 segundos
+      Future.delayed(Duration(seconds: 6), () {
+        if (mounted) {
+          state = state.copyWith(successMessage: null);
+        }
+      });
     } catch (e) {
       state = state.copyWith(
         isSaving: false,
@@ -123,7 +145,40 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
     }
   }
 
-  void limparErro() {
-    state = state.copyWith(errorMessage: null);
+  void limparMensagens() {
+    state = state.copyWith(
+      errorMessage: null, 
+      successMessage: null
+    );
+  }
+
+  String gerarJsonParaDownload() {
+    return _repository.gerarJsonFormatado(_tipoSelecionado, state.danoRecebido);
+  }
+
+  Future<void> exportarTodosOsJsons() async {
+    try {
+      state = state.copyWith(isSaving: true);
+      
+      await _repository.exportarTodosOsJsons();
+      final caminhoExportacao = await _repository.obterCaminhoExportacao();
+      
+      state = state.copyWith(
+        isSaving: false,
+        successMessage: 'Todos os JSONs exportados!\n\n$caminhoExportacao\n\n✅ ${Tipo.values.length} arquivos processados'
+      );
+      
+      // Remove a mensagem após 8 segundos
+      Future.delayed(Duration(seconds: 8), () {
+        if (mounted) {
+          state = state.copyWith(successMessage: null);
+        }
+      });
+    } catch (e) {
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: 'Erro ao exportar JSONs: $e',
+      );
+    }
   }
 }

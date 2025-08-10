@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../providers/tipagem_provider.dart';
 
@@ -43,9 +46,23 @@ class TipagemDanoScreen extends ConsumerWidget {
                 ),
               ),
             )
-          else
+          else ...[
+            // Botão para exportar todos os JSONs
+            IconButton(
+              icon: const Icon(Icons.folder_zip, color: Colors.white),
+              tooltip: 'Exportar todos os JSONs',
+              onPressed: () => editNotifier.exportarTodosOsJsons(),
+            ),
+            // Botão para download do JSON (especialmente útil na web)
+            IconButton(
+              icon: const Icon(Icons.download, color: Colors.white),
+              tooltip: 'Download JSON',
+              onPressed: () => _downloadJson(context, editNotifier),
+            ),
+            // Botão salvar
             IconButton(
               icon: const Icon(Icons.save, color: Colors.white),
+              tooltip: 'Salvar alterações',
               onPressed: () async {
                 await editNotifier.salvarAlteracoes();
                 if (!editState.isSaving && editState.errorMessage == null) {
@@ -55,6 +72,7 @@ class TipagemDanoScreen extends ConsumerWidget {
                 }
               },
             ),
+          ]
         ],
       ),
       body: editState.isLoading
@@ -141,7 +159,35 @@ class TipagemDanoScreen extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => notifier.limparErro(),
+                  onPressed: () => notifier.limparMensagens(),
+                ),
+              ],
+            ),
+          ),
+
+        // Mensagem de sucesso
+        if (state.successMessage != null)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    state.successMessage!,
+                    style: TextStyle(color: Colors.green.shade800),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => notifier.limparMensagens(),
                 ),
               ],
             ),
@@ -299,5 +345,85 @@ class TipagemDanoScreen extends ConsumerWidget {
     if (value == 1.0) return 'Normal';
     if (value < 1.5) return 'Fraco';
     return 'Muito Fraco';
+  }
+
+  void _downloadJson(BuildContext context, TipagemEditNotifier notifier) {
+    try {
+      final jsonString = notifier.gerarJsonParaDownload();
+      final filename = 'tb_${tipoSelecionado.name}_defesa.json';
+      
+      // Para web, mostrar o JSON em um dialog para cópia manual
+      if (kIsWeb) {
+        _mostrarJsonParaCopia(context, jsonString, filename);
+      } else {
+        // Para desktop/mobile, tentar salvar na pasta Downloads
+        _saveJsonToDownloads(context, jsonString, filename);
+      }
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao gerar JSON: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _mostrarJsonParaCopia(BuildContext context, String jsonString, String filename) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('JSON Gerado: $filename'),
+          content: Container(
+            width: double.maxFinite,
+            height: 400,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                jsonString,
+                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Fechar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Copia para o clipboard
+                // Clipboard.setData(ClipboardData(text: jsonString));
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('JSON copiado para a área de transferência!')),
+                );
+              },
+              child: Text('Copiar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _saveJsonToDownloads(BuildContext context, String jsonString, String filename) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$filename');
+      await file.writeAsString(jsonString);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('JSON salvo: ${file.path}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao salvar JSON: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
