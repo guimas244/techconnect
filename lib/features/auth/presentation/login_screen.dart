@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/constants/app_constants.dart';
 
 
 
@@ -47,8 +47,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _showError('Firebase não inicializado. Reinicie o app.');
         return;
       }
-      final user = await AuthService().signInWithEmail(email, password);
-      if (user != null) {
+      final user = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      if (user.user != null) {
         if (mounted) {
           context.go('/home');
         }
