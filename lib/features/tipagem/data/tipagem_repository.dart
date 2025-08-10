@@ -251,10 +251,10 @@ class TipagemRepository {
         const encoder = JsonEncoder.withIndent('  ');
         await file.writeAsString(encoder.convert(jsonStructure));
         
-        print('📁 JSON exportado para: ${file.path}');
+        print('✅ Dados salvos em: ${file.path}');
       }
     } catch (e) {
-      print('⚠️ Erro ao exportar para Downloads: $e');
+      print('⚠️ Erro ao salvar dados: $e');
       // Não falha se não conseguir exportar
     }
   }
@@ -318,22 +318,20 @@ class TipagemRepository {
       try {
         await testFile.writeAsString('test');
         await testFile.delete();
-        return '💾 Projeto: tipagem_jsons/\n📁 Backup: Downloads/TechConnect/';
+        return '✅ Dados salvos no projeto: tipagem_jsons/';
       } catch (e) {
         // Se não conseguir escrever no projeto, usa o caminho de fallback
-        if (kIsWeb) return 'Download via navegador';
+        if (kIsWeb) return '✅ Dados salvos via navegador';
         
-        Directory? directory;
         try {
-          directory = await getDownloadsDirectory();
-          return '📁 Downloads/TechConnect/\n⚠️ (Copie para tipagem_jsons/)';
+          await getDownloadsDirectory();
+            return '';
         } catch (e) {
-          directory = await getApplicationDocumentsDirectory();
-          return '📁 ${directory.path}/TechConnect/\n⚠️ (Copie para tipagem_jsons/)';
+            return '';
         }
       }
     } catch (e) {
-      return 'Erro ao obter caminho';
+      return '❌ Erro ao salvar dados';
     }
   }
 
@@ -379,7 +377,6 @@ class TipagemRepository {
 
   Future<bool> sincronizarTodosParaDrive() async {
     // Criar um mapa com todos os dados de todos os tipos
-    Map<String, Map<String, dynamic>> todosJsons = {};
 
     for (Tipo tipo in Tipo.values) {
       try {
