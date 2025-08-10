@@ -6,6 +6,7 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
+import '../../features/monstros/monstros_menu_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
@@ -43,7 +44,7 @@ class AppRouter {
           ),
           GoRoute(
             path: 'monstros',
-            builder: (context, state) => const MonstrosScreenPlaceholder(),
+            builder: (context, state) => const MonstrosMenuScreen(),
           ),
           GoRoute(
             path: 'regras',
@@ -53,13 +54,6 @@ class AppRouter {
       ),
     ],
   );
-}
-
-// Placeholder screens (will be replaced with actual implementations)
-class MonstrosScreenPlaceholder extends StatelessWidget {
-  const MonstrosScreenPlaceholder({super.key});
-  @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Monstros - Placeholder')));
 }
 
 class RegrasScreenPlaceholder extends StatelessWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/menu_block.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../admin/presentation/admin_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -228,7 +229,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: 'Aventura',
                     color: _isDriveConnected ? Colors.blueGrey.shade700 : Colors.grey.shade400,
                     onTap: _isDriveConnected ? () {
-                      // TODO: Navegar para Aventura
+                      // TODO: Navegar para tela de aventura quando implementada
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Aventura em desenvolvimento')),
+                      );
                     } : null,
                   ),
                   MenuBlock(

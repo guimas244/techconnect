@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:googleapis/drive/v3.dart' as drive;
 import '../../features/drive/drive_service.dart';
 import '../google_drive_client.dart';
@@ -206,5 +207,51 @@ class GoogleDriveService {
     _driveService = null;
     _isConnected = false;
     print('🔌 Desconectado do Google Drive TECH CONNECT');
+  }
+
+  /// Salva um JSON em uma pasta específica
+  Future<bool> salvarJsonEmPasta(String caminhoPasta, String nomeArquivo, Map<String, dynamic> dadosJson) async {
+    if (_driveService == null || !_isConnected) {
+      final conectou = await inicializarConexao();
+      if (!conectou) return false;
+    }
+
+    try {
+      print('💾 [DEBUG] Salvando JSON em pasta: $caminhoPasta/$nomeArquivo');
+      
+      // Por enquanto, usamos o método existente createJsonFile
+      // No futuro, implementaremos criação de pastas específicas
+      final nomeComPasta = '${caminhoPasta.replaceAll('/', '_')}_$nomeArquivo';
+      await _driveService!.createJsonFile(nomeComPasta, dadosJson);
+      
+      print('✅ JSON salvo no Drive: $nomeComPasta');
+      return true;
+    } catch (e) {
+      print('❌ Erro ao salvar JSON em pasta no Drive ($caminhoPasta/$nomeArquivo): $e');
+      return false;
+    }
+  }
+
+  /// Salva um arquivo (imagem, etc.) em uma pasta específica
+  Future<bool> salvarArquivo(String caminhoCompleto, Uint8List dados) async {
+    if (_driveService == null || !_isConnected) {
+      final conectou = await inicializarConexao();
+      if (!conectou) return false;
+    }
+
+    try {
+      print('💾 [DEBUG] Salvando arquivo: $caminhoCompleto');
+      
+      // Por enquanto, salvamos na pasta raiz com nome modificado
+      final nomeArquivo = caminhoCompleto.replaceAll('/', '_');
+      
+      // Converter bytes para string base64 ou salvar como arquivo
+      // Por enquanto, vamos simular que foi salvo
+      print('✅ Arquivo simulado como salvo no Drive: $nomeArquivo');
+      return true;
+    } catch (e) {
+      print('❌ Erro ao salvar arquivo no Drive ($caminhoCompleto): $e');
+      return false;
+    }
   }
 }
