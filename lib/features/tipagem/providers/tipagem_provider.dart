@@ -8,9 +8,9 @@ final tipagemRepositoryProvider = Provider<TipagemRepository>((ref) {
 });
 
 // Provider para carregar dados de um tipo específico
-final tipagemDataProvider = FutureProvider.family<Map<Tipo, double>, Tipo>((ref, tipo) {
+final tipagemDataProvider = FutureProvider.family<Map<Tipo, double>?, Tipo>((ref, tipo) async {
   final repository = ref.read(tipagemRepositoryProvider);
-  return repository.carregarDadosTipo(tipo);
+  return await repository.carregarDadosTipo(tipo);
 });
 
 // Provider para a lista de todos os tipos
@@ -78,24 +78,31 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
     try {
       final dados = await _repository.carregarDadosTipo(_tipoSelecionado);
       
-      print('Provider - dados recebidos do repositório para ${_tipoSelecionado.name}:');
-      dados.forEach((key, value) {
-        print('  ${key.name}: $value');
-      });
-      
-      // Remove o próprio tipo selecionado dos dados (não faz sentido editar dano de si mesmo)
-      final dadosFiltrados = Map<Tipo, double>.from(dados);
-      dadosFiltrados.remove(_tipoSelecionado);
-      
-      print('Provider - dados filtrados (sem ${_tipoSelecionado.name}):');
-      dadosFiltrados.forEach((key, value) {
-        print('  ${key.name}: $value');
-      });
-      
-      state = state.copyWith(
-        danoRecebido: dadosFiltrados,
-        isLoading: false,
-      );
+      if (dados != null) {
+        print('Provider - dados recebidos do repositório para ${_tipoSelecionado.name}:');
+        dados.forEach((key, value) {
+          print('  ${key.name}: $value');
+        });
+        
+        // Remove o próprio tipo selecionado dos dados (não faz sentido editar dano de si mesmo)
+        final dadosFiltrados = Map<Tipo, double>.from(dados);
+        dadosFiltrados.remove(_tipoSelecionado);
+        
+        print('Provider - dados filtrados (sem ${_tipoSelecionado.name}):');
+        dadosFiltrados.forEach((key, value) {
+          print('  ${key.name}: $value');
+        });
+        
+        state = state.copyWith(
+          danoRecebido: dadosFiltrados,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(
+          errorMessage: 'App não inicializado. Baixe dados do Drive primeiro.',
+          isLoading: false,
+        );
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -154,31 +161,5 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
 
   String gerarJsonParaDownload() {
     return _repository.gerarJsonFormatado(_tipoSelecionado, state.danoRecebido);
-  }
-
-  Future<void> exportarTodosOsJsons() async {
-    try {
-      state = state.copyWith(isSaving: true);
-      
-      await _repository.exportarTodosOsJsons();
-      final caminhoExportacao = await _repository.obterCaminhoExportacao();
-      
-      state = state.copyWith(
-        isSaving: false,
-        successMessage: 'Todos os JSONs exportados!\n\n$caminhoExportacao\n\n✅ ${Tipo.values.length} arquivos processados'
-      );
-      
-      // Remove a mensagem após 8 segundos
-      Future.delayed(Duration(seconds: 8), () {
-        if (mounted) {
-          state = state.copyWith(successMessage: null);
-        }
-      });
-    } catch (e) {
-      state = state.copyWith(
-        isSaving: false,
-        errorMessage: 'Erro ao exportar JSONs: $e',
-      );
-    }
   }
 }

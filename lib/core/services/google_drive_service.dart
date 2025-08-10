@@ -89,7 +89,14 @@ class GoogleDriveService {
       
       return true;
     } catch (e) {
-      print('❌ Erro ao salvar JSON no Drive: $e');
+      // Se for erro 401 (token expirado), marca como desconectado
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('🔒 Token expirado durante salvamento, marcando como desconectado');
+        _isConnected = false;
+        _driveService = null;
+      } else {
+        print('❌ Erro ao salvar JSON no Drive: $e');
+      }
       return false;
     }
   }
@@ -145,7 +152,14 @@ class GoogleDriveService {
       print('📋 Encontrados ${nomesJson.length} JSONs na pasta TECH CONNECT');
       return nomesJson;
     } catch (e) {
-      print('❌ Erro ao listar arquivos do Drive: $e');
+      // Se for erro 401 (token expirado), marca como desconectado
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('🔒 Token expirado durante listagem, marcando como desconectado');
+        _isConnected = false;
+        _driveService = null;
+      } else {
+        print('❌ Erro ao listar arquivos do Drive: $e');
+      }
       return [];
     }
   }
@@ -165,14 +179,21 @@ class GoogleDriveService {
       );
 
       if (arquivo.id == null) {
-        print('⚠️ Arquivo não encontrado: $nomeArquivo');
+        print('! Arquivo não encontrado: $nomeArquivo');
         return null;
       }
 
       final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
       return json.decode(conteudo) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Erro ao baixar JSON do Drive: $e');
+      // Se for erro 401 (token expirado), marca como desconectado
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('🔒 Token expirado para $nomeArquivo, marcando como desconectado');
+        _isConnected = false;
+        _driveService = null;
+      } else {
+        print('❌ Erro ao baixar JSON do Drive ($nomeArquivo): $e');
+      }
       return null;
     }
   }
