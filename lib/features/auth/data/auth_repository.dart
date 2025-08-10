@@ -1,95 +1,72 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// Simulação de repositório de autenticação sem Firebase
+class SimpleUser {
+  final String email;
+  final String uid;
+  
+  SimpleUser({required this.email, required this.uid});
+}
 
 class AuthRepository {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // Stream do estado de autenticação
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // Simulação de usuário atual
+  SimpleUser? _currentUser;
 
   // Usuário atual
-  User? get currentUser => _auth.currentUser;
+  SimpleUser? get currentUser => _currentUser;
 
-  // Login com email e senha
-  Future<User?> signInWithEmail(String email, String password) async {
-    try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+  // Login com email e senha (simulado)
+  Future<SimpleUser?> signInWithEmail(String email, String password) async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (email.isNotEmpty && password.length >= 6) {
+      _currentUser = SimpleUser(
+        email: email, 
+        uid: 'user_${DateTime.now().millisecondsSinceEpoch}'
       );
-      return credential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _getAuthErrorMessage(e.code);
-    } catch (e) {
-      throw 'Erro desconhecido durante o login.';
+      return _currentUser;
+    } else {
+      throw 'Email ou senha inválidos';
     }
   }
 
-  // Registro com email e senha
-  Future<User?> signUpWithEmail(String email, String password) async {
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+  // Registro com email e senha (simulado)
+  Future<SimpleUser?> signUpWithEmail(String email, String password) async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (email.isNotEmpty && password.length >= 6) {
+      _currentUser = SimpleUser(
+        email: email, 
+        uid: 'user_${DateTime.now().millisecondsSinceEpoch}'
       );
-      return credential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _getAuthErrorMessage(e.code);
-    } catch (e) {
-      throw 'Erro desconhecido durante o registro.';
+      return _currentUser;
+    } else {
+      throw 'Email ou senha inválidos';
     }
   }
 
-  // Login como convidado
-  Future<User?> signInAnonymously() async {
-    try {
-      final credential = await _auth.signInAnonymously();
-      return credential.user;
-    } on FirebaseAuthException catch (e) {
-      throw _getAuthErrorMessage(e.code);
-    } catch (e) {
-      throw 'Erro desconhecido durante o login anônimo.';
-    }
+  // Login como convidado (simulado)
+  Future<SimpleUser?> signInAnonymously() async {
+    await Future.delayed(const Duration(seconds: 1));
+    
+    _currentUser = SimpleUser(
+      email: 'guest@example.com', 
+      uid: 'guest_${DateTime.now().millisecondsSinceEpoch}'
+    );
+    return _currentUser;
   }
 
   // Logout
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      throw 'Erro ao fazer logout.';
-    }
+    await Future.delayed(const Duration(milliseconds: 500));
+    _currentUser = null;
   }
 
-  // Reset de senha
+  // Reset de senha (simulado)
   Future<void> sendPasswordResetEmail(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw _getAuthErrorMessage(e.code);
-    } catch (e) {
-      throw 'Erro ao enviar email de redefinição.';
+    await Future.delayed(const Duration(seconds: 1));
+    
+    if (email.isEmpty) {
+      throw 'Email inválido';
     }
-  }
-
-  // Converter códigos de erro do Firebase em mensagens legíveis
-  String _getAuthErrorMessage(String errorCode) {
-    switch (errorCode) {
-      case 'user-not-found':
-        return 'Usuário não encontrado.';
-      case 'wrong-password':
-        return 'Senha incorreta.';
-      case 'email-already-in-use':
-        return 'Este email já está sendo usado.';
-      case 'weak-password':
-        return 'A senha é muito fraca.';
-      case 'invalid-email':
-        return 'Email inválido.';
-      case 'too-many-requests':
-        return 'Muitas tentativas. Tente novamente mais tarde.';
-      case 'network-request-failed':
-        return 'Erro de conexão. Verifique sua internet.';
-      default:
-        return 'Erro desconhecido. Código: $errorCode';
-    }
+    // Simula envio de email de reset
   }
 }

@@ -39,17 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       // Login simplificado sem Firebase - apenas para acesso ao app
-      await Future.delayed(const Duration(seconds: 1));
-      
       if (email.isNotEmpty && password.length >= 6) {
+        // Simula login bem-sucedido
+        await Future.delayed(const Duration(seconds: 1)); // Simula processamento
         if (mounted) {
           context.go('/home');
         }
       } else {
-        _showError('Email ou senha inválidos');
+        _showError('Senha deve ter pelo menos 6 caracteres.');
       }
     } catch (e) {
-      _showError(e.toString());
+      _showError('Erro inesperado: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -155,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                       ),
                     ),
-                    // ...removido botão Google...
                   ],
                 ),
               ),
@@ -166,8 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-
 
 class _CustomTextField extends StatelessWidget {
   final String label;

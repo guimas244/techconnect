@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../providers/tipagem_provider.dart';
+import '../../../core/services/google_drive_service.dart';
 
 class TipagemDanoScreen extends ConsumerWidget {
   final Tipo tipoSelecionado;
@@ -64,10 +65,14 @@ class TipagemDanoScreen extends ConsumerWidget {
               icon: const Icon(Icons.save, color: Colors.white),
               tooltip: 'Salvar alterações',
               onPressed: () async {
+                // Salvar alterações locais
                 await editNotifier.salvarAlteracoes();
+                
+                // Salvar no Google Drive também
                 if (!editState.isSaving && editState.errorMessage == null) {
+                  await _salvarNoGoogleDrive(context, editNotifier);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Alterações salvas!')),
+                    const SnackBar(content: Text('Alterações salvas localmente e no Google Drive!')),
                   );
                 }
               },
@@ -424,6 +429,41 @@ class TipagemDanoScreen extends ConsumerWidget {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // Método para salvar no Google Drive
+  Future<void> _salvarNoGoogleDrive(BuildContext context, TipagemEditNotifier editNotifier) async {
+    try {
+      final driveService = GoogleDriveService();
+      
+      // Gerar JSON do tipo atual usando o método existente
+      final jsonString = editNotifier.gerarJsonParaDownload();
+      final jsonData = <String, dynamic>{
+        'tipo': tipoSelecionado.name,
+        'data': jsonString,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      final nomeArquivo = '${tipoSelecionado.name.toLowerCase()}_tipo';
+      
+      // Salvar no Google Drive
+      final sucesso = await driveService.salvarJson(nomeArquivo, jsonData);
+      
+      if (!sucesso) {
+        throw Exception('Falha ao salvar no Google Drive');
+      }
+      
+      print('✅ JSON salvo no Google Drive: $nomeArquivo');
+    } catch (e) {
+      print('❌ Erro ao salvar no Google Drive: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar no Google Drive: $e'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 }

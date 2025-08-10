@@ -1,32 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../data/auth_repository.dart';
 
-// Provider para o repositório de autenticação
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository();
-});
-
-// Provider para o estado de autenticação atual
-final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
-
-// Provider para o usuário atual
-final currentUserProvider = Provider<User?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.when(
-    data: (user) => user,
-    loading: () => null,
-    error: (_, __) => null,
-  );
-});
-
-// Notifier para operações de autenticação
-final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final authRepository = ref.read(authRepositoryProvider);
-  return AuthNotifier(authRepository);
-});
+// Simulação de usuário simples sem Firebase
+class SimpleUser {
+  final String email;
+  final String uid;
+  
+  SimpleUser({required this.email, required this.uid});
+}
 
 // Estados possíveis da autenticação
 enum AuthStatus {
@@ -39,7 +19,7 @@ enum AuthStatus {
 
 class AuthState {
   final AuthStatus status;
-  final User? user;
+  final SimpleUser? user;
   final String? errorMessage;
 
   const AuthState({
@@ -50,7 +30,7 @@ class AuthState {
 
   AuthState copyWith({
     AuthStatus? status,
-    User? user,
+    SimpleUser? user,
     String? errorMessage,
   }) {
     return AuthState(
@@ -61,22 +41,27 @@ class AuthState {
   }
 }
 
-// Notifier para gerenciar o estado de autenticação
+// Notifier para gerenciar o estado de autenticação simples
 class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepository _authRepository;
-
-  AuthNotifier(this._authRepository) : super(const AuthState(status: AuthStatus.initial));
+  AuthNotifier() : super(const AuthState(status: AuthStatus.initial));
 
   Future<void> signInWithEmail(String email, String password) async {
     state = state.copyWith(status: AuthStatus.loading);
     
     try {
-      final user = await _authRepository.signInWithEmail(email, password);
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        user: user,
-        errorMessage: null,
-      );
+      // Simulação de login simples
+      await Future.delayed(const Duration(seconds: 1));
+      
+      if (email.isNotEmpty && password.length >= 6) {
+        final user = SimpleUser(email: email, uid: 'user_${DateTime.now().millisecondsSinceEpoch}');
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: user,
+          errorMessage: null,
+        );
+      } else {
+        throw Exception('Email ou senha inválidos');
+      }
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
@@ -89,7 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading);
     
     try {
-      await _authRepository.signOut();
+      await Future.delayed(const Duration(milliseconds: 500));
       state = const AuthState(status: AuthStatus.unauthenticated);
     } catch (e) {
       state = state.copyWith(
@@ -106,3 +91,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 }
+
+// Provider principal para autenticação
+final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier();
+});
+
+// Provider para o usuário atual
+final currentUserProvider = Provider<SimpleUser?>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+  return authState.user;
+});
+
+// Provider para estado de loading do auth
+final authLoadingProvider = Provider<bool>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+  return authState.status == AuthStatus.loading;
+});
+
+// Provider para mensagens de erro do auth
+final authErrorProvider = Provider<String?>((ref) {
+  final authState = ref.watch(authNotifierProvider);
+  return authState.errorMessage;
+});

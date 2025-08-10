@@ -54,6 +54,22 @@ class GoogleDriveService {
       final nomeArquivo = 'tb_${tipoNome}_defesa.json';
       print('💾 Salvando arquivo JSON no Drive: $nomeArquivo');
       
+      // Verificar se a pasta TECH CONNECT foi configurada
+      if (_driveService!.folderId == "PASTE_TECH_CONNECT_FOLDER_ID_HERE") {
+        print('📁 [DEBUG] FOLDER_ID não configurado, criando pasta TECH CONNECT...');
+        final novoFolderId = await _driveService!.criarPastaTechConnect();
+        if (novoFolderId == null) {
+          print('❌ Falha ao criar pasta TECH CONNECT');
+          return false;
+        }
+        print('✅ [DEBUG] Pasta criada com ID: $novoFolderId');
+        print('⚠️ [INFO] ATENÇÃO: Atualize o FOLDER_ID no código para: $novoFolderId');
+        
+        // Recriar DriveService com o novo FOLDER_ID
+        final api = await DriveClientFactory.create();
+        _driveService = DriveService(api, folderId: novoFolderId);
+      }
+      
       // Verificar se arquivo já existe
       final arquivosExistentes = await _driveService!.listInRootFolder();
       final arquivoExistente = arquivosExistentes.firstWhere(
@@ -83,6 +99,13 @@ class GoogleDriveService {
     if (_driveService == null || !_isConnected) {
       final conectou = await inicializarConexao();
       if (!conectou) return false;
+    }
+
+    // Verificar se FOLDER_ID está configurado antes de tentar sincronizar
+    if (_driveService!.folderId == "PASTE_TECH_CONNECT_FOLDER_ID_HERE") {
+      print('⚠️ [AVISO] FOLDER_ID não configurado. Sincronização cancelada.');
+      print('📋 [INFO] Para configurar: Execute a primeira sincronização individual para criar a pasta.');
+      return false;
     }
 
     try {

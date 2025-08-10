@@ -1,14 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../shared/widgets/menu_block.dart';
+import '../../../core/services/google_drive_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isDriveConnected = false;
+  bool _isConnecting = false;
+  String _connectionStatus = 'Não conectado ao Google Drive';
+  final GoogleDriveService _driveService = GoogleDriveService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDriveConnection();
+  }
+
+  Future<void> _checkDriveConnection() async {
+    setState(() {
+      _isConnecting = true;
+      _connectionStatus = 'Verificando conexão...';
+    });
+
+    try {
+      // Tenta verificar se já está conectado usando inicializarConexao
+      final isConnected = await _driveService.inicializarConexao();
+      setState(() {
+        _isDriveConnected = isConnected;
+        _connectionStatus = isConnected 
+            ? 'Conectado ao Google Drive' 
+            : 'É necessário conectar ao Google Drive para continuar';
+        _isConnecting = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isDriveConnected = false;
+        _connectionStatus = 'Erro ao verificar conexão. Clique para conectar.';
+        _isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _connectToDrive() async {
+    setState(() {
+      _isConnecting = true;
+      _connectionStatus = 'Conectando ao Google Drive...';
+    });
+
+    try {
+      final success = await _driveService.inicializarConexao();
+      setState(() {
+        _isDriveConnected = success;
+        _connectionStatus = success
+            ? 'Conectado ao Google Drive com sucesso!'
+            : 'Falha ao conectar ao Google Drive';
+        _isConnecting = false;
+      });
+      
+      if (!success) {
+        throw Exception('Falha na autenticação');
+      }
+    } catch (e) {
+      setState(() {
+        _isDriveConnected = false;
+        _connectionStatus = 'Erro ao conectar: $e';
+        _isConnecting = false;
+      });
+      
+      // Mostrar erro em dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Erro de Conexão'),
+            content: Text('Não foi possível conectar ao Google Drive:\n\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _connectToDrive();
+                },
+                child: const Text('Tentar Novamente'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    // Simulação de usuário logado sem Firebase
+    const userEmail = "usuario@techconnect.com";
     
     return Scaffold(
       backgroundColor: const Color(0xFFEEEEEE),
@@ -42,7 +136,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      user?.email ?? 'Usuário não identificado',
+                      userEmail,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -54,6 +148,73 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            
+            // Status de conexão do Google Drive
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isDriveConnected ? Colors.green.shade50 : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isDriveConnected ? Colors.green.shade300 : Colors.orange.shade300,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isDriveConnected ? Icons.cloud_done : Icons.cloud_off,
+                    color: _isDriveConnected ? Colors.green : Colors.orange,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Status do Google Drive',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _connectionStatus,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!_isDriveConnected && !_isConnecting)
+                    ElevatedButton(
+                      onPressed: _connectToDrive,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text('Conectar'),
+                    ),
+                  if (_isConnecting)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
+            ),
+            
             const SizedBox(height: 32),
             Expanded(
               child: GridView.count(
@@ -65,18 +226,18 @@ class HomeScreen extends StatelessWidget {
                   MenuBlock(
                     icon: Icons.explore,
                     label: 'Aventura',
-                    color: Colors.blueGrey.shade700,
-                    onTap: () {
+                    color: _isDriveConnected ? Colors.blueGrey.shade700 : Colors.grey.shade400,
+                    onTap: _isDriveConnected ? () {
                       // TODO: Navegar para Aventura
-                    },
+                    } : null,
                   ),
                   MenuBlock(
                     icon: Icons.admin_panel_settings,
                     label: 'Administrador',
-                    color: Colors.blueGrey.shade400,
-                    onTap: () {
+                    color: _isDriveConnected ? Colors.blueGrey.shade400 : Colors.grey.shade400,
+                    onTap: _isDriveConnected ? () {
                       context.go('/admin');
-                    },
+                    } : null,
                   ),
                 ],
               ),
@@ -97,7 +258,7 @@ class HomeScreen extends StatelessWidget {
                     elevation: 2,
                   ),
                   onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
+                    // Logout simples sem Firebase
                     if (context.mounted) {
                       context.go('/login');
                     }

@@ -33,18 +33,6 @@ class AdminScreen extends StatelessWidget {
               onTap: () => context.push('/admin/tipagem'),
             ),
             _MenuBlock(
-              icon: Icons.cloud,
-              label: 'Google Drive',
-              color: Colors.blue.shade600,
-              onTap: () => context.push('/admin/drive'),
-            ),
-            _MenuBlock(
-              icon: Icons.bug_report,
-              label: 'Drive Debug',
-              color: Colors.orange.shade600,
-              onTap: () => context.push('/admin/drive-debug'),
-            ),
-            _MenuBlock(
               icon: Icons.bug_report,
               label: 'Monstros',
               color: Colors.blueGrey.shade400,
