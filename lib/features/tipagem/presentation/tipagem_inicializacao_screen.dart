@@ -18,6 +18,7 @@ class TipagemInicializacaoScreen extends ConsumerStatefulWidget {
 class _TipagemInicializacaoScreenState extends ConsumerState<TipagemInicializacaoScreen> {
   final TipagemRepository _repository = TipagemRepository();
   bool _isCarregando = false;
+  bool _isInicializado = false; // Estado local para controle da UI
   String _statusMessage = 'Aguardando inicialização...';
   String _errorMessage = '';
   double _progresso = 0.0;
@@ -29,13 +30,19 @@ class _TipagemInicializacaoScreenState extends ConsumerState<TipagemInicializaca
     _verificarEstado();
   }
 
-  void _verificarEstado() {
+  Future<void> _verificarEstado() async {
+    print('🔍 Verificando estado de inicialização...');
+    final isInit = await _repository.isInicializadoAsync;
+    
     setState(() {
-      if (_repository.isInicializado) {
-        _statusMessage = 'App já inicializado!';
+      _isInicializado = isInit;
+      if (isInit) {
+        _statusMessage = 'App já inicializado com cache local!';
+        print('✅ App já inicializado, chamando callback...');
         widget.onInicializado();
       } else {
         _statusMessage = 'Necessário baixar dados do Google Drive para usar o app';
+        print('❌ App não inicializado, necessário download');
       }
     });
   }
@@ -211,7 +218,7 @@ class _TipagemInicializacaoScreenState extends ConsumerState<TipagemInicializaca
                     ),
                   ],
                 ),
-              ] else if (!_repository.isInicializado) ...[
+              ] else if (!_isInicializado) ...[
                 ElevatedButton.icon(
                   onPressed: _inicializarComDrive,
                   icon: const Icon(Icons.download),

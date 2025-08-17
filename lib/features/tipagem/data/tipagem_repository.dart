@@ -12,12 +12,35 @@ class TipagemRepository {
   static final Map<Tipo, Map<Tipo, double>> _dadosLocais = {};
   static bool _foiBaixadoDoDrive = false;
   static bool _isInicializado = false;
+  
+  // ✅ CACHE LOCAL PERSISTENTE
+  static const String _cacheFileName = 'tipagens_cache.json';
+  static const String _cacheMetaFileName = 'tipagens_meta.json';
 
   // ========================================
   // ✅ VERIFICAÇÃO DE ESTADO PRINCIPAL
   // ========================================
   
-  /// Verifica se o app já foi inicializado com dados do Drive
+  /// Verifica se o app já foi inicializado (cache local ou Drive)
+  Future<bool> get isInicializadoAsync async {
+    // 1º: Verifica se já está carregado em memória
+    if (_isInicializado) {
+      print('✅ Dados já carregados em memória');
+      return true;
+    }
+    
+    // 2º: Verifica se existe cache local válido
+    if (await _temCacheLocalValido()) {
+      print('✅ Cache local encontrado, carregando...');
+      await _carregarCacheLocal();
+      return true;
+    }
+    
+    print('❌ Sem cache local válido, necessário download do Drive');
+    return false;
+  }
+  
+  /// Verifica se o app já foi inicializado com dados do Drive (legacy)
   bool get isInicializado => _isInicializado;
   
   /// Verifica se já baixou dados do Drive alguma vez
@@ -68,6 +91,10 @@ class TipagemRepository {
       if (sucessoCompleto) {
         _foiBaixadoDoDrive = true;
         _isInicializado = true;
+        
+        // ✅ SALVA CACHE LOCAL APÓS DOWNLOAD BEM-SUCEDIDO
+        await _salvarCacheLocal();
+        
         print('✅ App inicializado com sucesso! Dados baixados do Drive.');
         return true;
       } else {
@@ -447,6 +474,133 @@ class TipagemRepository {
     } catch (e) {
       print('⚠️ Tipo não encontrado: $nome');
       return null;
+    }
+  }
+
+  // ========================================
+  // ✅ MÉTODOS DE CACHE LOCAL
+  // ========================================
+
+  /// Verifica se existe cache local válido
+  Future<bool> _temCacheLocalValido() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final cacheFile = File('${dir.path}/$_cacheFileName');
+      final metaFile = File('${dir.path}/$_cacheMetaFileName');
+      
+      if (!cacheFile.existsSync() || !metaFile.existsSync()) {
+        return false;
+      }
+      
+      // Verifica se cache não expirou (7 dias)
+      final metaContent = await metaFile.readAsString();
+      final meta = jsonDecode(metaContent);
+      final timestamp = DateTime.parse(meta['timestamp']);
+      final agora = DateTime.now();
+      final diferenca = agora.difference(timestamp);
+      
+      if (diferenca.inDays > 7) {
+        print('⏰ Cache local expirado (${diferenca.inDays} dias)');
+        return false;
+      }
+      
+      print('✅ Cache local válido (${diferenca.inDays} dias atrás)');
+      return true;
+    } catch (e) {
+      print('❌ Erro ao verificar cache local: $e');
+      return false;
+    }
+  }
+
+  /// Carrega dados do cache local
+  Future<void> _carregarCacheLocal() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final cacheFile = File('${dir.path}/$_cacheFileName');
+      
+      final cacheContent = await cacheFile.readAsString();
+      final cacheData = jsonDecode(cacheContent);
+      
+      // Converte dados do cache para memória
+      _dadosLocais.clear();
+      for (final entry in cacheData.entries) {
+        final tipoNome = entry.key;
+        final tipo = _obterTipoPorNome(tipoNome);
+        
+        if (tipo != null && entry.value is Map<String, dynamic>) {
+          final dadosTipo = <Tipo, double>{};
+          
+          for (final tipoEntry in entry.value.entries) {
+            final tipoDefesa = _obterTipoPorNome(tipoEntry.key);
+            if (tipoDefesa != null && tipoEntry.value is num) {
+              dadosTipo[tipoDefesa] = tipoEntry.value.toDouble();
+            }
+          }
+          
+          _dadosLocais[tipo] = dadosTipo;
+        }
+      }
+      
+      _foiBaixadoDoDrive = true;
+      _isInicializado = true;
+      
+      print('✅ Cache local carregado: ${_dadosLocais.length} tipos');
+    } catch (e) {
+      print('❌ Erro ao carregar cache local: $e');
+      rethrow;
+    }
+  }
+
+  /// Salva dados atuais no cache local
+  Future<void> _salvarCacheLocal() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final cacheFile = File('${dir.path}/$_cacheFileName');
+      final metaFile = File('${dir.path}/$_cacheMetaFileName');
+      
+      // Prepara dados para cache
+      final cacheData = <String, Map<String, double>>{};
+      for (final entry in _dadosLocais.entries) {
+        final tipoNome = entry.key.name;
+        final dadosTipo = <String, double>{};
+        
+        for (final tipoEntry in entry.value.entries) {
+          dadosTipo[tipoEntry.key.name] = tipoEntry.value;
+        }
+        
+        cacheData[tipoNome] = dadosTipo;
+      }
+      
+      // Salva cache
+      await cacheFile.writeAsString(jsonEncode(cacheData));
+      
+      // Salva metadados
+      final meta = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'version': '1.0',
+        'tipos_count': cacheData.length,
+      };
+      await metaFile.writeAsString(jsonEncode(meta));
+      
+      print('✅ Cache local salvo: ${cacheData.length} tipos');
+    } catch (e) {
+      print('❌ Erro ao salvar cache local: $e');
+    }
+  }
+
+  /// Limpa cache local (opcional, para debug)
+  Future<void> limparCacheLocal() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final cacheFile = File('${dir.path}/$_cacheFileName');
+      final metaFile = File('${dir.path}/$_cacheMetaFileName');
+      
+      if (cacheFile.existsSync()) await cacheFile.delete();
+      if (metaFile.existsSync()) await metaFile.delete();
+      
+      print('✅ Cache local limpo');
+    } catch (e) {
+      print('❌ Erro ao limpar cache local: $e');
     }
   }
 }

@@ -24,10 +24,13 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
     _checkInitialization();
   }
 
-  void _checkInitialization() {
+  Future<void> _checkInitialization() async {
+    print('🔍 Verificando inicialização...');
+    final isInit = await _repository.isInicializadoAsync;
     setState(() {
-      _isInitialized = _repository.isInicializado;
+      _isInitialized = isInit;
     });
+    print('📋 Estado da inicialização: $_isInitialized');
   }
 
   void _onInitialized() {
