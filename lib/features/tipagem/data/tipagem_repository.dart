@@ -132,7 +132,19 @@ class TipagemRepository {
         return Map.from(dadosLocais);
       }
       
-      // 3. Se não tem nada, gera valores padrão
+      // 3. Tenta baixar do Google Drive se não tem dados locais
+      if (_driveService.isConectado) {
+        print('📥 Tentando baixar tipo ${tipo.name} do Google Drive...');
+        final dadosDrive = await _baixarTipoDoGoogleDrive(tipo);
+        if (dadosDrive != null) {
+          _dadosLocais[tipo] = dadosDrive;
+          await _salvarDadosLocalmente(tipo, dadosDrive);
+          print('✅ Tipo ${tipo.name} baixado e salvo do Google Drive');
+          return Map.from(dadosDrive);
+        }
+      }
+      
+      // 4. Se não tem nada, gera valores padrão
       final valoresPadrao = _gerarValoresPadrao();
       _dadosLocais[tipo] = valoresPadrao;
       return Map.from(valoresPadrao);
@@ -337,7 +349,7 @@ class TipagemRepository {
     try {
       if (!_driveService.isConectado) return null;
       
-      final jsonData = await _driveService.baixarJson('tb_${tipo.name}_defesa.json');
+      final jsonData = await _driveService.baixarJson('tb_${tipo.name.toLowerCase()}_defesa.json');
       if (jsonData != null) {
         return _converterJsonParaTipos(jsonData);
       }
@@ -363,7 +375,7 @@ class TipagemRepository {
       'defesa': defesas,
     };
     
-    await _driveService.salvarJson(tipo.name, jsonData);
+    await _driveService.salvarJson('tb_${tipo.name.toLowerCase()}_defesa', jsonData);
   }
 
   /// Salva dados localmente no dispositivo

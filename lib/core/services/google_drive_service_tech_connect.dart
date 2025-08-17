@@ -38,7 +38,7 @@ class GoogleDriveService {
     }
 
     try {
-      final nomeArquivo = 'tb_${tipoNome}_defesa.json';
+      final nomeArquivo = '$tipoNome.json';
       print('💾 Salvando arquivo JSON no Drive: $nomeArquivo');
       
       // Verificar se arquivo já existe

@@ -263,7 +263,7 @@ class TipagemRepository {
     try {
       if (!_driveService.isConectado) return null;
       
-      final jsonData = await _driveService.baixarJson('tb_${tipo.name}_defesa.json');
+      final jsonData = await _driveService.baixarJson('tb_${tipo.name.toLowerCase()}_defesa.json');
       if (jsonData != null) {
         return _converterJsonParaTipos(jsonData);
       }

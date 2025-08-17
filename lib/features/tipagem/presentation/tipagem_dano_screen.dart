@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -342,21 +343,15 @@ class TipagemDanoScreen extends ConsumerWidget {
     try {
       final driveService = GoogleDriveService();
       
-      // Gerar JSON do tipo atual usando o método existente
+      // Gerar JSON do tipo atual usando o método existente e converter para Map
       final jsonString = editNotifier.gerarJsonParaDownload();
-      final jsonData = <String, dynamic>{
-        'tipo': tipoSelecionado.name,
-        'data': jsonString,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-  final nomeArquivo = tipoSelecionado.name.toLowerCase();
+      final jsonData = json.decode(jsonString) as Map<String, dynamic>;
+      
+      // Nome do arquivo no formato tb_{tipo}_defesa.json
+      final nomeArquivo = 'tb_${tipoSelecionado.name.toLowerCase()}_defesa';
       
       // Salvar no Google Drive
-      final sucesso = await driveService.salvarJson(nomeArquivo, jsonData);
-      
-      if (!sucesso) {
-        throw Exception('Falha ao salvar no Google Drive');
-      }
+      await driveService.salvarJson(nomeArquivo, jsonData);
       
       print('✅ JSON salvo no Google Drive: $nomeArquivo');
     } catch (e) {

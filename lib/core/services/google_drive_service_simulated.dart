@@ -31,7 +31,7 @@ class GoogleDriveService {
   /// Salva um arquivo JSON no Drive
   Future<bool> salvarJson(String tipoNome, Map<String, dynamic> jsonData) async {
     try {
-      final nomeArquivo = 'tb_${tipoNome}_defesa.json';
+      final nomeArquivo = '$tipoNome.json';
       const encoder = JsonEncoder.withIndent('  ');
       final jsonString = encoder.convert(jsonData);
       
