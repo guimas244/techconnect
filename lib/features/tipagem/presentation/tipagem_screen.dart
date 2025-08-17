@@ -308,13 +308,6 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Toque para editar danos recebidos',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -322,28 +315,6 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
               // Status e seta
               Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      'Disponível',
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey.shade400,
-                  ),
                 ],
               ),
             ],
