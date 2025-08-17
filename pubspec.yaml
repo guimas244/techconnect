@@ -76,6 +76,8 @@ flutter:
     - tipagem_jsons/
     - assets/images/
     - assets/background/
+    - assets/monstros_aventura/
+    - assets/mapas_aventura/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

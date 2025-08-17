@@ -72,7 +72,7 @@ enum Tipo {
       case Tipo.pedra:
         return Colors.grey.shade700;
       case Tipo.luz:
-        return Colors.yellow.shade300;
+        return Colors.amber.shade700;
       case Tipo.trevas:
         return Colors.black;
       case Tipo.nostalgico:

@@ -59,14 +59,15 @@ class MonstrosAventuraScreen extends ConsumerWidget {
                   subtitle: 'Explore os mapas disponíveis',
                   icon: Icons.map,
                   color: Colors.green,
-                  onTap: () => _mostrarCatalogoMapas(context),
-                ),
-                const SizedBox(height: 20),
-                
-                // Botão de iniciar aventura
-                ElevatedButton(
-                  onPressed: () => _iniciarAventura(context),
-                  style: ElevatedButton.styleFrom(
+                        _buildMenuCard(
+                          context: context,
+                          title: 'Catálogo de Mapas',
+                          subtitle: 'Explore os mapas disponíveis',
+                          icon: Icons.map,
+                          color: Colors.green,
+                          onTap: () => _mostrarCatalogoMapas(context),
+                          enabled: true,
+                        ),
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -124,6 +125,124 @@ class MonstrosAventuraScreen extends ConsumerWidget {
                   color: enabled ? color : Colors.grey[500],
                 ),
               ),
+        // --- Catálogo de Mapas ---
+        class CatalogoMapasScreen extends StatefulWidget {
+          const CatalogoMapasScreen({super.key});
+
+          @override
+          State<CatalogoMapasScreen> createState() => _CatalogoMapasScreenState();
+        }
+
+        class _CatalogoMapasScreenState extends State<CatalogoMapasScreen> {
+          String? mapaExpandido;
+
+          // Lista de mapas e descrições amigáveis
+          final List<Map<String, String>> mapas = [
+            {'arquivo': 'cidade_abandonada.jpg', 'descricao': 'Cidade Abandonada'},
+            {'arquivo': 'deserto.jpg', 'descricao': 'Deserto'},
+            {'arquivo': 'floresta_verde.jpg', 'descricao': 'Floresta Verde'},
+            {'arquivo': 'praia.jpg', 'descricao': 'Praia'},
+            {'arquivo': 'vulcao.jpg', 'descricao': 'Vulcão'},
+          ];
+
+          @override
+          Widget build(BuildContext context) {
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Catálogo de Mapas'),
+                backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              ),
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/background/templo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.9,
+                    ),
+                    itemCount: mapas.length,
+                    itemBuilder: (context, index) {
+                      final mapa = mapas[index];
+                      return _buildMapaItem(mapa['arquivo']!, mapa['descricao']!);
+                    },
+                  ),
+                  if (mapaExpandido != null)
+                    GestureDetector(
+                      onTap: () => setState(() => mapaExpandido = null),
+                      child: Container(
+                        color: Colors.black.withOpacity(0.8),
+                        child: Center(
+                          child: Hero(
+                            tag: mapaExpandido!,
+                            child: Image.asset(
+                              'assets/mapas_aventura/$mapaExpandido',
+                              fit: BoxFit.contain,
+                              height: MediaQuery.of(context).size.height * 0.7,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          Widget _buildMapaItem(String arquivo, String descricao) {
+            return GestureDetector(
+              onTap: () => setState(() => mapaExpandido = arquivo),
+              child: Card(
+                elevation: 4,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Hero(
+                        tag: arquivo,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Image.asset(
+                            'assets/mapas_aventura/$arquivo',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E7D32),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        descricao,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
@@ -176,11 +295,11 @@ class MonstrosAventuraScreen extends ConsumerWidget {
     );
   }
 
-  void _mostrarCatalogoMapas(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CatalogoMapasScreen(),
+  void _mostrarMapasEmDesenvolvimento(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Catálogo de mapas em desenvolvimento...'),
+        backgroundColor: Colors.orange,
       ),
     );
   }
@@ -329,125 +448,6 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: tipo.cor.withOpacity(0.8),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- Catálogo de Mapas ---
-class CatalogoMapasScreen extends StatefulWidget {
-  const CatalogoMapasScreen({super.key});
-
-  @override
-  State<CatalogoMapasScreen> createState() => _CatalogoMapasScreenState();
-}
-
-class _CatalogoMapasScreenState extends State<CatalogoMapasScreen> {
-  String? mapaExpandido;
-
-  // Lista de mapas e descrições amigáveis
-  final List<Map<String, String>> mapas = [
-    {'arquivo': 'cidade_abandonada.jpg', 'descricao': 'Cidade Abandonada'},
-    {'arquivo': 'deserto.jpg', 'descricao': 'Deserto'},
-    {'arquivo': 'floresta_verde.jpg', 'descricao': 'Floresta Verde'},
-    {'arquivo': 'praia.jpg', 'descricao': 'Praia'},
-    {'arquivo': 'vulcao.jpg', 'descricao': 'Vulcão'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Catálogo de Mapas'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/background/templo.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.9,
-            ),
-            itemCount: mapas.length,
-            itemBuilder: (context, index) {
-              final mapa = mapas[index];
-              return _buildMapaItem(mapa['arquivo']!, mapa['descricao']!);
-            },
-          ),
-          if (mapaExpandido != null)
-            GestureDetector(
-              onTap: () => setState(() => mapaExpandido = null),
-              child: Container(
-                color: Colors.black.withOpacity(0.8),
-                child: Center(
-                  child: Hero(
-                    tag: mapaExpandido!,
-                    child: Image.asset(
-                      'assets/mapas_aventura/$mapaExpandido',
-                      fit: BoxFit.contain,
-                      height: MediaQuery.of(context).size.height * 0.7,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMapaItem(String arquivo, String descricao) {
-    return GestureDetector(
-      onTap: () => setState(() => mapaExpandido = arquivo),
-      child: Card(
-        elevation: 4,
-        child: Column(
-          children: [
-            Expanded(
-              child: Hero(
-                tag: arquivo,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset(
-                    'assets/mapas_aventura/$arquivo',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E7D32),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-              ),
-              child: Text(
-                descricao,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
