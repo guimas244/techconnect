@@ -227,11 +227,17 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
 
           // Lista de tipos (formato antigo)
           Expanded(
-            child: ListView.builder(
+            child: GridView.builder(
               padding: const EdgeInsets.only(
                 left: 16,
                 right: 16,
-                bottom: 80, // Espaço extra para navigation bar do S23 Ultra
+                bottom: 80,
+              ),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 2.8,
               ),
               itemCount: Tipo.values.length,
               itemBuilder: (context, index) {
@@ -247,7 +253,7 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
 
   Widget _buildTipoListItem(BuildContext context, Tipo tipo) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      // margin removido pois o espaçamento agora é do grid
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -299,13 +305,24 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      tipo.displayName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        double fontSize = 16;
+                        // Se o nome for muito longo para o espaço disponível, diminui a fonte
+                        if (tipo.displayName.length > 12 || constraints.maxWidth < 100) {
+                          fontSize = 13;
+                        }
+                        return Text(
+                          tipo.displayName,
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
                     ),
                     const SizedBox(height: 4),
                   ],

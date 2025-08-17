@@ -129,15 +129,10 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
     
     try {
       await _repository.salvarDadosTipo(_tipoSelecionado, state.danoRecebido);
-      
-      // Obter caminho de exportação
-      final caminhoExportacao = await _repository.obterCaminhoExportacao();
-      
       state = state.copyWith(
         isSaving: false,
-        successMessage: 'Dados salvos com sucesso!\n\n$caminhoExportacao'
+        successMessage: 'Dados salvos no Drive com sucesso!'
       );
-      
       // Remove a mensagem de sucesso após 6 segundos
       Future.delayed(Duration(seconds: 6), () {
         if (mounted) {
