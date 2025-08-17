@@ -349,7 +349,7 @@ class TipagemDanoScreen extends ConsumerWidget {
         'data': jsonString,
         'timestamp': DateTime.now().toIso8601String(),
       };
-      final nomeArquivo = 'tb_${tipoSelecionado.name.toLowerCase()}_defesa';
+  final nomeArquivo = tipoSelecionado.name.toLowerCase();
       
       // Salvar no Google Drive
       final sucesso = await driveService.salvarJson(nomeArquivo, jsonData);
