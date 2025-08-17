@@ -11,52 +11,42 @@ class MonstrosMenuScreen extends StatelessWidget {
         title: const Text('Monstros'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(
-              Icons.pets,
-              size: 100,
-              color: Theme.of(context).colorScheme.primary,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/background/templo.png',
+              fit: BoxFit.cover,
             ),
-            const SizedBox(height: 32),
-            Text(
-              'Escolha o modo',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              textAlign: TextAlign.center,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildMenuCard(
+                  context: context,
+                  title: 'Aventura',
+                  subtitle: 'Gerencie seus monstros de aventura',
+                  icon: Icons.explore,
+                  color: Colors.green,
+                  onTap: () => _navegarParaAventura(context),
+                ),
+                const SizedBox(height: 20),
+                _buildMenuCard(
+                  context: context,
+                  title: 'Dex',
+                  subtitle: 'Catálogo completo de monstros',
+                  icon: Icons.library_books,
+                  color: Colors.blue,
+                  onTap: () => _navegarParaDex(context),
+                  enabled: false,
+                ),
+              ],
             ),
-            const SizedBox(height: 48),
-            
-            // Botão Aventura
-            _buildMenuCard(
-              context: context,
-              title: 'Aventura',
-              subtitle: 'Gerencie seus monstros de aventura',
-              icon: Icons.explore,
-              color: Colors.green,
-              onTap: () => _navegarParaAventura(context),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // Botão Dex
-            _buildMenuCard(
-              context: context,
-              title: 'Dex',
-              subtitle: 'Catálogo completo de monstros',
-              icon: Icons.library_books,
-              color: Colors.blue,
-              onTap: () => _navegarParaDex(context),
-              enabled: false, // Por enquanto desabilitado
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

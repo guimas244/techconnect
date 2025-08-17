@@ -15,37 +15,53 @@ class AdminScreen extends StatelessWidget {
         elevation: 2,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 24,
-          crossAxisSpacing: 24,
-          childAspectRatio: 1.1,
-          children: [
-            _MenuBlock(
-              icon: Icons.category,
-              label: 'Tipagem',
-              color: Colors.blueGrey.shade700,
-              onTap: () => context.push('/admin/tipagem'),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/background/templo.png',
+              fit: BoxFit.cover,
             ),
-            _MenuBlock(
-              icon: Icons.bug_report,
-              label: 'Monstros',
-              color: Colors.blueGrey.shade400,
-              onTap: () => context.push('/admin/monstros'),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 24,
+              crossAxisSpacing: 24,
+              childAspectRatio: 1.1,
+              children: [
+                _MenuBlock(
+                  icon: Icons.category,
+                  label: 'Tipagem',
+                  color: Colors.blueGrey.shade700,
+                  onTap: () => context.push('/admin/tipagem'),
+                ),
+                _MenuBlock(
+                  icon: Icons.bug_report,
+                  label: 'Monstros',
+                  color: Colors.blueGrey.shade400,
+                  onTap: () => context.push('/admin/monstros'),
+                ),
+                _MenuBlock(
+                  icon: Icons.rule,
+                  label: 'Regras',
+                  color: Colors.blueGrey.shade600,
+                  onTap: () => context.push('/admin/regras'),
+                ),
+              ],
             ),
-            _MenuBlock(
-              icon: Icons.rule,
-              label: 'Regras',
-              color: Colors.blueGrey.shade600,
-              onTap: () => context.push('/admin/regras'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
