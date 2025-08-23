@@ -40,6 +40,7 @@ enum AventuraEstado {
   semHistorico,
   temHistorico,
   podeIniciar,
+  aventuraIniciada,
   erro,
 }
 

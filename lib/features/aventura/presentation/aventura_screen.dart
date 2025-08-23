@@ -5,9 +5,8 @@ import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/monstro_aventura.dart';
-import 'package:material_symbols_icons/material_symbols_icons.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:remixicon/remixicon.dart';
+import 'mapa_aventura_screen.dart';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -118,6 +117,56 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao sortear monstros: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _iniciarAventura() async {
+    print('🚀 [AventuraScreen] Iniciando aventura...');
+    ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
+    
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      print('🚀 [AventuraScreen] Chamando iniciarAventura no repository...');
+      
+      final historiaAtualizada = await repository.iniciarAventura(emailJogador);
+      
+      if (historiaAtualizada != null) {
+        print('🚀 [AventuraScreen] Aventura iniciada com sucesso!');
+        setState(() {
+          historiaAtual = historiaAtualizada;
+        });
+        
+        // Navegar para o mapa de aventura
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MapaAventuraScreen(
+              mapaPath: historiaAtualizada.mapaAventura!,
+              monstrosInimigos: historiaAtualizada.monstrosInimigos,
+            ),
+          ),
+        );
+        
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aventura iniciada! Boa sorte na jornada!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Falha ao iniciar aventura');
+      }
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao iniciar aventura: $e');
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao iniciar aventura: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -281,6 +330,9 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       case AventuraEstado.podeIniciar:
         return _buildTelaComMonstros();
 
+      case AventuraEstado.aventuraIniciada:
+        return _buildTelaComMonstros();
+
       case AventuraEstado.erro:
         return Center(
           child: Column(
@@ -362,13 +414,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
-              // TODO: Navegar para tela de jogo
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tela de jogo em desenvolvimento!'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
+              _iniciarAventura();
             },
             icon: const Icon(Icons.play_arrow),
             label: const Text('INICIAR AVENTURA'),

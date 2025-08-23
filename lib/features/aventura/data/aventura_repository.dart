@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:math';
 import '../../../core/services/google_drive_service.dart';
 import '../../../shared/models/tipo_enum.dart';
-import '../../../shared/models/atributos_jogo_enum.dart';
+import '../../../core/models/atributo_jogo_enum.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
+import '../models/monstro_inimigo.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
@@ -87,11 +88,11 @@ class AventuraRepository {
         tipo: tipo,
         tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
-        vida: AtributoJogo.vida.sortearValor(random),
-        energia: AtributoJogo.energia.sortearValor(random),
-        agilidade: AtributoJogo.agilidade.sortearValor(random),
-        ataque: AtributoJogo.ataque.sortearValor(random),
-        defesa: AtributoJogo.defesa.sortearValor(random),
+        vida: AtributoJogo.vida.sortear(random),
+        energia: AtributoJogo.energia.sortear(random),
+        agilidade: AtributoJogo.agilidade.sortear(random),
+        ataque: AtributoJogo.ataque.sortear(random),
+        defesa: AtributoJogo.defesa.sortear(random),
         habilidades: ['TODO', 'TODO', 'TODO', 'TODO'],
         item: 'TODO',
       );
@@ -120,5 +121,80 @@ class AventuraRepository {
       print('❌ [Aventura] Erro ao verificar tipos baixados: $e');
       return false;
     }
+  }
+
+  /// Inicia uma nova aventura para o jogador
+  Future<HistoriaJogador?> iniciarAventura(String email) async {
+    try {
+      print('🚀 [Repository] Iniciando aventura para: $email');
+      
+      // Carrega o histórico atual
+      final historiaAtual = await carregarHistoricoJogador(email);
+      if (historiaAtual == null) {
+        print('❌ [Repository] Histórico não encontrado para iniciar aventura');
+        return null;
+      }
+
+      // Seleciona um mapa aleatório
+      final mapas = [
+        'assets/mapas_aventura/mapa_floresta.png',
+        'assets/mapas_aventura/mapa_montanha.png',
+        'assets/mapas_aventura/mapa_deserto.png',
+      ];
+      final random = Random();
+      final mapaEscolhido = mapas[random.nextInt(mapas.length)];
+
+      // Sorteia 5 monstros inimigos (apenas 1 tipo cada)
+      final monstrosInimigos = await _sortearMonstrosInimigos();
+
+      // Atualiza o histórico com a aventura iniciada
+      final historiaAtualizada = historiaAtual.copyWith(
+        aventuraIniciada: true,
+        mapaAventura: mapaEscolhido,
+        monstrosInimigos: monstrosInimigos,
+      );
+
+      // Salva no Drive
+      final sucesso = await salvarHistoricoJogador(historiaAtualizada);
+      if (sucesso) {
+        print('✅ [Repository] Aventura iniciada com sucesso');
+        return historiaAtualizada;
+      } else {
+        print('❌ [Repository] Erro ao salvar aventura');
+        return null;
+      }
+    } catch (e) {
+      print('❌ [Repository] Erro ao iniciar aventura: $e');
+      return null;
+    }
+  }
+
+  /// Sorteia 5 monstros inimigos com apenas 1 tipo cada
+  Future<List<MonstroInimigo>> _sortearMonstrosInimigos() async {
+    final random = Random();
+    final monstrosInimigos = <MonstroInimigo>[];
+    
+    for (int i = 0; i < 5; i++) {
+      // Escolhe um tipo aleatório
+      final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
+      final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
+      
+      // Cria monstro inimigo com atributos sorteados
+      final monstro = MonstroInimigo(
+        tipo: tipo,
+        imagem: 'assets/monstros_aventura/${tipo.name}.png',
+        vida: AtributoJogo.vida.sortear(random),
+        energia: AtributoJogo.energia.sortear(random),
+        agilidade: AtributoJogo.agilidade.sortear(random),
+        ataque: AtributoJogo.ataque.sortear(random),
+        defesa: AtributoJogo.defesa.sortear(random),
+        habilidades: [],
+        item: '',
+      );
+      
+      monstrosInimigos.add(monstro);
+    }
+    
+    return monstrosInimigos;
   }
 }
