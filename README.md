@@ -62,7 +62,7 @@ lib/
 ### 🗄️ Dados e Persistência
 
 ```
-tipagem_jsons/                      # Arquivos JSON de configuração
+dados_json/                          # Arquivos JSON de configuração
 ├── tb_normal_defesa.json           # Configurações de defesa por tipo
 ├── tb_planta_defesa.json           # (30 arquivos, um para cada tipo)
 └── ...                            # Formato: tb_{tipo}_defesa.json

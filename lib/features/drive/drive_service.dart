@@ -47,6 +47,43 @@ class DriveService {
     }
   }
 
+  /// Método para criar/encontrar a pasta HISTORIAS dentro da pasta principal
+  Future<String?> criarPastaHistorias() async {
+    try {
+      print('📁 [DEBUG] Verificando se pasta HISTORIAS existe dentro da pasta principal...');
+      
+      // Procurar por pasta HISTORIAS dentro da pasta configurada (FOLDER_ID)
+      final res = await api.files.list(
+        q: "name = 'historias' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+        pageSize: 10,
+      );
+      
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaExistente = res.files!.first;
+        print('✅ [DEBUG] Pasta HISTORIAS já existe: ${pastaExistente.id}');
+        return pastaExistente.id;
+      }
+      
+      // Se não existe, criar nova pasta HISTORIAS dentro da pasta principal
+      print('📁 [DEBUG] Criando pasta HISTORIAS dentro da pasta principal...');
+      final meta = drive.File()
+        ..name = 'historias'
+        ..mimeType = 'application/vnd.google-apps.folder'
+        ..parents = [folderId]; // Criar dentro da pasta principal
+      
+      final novaPasta = await api.files.create(meta);
+      print('✅ [DEBUG] Pasta HISTORIAS criada: ${novaPasta.id}');
+      print('📋 [INFO] Pasta HISTORIAS ID: ${novaPasta.id}');
+      
+      return novaPasta.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta HISTORIAS: $e');
+      return null;
+    }
+  }
+
   /// Método para criar a pasta TECH CONNECT se não existir
   Future<String?> criarPastaTechConnect() async {
     try {
@@ -174,6 +211,34 @@ class DriveService {
     return await api.files.create(meta, uploadMedia: media);
   }
 
+  Future<drive.File> createJsonFileInHistorias(String name, Map<String, dynamic> jsonData) async {
+    // Verificar se FOLDER_ID está configurado antes de tentar salvar
+    if (folderId == "PASTE_TECH_CONNECT_FOLDER_ID_HERE") {
+      print('⚠️ [DEBUG] FOLDER_ID não configurado, não é possível salvar arquivos');
+      throw Exception('FOLDER_ID não configurado. Configure o ID da pasta no Google Drive.');
+    }
+    
+    // Criar/encontrar pasta HISTORIAS
+    final pastaHistoriasId = await criarPastaHistorias();
+    if (pastaHistoriasId == null) {
+      print('❌ [DEBUG] Não foi possível criar pasta HISTORIAS');
+      throw Exception('Falha ao criar pasta HISTORIAS');
+    }
+    
+    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final media = drive.Media(
+      http.ByteStream.fromBytes(utf8.encode(content)),
+      content.length,
+    );
+    final meta = drive.File()
+      ..name = name
+      ..mimeType = 'application/json'
+      ..parents = [pastaHistoriasId]; // Usar pasta HISTORIAS
+    
+    print('💾 [DEBUG] Criando arquivo JSON na pasta HISTORIAS: $name');
+    return await api.files.create(meta, uploadMedia: media);
+  }
+
   Future<drive.File> updateJsonFile(String fileId, Map<String, dynamic> jsonData) async {
     // Verificar se FOLDER_ID está configurado antes de tentar atualizar
     if (folderId == "PASTE_TECH_CONNECT_FOLDER_ID_HERE") {
@@ -204,5 +269,41 @@ class DriveService {
       bytes.addAll(chunk);
     }
     return utf8.decode(bytes);
+  }
+
+  /// Lista arquivos na pasta TIPAGENS
+  Future<List<drive.File>> listInTipagensFolder() async {
+    final pastaTipagensId = await criarPastaTipagens();
+    if (pastaTipagensId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta TIPAGENS');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaTipagensId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Lista arquivos na pasta HISTORIAS
+  Future<List<drive.File>> listInHistoriasFolder() async {
+    final pastaHistoriasId = await criarPastaHistorias();
+    if (pastaHistoriasId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta HISTORIAS');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaHistoriasId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
   }
 }

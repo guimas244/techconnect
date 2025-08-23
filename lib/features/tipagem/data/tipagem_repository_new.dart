@@ -187,8 +187,8 @@ class TipagemRepository {
   /// Carrega dados dos assets (arquivos originais)
   Future<Map<Tipo, double>> _carregarDosAssets(Tipo tipo) async {
     try {
-      print('📁 Carregando dados originais: tipagem_jsons/tb_${tipo.name}_defesa.json');
-      final String data = await rootBundle.loadString('tipagem_jsons/tb_${tipo.name}_defesa.json');
+      print('📁 Carregando dados originais: dados_json/tb_${tipo.name}_defesa.json');
+      final String data = await rootBundle.loadString('dados_json/tb_${tipo.name}_defesa.json');
       final Map<String, dynamic> jsonData = json.decode(data);
       final resultado = _converterJsonParaTipos(jsonData);
       

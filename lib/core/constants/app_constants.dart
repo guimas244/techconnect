@@ -6,6 +6,7 @@ class AppConstants {
   // Routes
   static const String loginRoute = '/login';
   static const String homeRoute = '/home';
+  static const String aventuraRoute = '/aventura';
   static const String adminRoute = '/admin';
   static const String tipagemRoute = '/admin/tipagem';
   static const String monstrosRoute = '/admin/monstros';
@@ -17,7 +18,8 @@ class AppConstants {
   
   // Assets Paths
   static const String tipagemAssetsPath = 'assets/tipagens/';
-  static const String tipagemJsonsPath = 'tipagem_jsons/';
+  static const String tipagemJsonsPath = 'dados_json/';
+  static const String aventuraJsonsPath = 'dados_json/';
   
   // Default Values
   static const double defaultDamageMultiplier = 1.0;

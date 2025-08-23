@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/menu_block.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../aventura/providers/aventura_provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isDriveConnected = false;
   bool _isConnecting = false;
   String _connectionStatus = 'Não conectado ao Google Drive';
@@ -227,11 +229,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.explore,
                     label: 'Aventura',
                     color: _isDriveConnected ? Colors.blueGrey.shade700 : Colors.grey.shade400,
-                    onTap: _isDriveConnected ? () {
-                      // TODO: Navegar para tela de aventura quando implementada
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Aventura em desenvolvimento')),
-                      );
+                    onTap: _isDriveConnected ? () async {
+                      // Verifica se pode acessar aventura
+                      try {
+                        print('🔍 [HomeScreen] Verificando acesso à aventura...');
+                        final podeAcessar = await ref.read(podeAcessarAventuraProvider.future);
+                        print('🔍 [HomeScreen] Pode acessar: $podeAcessar');
+                        
+                        if (podeAcessar) {
+                          print('✅ [HomeScreen] Navegando para aventura...');
+                          context.go('/aventura');
+                        } else {
+                          print('❌ [HomeScreen] Acesso negado - tipos não baixados');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('É necessário baixar os tipos dos monstros primeiro.\nAcesse Administrador > Tipagem para baixar.'),
+                              backgroundColor: Colors.orange,
+                              duration: Duration(seconds: 4),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        print('❌ [HomeScreen] Erro ao verificar: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro ao verificar dados: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     } : null,
                   ),
                   MenuBlock(

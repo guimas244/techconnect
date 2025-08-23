@@ -8,6 +8,7 @@ import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/monstros/monstros_menu_screen.dart';
+import '../../features/aventura/presentation/aventura_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
@@ -25,6 +26,10 @@ class AppRouter {
       GoRoute(
         path: AppConstants.homeRoute,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.aventuraRoute,
+        builder: (context, state) => const AventuraScreen(),
       ),
       GoRoute(
         path: AppConstants.adminRoute,

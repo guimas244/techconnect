@@ -254,4 +254,90 @@ class GoogleDriveService {
       return false;
     }
   }
+
+  /// Métodos específicos para Aventura
+
+  /// Baixa arquivo de uma pasta específica (para aventura)
+  Future<String> baixarArquivoDaPasta(String nomeArquivo, String pasta) async {
+    if (_driveService == null || !_isConnected) {
+      final conectou = await inicializarConexao();
+      if (!conectou) return '';
+    }
+
+    try {
+      print('📥 [GoogleDriveService] Baixando arquivo: $nomeArquivo da pasta: $pasta');
+      
+      List<drive.File> arquivos;
+      
+      if (pasta == 'tipagens') {
+        arquivos = await _driveService!.listInTipagensFolder();
+      } else if (pasta == 'historias') {
+        arquivos = await _driveService!.listInHistoriasFolder();
+      } else {
+        // Fallback para pasta raiz
+        arquivos = await _driveService!.listInRootFolder();
+      }
+      
+      final arquivo = arquivos.firstWhere(
+        (file) => file.name == nomeArquivo,
+        orElse: () => drive.File(),
+      );
+
+      if (arquivo.id == null) {
+        print('! Arquivo não encontrado: $nomeArquivo na pasta $pasta');
+        return '';
+      }
+
+      final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
+      print('✅ Arquivo baixado com sucesso da pasta $pasta: $nomeArquivo');
+      return conteudo;
+    } catch (e) {
+      print('❌ Erro ao baixar arquivo da pasta no Drive ($pasta/$nomeArquivo): $e');
+      return '';
+    }
+  }
+
+  /// Salva arquivo JSON em pasta específica (para aventura)
+  Future<bool> salvarArquivoEmPasta(String nomeArquivo, String conteudo, String pasta) async {
+    if (_driveService == null || !_isConnected) {
+      final conectou = await inicializarConexao();
+      if (!conectou) return false;
+    }
+
+    try {
+      print('💾 [GoogleDriveService] Salvando arquivo: $nomeArquivo na pasta: $pasta');
+      
+      if (conteudo.startsWith('{') || conteudo.startsWith('[')) {
+        // É JSON
+        final dadosJson = json.decode(conteudo);
+        
+        if (pasta == 'tipagens') {
+          await _driveService!.createJsonFile(nomeArquivo, dadosJson);
+        } else if (pasta == 'historias') {
+          await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else {
+          // Fallback para pasta padrão (tipagens)
+          await _driveService!.createJsonFile(nomeArquivo, dadosJson);
+        }
+      } else {
+        // É texto simples - converter para JSON
+        final dadosJson = {'conteudo': conteudo};
+        
+        if (pasta == 'tipagens') {
+          await _driveService!.createJsonFile(nomeArquivo, dadosJson);
+        } else if (pasta == 'historias') {
+          await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else {
+          // Fallback para pasta padrão (tipagens)
+          await _driveService!.createJsonFile(nomeArquivo, dadosJson);
+        }
+      }
+      
+      print('✅ Arquivo salvo no Drive na pasta $pasta: $nomeArquivo');
+      return true;
+    } catch (e) {
+      print('❌ Erro ao salvar arquivo em pasta no Drive ($pasta/$nomeArquivo): $e');
+      return false;
+    }
+  }
 }

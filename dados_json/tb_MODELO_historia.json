@@ -1,0 +1,29 @@
+{
+  "email": "MODELO@gmail.com",
+  "monstros": [
+    {
+      "tipo": "fogo",
+      "imagem": "assets/monstros_aventura/fogo.png",
+      "vida": 50,
+      "energia": 50,
+      "habilidades": ["TODO", "TODO", "TODO", "TODO"],
+      "item": "TODO"
+    },
+    {
+      "tipo": "agua",
+      "imagem": "assets/monstros_aventura/agua.png",
+      "vida": 50,
+      "energia": 50,
+      "habilidades": ["TODO", "TODO", "TODO", "TODO"],
+      "item": "TODO"
+    },
+    {
+      "tipo": "planta",
+      "imagem": "assets/monstros_aventura/planta.png",
+      "vida": 50,
+      "energia": 50,
+      "habilidades": ["TODO", "TODO", "TODO", "TODO"],
+      "item": "TODO"
+    }
+  ]
+}
