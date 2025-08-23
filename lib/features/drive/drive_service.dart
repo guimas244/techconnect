@@ -225,6 +225,17 @@ class DriveService {
       throw Exception('Falha ao criar pasta HISTORIAS');
     }
     
+    // Verificar se arquivo já existe
+    print('🔍 [DEBUG] Verificando se arquivo já existe: $name');
+    final arquivosExistentes = await listInHistoriasFolder();
+    final arquivoExistente = arquivosExistentes.where((file) => file.name == name).firstOrNull;
+    
+    if (arquivoExistente != null && arquivoExistente.id != null) {
+      print('🔄 [DEBUG] Arquivo já existe, atualizando: $name (ID: ${arquivoExistente.id})');
+      return await updateJsonFileInHistorias(arquivoExistente.id!, jsonData);
+    }
+    
+    print('💾 [DEBUG] Criando novo arquivo JSON na pasta HISTORIAS: $name');
     final content = const JsonEncoder.withIndent('  ').convert(jsonData);
     final media = drive.Media(
       http.ByteStream.fromBytes(utf8.encode(content)),
@@ -235,8 +246,19 @@ class DriveService {
       ..mimeType = 'application/json'
       ..parents = [pastaHistoriasId]; // Usar pasta HISTORIAS
     
-    print('💾 [DEBUG] Criando arquivo JSON na pasta HISTORIAS: $name');
     return await api.files.create(meta, uploadMedia: media);
+  }
+
+  Future<drive.File> updateJsonFileInHistorias(String fileId, Map<String, dynamic> jsonData) async {
+    print('� [DEBUG] Atualizando arquivo JSON na pasta HISTORIAS (ID: $fileId)');
+    
+    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final media = drive.Media(
+      http.ByteStream.fromBytes(utf8.encode(content)),
+      content.length,
+    );
+    final meta = drive.File();
+    return await api.files.update(meta, fileId, uploadMedia: media);
   }
 
   Future<drive.File> updateJsonFile(String fileId, Map<String, dynamic> jsonData) async {

@@ -137,12 +137,15 @@ class AventuraRepository {
 
       // Seleciona um mapa aleatório
       final mapas = [
-        'assets/mapas_aventura/mapa_floresta.png',
-        'assets/mapas_aventura/mapa_montanha.png',
-        'assets/mapas_aventura/mapa_deserto.png',
+        'assets/mapas_aventura/cidade_abandonada.jpg',
+        'assets/mapas_aventura/deserto.jpg',
+        'assets/mapas_aventura/floresta_verde.jpg',
+        'assets/mapas_aventura/praia.jpg',
+        'assets/mapas_aventura/vulcao.jpg',
       ];
       final random = Random();
       final mapaEscolhido = mapas[random.nextInt(mapas.length)];
+      print('🗺️ [Repository] Mapa escolhido para aventura: $mapaEscolhido');
 
       // Sorteia 5 monstros inimigos (apenas 1 tipo cada)
       final monstrosInimigos = await _sortearMonstrosInimigos();

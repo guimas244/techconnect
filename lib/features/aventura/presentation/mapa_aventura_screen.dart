@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math';
 import '../models/monstro_inimigo.dart';
+import '../models/historia_jogador.dart';
+import '../providers/aventura_provider.dart';
+import '../../../core/providers/user_provider.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
@@ -21,6 +24,8 @@ class MapaAventuraScreen extends ConsumerStatefulWidget {
 
 class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   late String mapaEscolhido;
+  HistoriaJogador? historiaAtual;
+  bool isLoading = true;
   
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
@@ -33,17 +38,106 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   @override
   void initState() {
     super.initState();
-    // Sorteia um mapa aleatório
-    final random = Random();
-    mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
+    _verificarAventuraIniciada();
+  }
+
+  Future<void> _verificarAventuraIniciada() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      print('🗺️ [MapaAventura] Verificando aventura iniciada para: $emailJogador');
+      
+      // Carrega a história do jogador
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      
+      if (historia != null) {
+        print('🗺️ [MapaAventura] História encontrada - Aventura iniciada: ${historia.aventuraIniciada}');
+        
+        setState(() {
+          historiaAtual = historia;
+          
+          if (historia.aventuraIniciada && historia.mapaAventura != null) {
+            // Se há aventura iniciada, usa o mapa salvo
+            mapaEscolhido = historia.mapaAventura!;
+            print('🗺️ [MapaAventura] Usando mapa salvo: $mapaEscolhido');
+          } else {
+            // Se não há aventura iniciada, sorteia um mapa aleatório
+            final random = Random();
+            mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
+            print('🗺️ [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
+          }
+          
+          isLoading = false;
+        });
+      } else {
+        print('❌ [MapaAventura] Nenhuma história encontrada');
+        setState(() {
+          final random = Random();
+          mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('❌ [MapaAventura] Erro ao verificar aventura: $e');
+      setState(() {
+        final random = Random();
+        mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
+        isLoading = false;
+      });
+    }
+  }
+
+  List<MonstroInimigo> get monstrosParaExibir {
+    // Se há história carregada e aventura iniciada, usa os monstros da história
+    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      print('🗺️ [MapaAventura] Usando monstros da história: ${historiaAtual!.monstrosInimigos.length}');
+      return historiaAtual!.monstrosInimigos;
+    }
+    
+    // Caso contrário, usa os monstros passados por parâmetro
+    print('🗺️ [MapaAventura] Usando monstros do parâmetro: ${widget.monstrosInimigos.length}');
+    return widget.monstrosInimigos;
   }
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black87,
+          title: const Text('Mapa de Aventura'),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Carregando aventura...',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black87,
-        title: const Text('Mapa de Aventura'),
+        title: Text(historiaAtual?.aventuraIniciada == true 
+            ? 'Aventura em Andamento' 
+            : 'Mapa de Aventura'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -72,23 +166,39 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
             ),
             // Pontos interativos do mapa (5 pontos fixos)
-            _buildPontoMapa(0, 0.2, 0.2), // Ponto 1 - Superior esquerdo
-            _buildPontoMapa(1, 0.7, 0.15), // Ponto 2 - Superior direito
-            _buildPontoMapa(2, 0.5, 0.45), // Ponto 3 - Centro
-            _buildPontoMapa(3, 0.25, 0.65), // Ponto 4 - Inferior esquerdo
-            _buildPontoMapa(4, 0.75, 0.78), // Ponto 5 - Inferior direito (ajustado para não colar na borda)
+            ..._buildPontosMapa(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPontoMapa(int index, double left, double top) {
-    if (index >= widget.monstrosInimigos.length) {
+  List<Widget> _buildPontosMapa() {
+    final monstrosParaUsar = monstrosParaExibir;
+    final pontos = <Widget>[];
+    
+    // Posições fixas dos pontos no mapa
+    final posicoes = [
+      (0.2, 0.2),   // Ponto 1 - Superior esquerdo
+      (0.7, 0.15),  // Ponto 2 - Superior direito
+      (0.5, 0.45),  // Ponto 3 - Centro
+      (0.25, 0.65), // Ponto 4 - Inferior esquerdo
+      (0.75, 0.78), // Ponto 5 - Inferior direito
+    ];
+    
+    for (int i = 0; i < posicoes.length && i < monstrosParaUsar.length; i++) {
+      pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosParaUsar));
+    }
+    
+    return pontos;
+  }
+
+  Widget _buildPontoMapa(int index, double left, double top, List<MonstroInimigo> monstros) {
+    if (index >= monstros.length) {
       return const SizedBox.shrink();
     }
 
-    final monstro = widget.monstrosInimigos[index];
+    final monstro = monstros[index];
     
     // Limita a posição máxima do topo para não colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
