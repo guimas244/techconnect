@@ -33,6 +33,38 @@ class ModalMonstroInimigo extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Header com X de fechar (se showCloseButton for true)
+            if (showCloseButton)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      onPressed: onClose ?? () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      color: Colors.black,
+                      iconSize: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+                ],
+              ),
+            if (showCloseButton) const SizedBox(height: 10),
             Row(
               children: [
                 Container(
@@ -152,21 +184,6 @@ class ModalMonstroInimigo extends StatelessWidget {
                 ],
               ),
             ),
-            if (showCloseButton) ...[
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: onClose ?? () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: monstro.tipo.cor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Fechar'),
-              ),
-            ],
           ],
         ),
       ),
