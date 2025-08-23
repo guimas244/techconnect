@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math';
 import '../models/monstro_inimigo.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 
@@ -19,6 +20,23 @@ class MapaAventuraScreen extends ConsumerStatefulWidget {
 }
 
 class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
+  late String mapaEscolhido;
+  
+  final List<String> mapasDisponiveis = [
+    'assets/mapas_aventura/cidade_abandonada.jpg',
+    'assets/mapas_aventura/deserto.jpg',
+    'assets/mapas_aventura/floresta_verde.jpg',
+    'assets/mapas_aventura/praia.jpg',
+    'assets/mapas_aventura/vulcao.jpg',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Sorteia um mapa aleatório
+    final random = Random();
+    mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,34 +50,35 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Stack(
-        children: [
-          // Imagem do mapa de fundo
-          Positioned.fill(
-            child: Image.asset(
-              widget.mapaPath,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey.shade800,
-                  child: const Center(
-                    child: Text(
-                      'Mapa não encontrado',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Imagem do mapa de fundo
+            Positioned.fill(
+              child: Image.asset(
+                mapaEscolhido,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade800,
+                    child: const Center(
+                      child: Text(
+                        'Mapa não encontrado',
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-          
-          // Pontos interativos do mapa (5 pontos fixos)
-          _buildPontoMapa(0, 0.2, 0.3), // Ponto 1 - Superior esquerdo
-          _buildPontoMapa(1, 0.7, 0.2), // Ponto 2 - Superior direito
-          _buildPontoMapa(2, 0.5, 0.5), // Ponto 3 - Centro
-          _buildPontoMapa(3, 0.3, 0.7), // Ponto 4 - Inferior esquerdo
-          _buildPontoMapa(4, 0.8, 0.8), // Ponto 5 - Inferior direito
-        ],
+            // Pontos interativos do mapa (5 pontos fixos)
+            _buildPontoMapa(0, 0.2, 0.2), // Ponto 1 - Superior esquerdo
+            _buildPontoMapa(1, 0.7, 0.15), // Ponto 2 - Superior direito
+            _buildPontoMapa(2, 0.5, 0.45), // Ponto 3 - Centro
+            _buildPontoMapa(3, 0.25, 0.65), // Ponto 4 - Inferior esquerdo
+            _buildPontoMapa(4, 0.75, 0.78), // Ponto 5 - Inferior direito (ajustado para não colar na borda)
+          ],
+        ),
       ),
     );
   }
@@ -71,9 +90,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
     final monstro = widget.monstrosInimigos[index];
     
+    // Limita a posição máxima do topo para não colar na borda inferior
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxTop = screenHeight * 0.85;
+    final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
     return Positioned(
       left: MediaQuery.of(context).size.width * left,
-      top: MediaQuery.of(context).size.height * top,
+      top: calcTop,
       child: GestureDetector(
         onTap: () => _mostrarModalMonstroInimigo(monstro),
         child: Container(

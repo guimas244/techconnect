@@ -7,6 +7,7 @@ import '../../../shared/models/tipo_enum.dart';
 import '../models/monstro_aventura.dart';
 import 'package:remixicon/remixicon.dart';
 import 'mapa_aventura_screen.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -41,7 +42,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       },
     );
   }
-  String emailJogador = 'teste123@gmail.com'; // Por enquanto fixo, depois pegar do auth
+  late String emailJogador;
   HistoriaJogador? historiaAtual;
 
   @override
@@ -49,6 +50,9 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     super.initState();
     // Move a verificação para depois que o widget foi construído
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Recupera o email do usuário autenticado
+      final user = ref.read(currentUserProvider);
+      emailJogador = user?.email ?? '';
       _verificarEstadoJogador();
     });
   }
