@@ -2,6 +2,7 @@ import 'dart:math';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../models/habilidade.dart';
+import 'gerador_nomes_habilidades.dart';
 
 class GeradorHabilidades {
   static final _random = Random();
@@ -33,8 +34,8 @@ class GeradorHabilidades {
     // Gera valor baseado no efeito
     final valor = _gerarValor(efeito);
     
-    // Gera nome e descrição
-    final nome = _gerarNome(efeito, tipoElemental);
+    // Gera nome e descrição usando o novo gerador
+    final nome = GeradorNomesHabilidades.gerarNome(tipoElemental, efeito);
     final descricao = _gerarDescricao(efeito, valor, tipoElemental);
     
     return Habilidade(
@@ -86,48 +87,6 @@ class GeradorHabilidades {
         return 15 + _random.nextInt(26); // 15-40
       case EfeitoHabilidade.danoDirecto:
         return 20 + _random.nextInt(31); // 20-50
-    }
-  }
-
-  static String _gerarNome(EfeitoHabilidade efeito, Tipo tipo) {
-    final prefixoTipo = _obterPrefixoTipo(tipo);
-    
-    switch (efeito) {
-      case EfeitoHabilidade.aumentarVida:
-        return '$prefixoTipo Vitalidade';
-      case EfeitoHabilidade.aumentarEnergia:
-        return '$prefixoTipo Vigor';
-      case EfeitoHabilidade.aumentarAgilidade:
-        return '$prefixoTipo Velocidade';
-      case EfeitoHabilidade.aumentarAtaque:
-        return '$prefixoTipo Força';
-      case EfeitoHabilidade.aumentarDefesa:
-        return '$prefixoTipo Proteção';
-      case EfeitoHabilidade.curarVida:
-        return '$prefixoTipo Cura';
-      case EfeitoHabilidade.danoDirecto:
-        return '$prefixoTipo Ataque';
-    }
-  }
-
-  static String _obterPrefixoTipo(Tipo tipo) {
-    switch (tipo) {
-      case Tipo.normal:
-        return 'Simples';
-      case Tipo.planta:
-        return 'Folha';
-      case Tipo.inseto:
-        return 'Picada';
-      case Tipo.venenoso:
-        return 'Tóxico';
-      case Tipo.fera:
-        return 'Selvagem';
-      case Tipo.fantasma:
-        return 'Sombrio';
-      case Tipo.agua:
-        return 'Aquático';
-      default:
-        return 'Especial';
     }
   }
 
