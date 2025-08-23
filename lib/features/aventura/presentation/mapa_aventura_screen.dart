@@ -183,7 +183,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       (0.7, 0.15),  // Ponto 2 - Superior direito
       (0.5, 0.45),  // Ponto 3 - Centro
       (0.25, 0.65), // Ponto 4 - Inferior esquerdo
-      (0.75, 0.78), // Ponto 5 - Inferior direito
+      (0.75, 0.68), // Ponto 5 - Inferior direito (mais alto)
     ];
     
     for (int i = 0; i < posicoes.length && i < monstrosParaUsar.length; i++) {
