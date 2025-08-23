@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../shared/models/tipo_enum.dart';
+import '../../../shared/models/habilidade_enum.dart';
 import '../models/monstro_aventura.dart';
 import 'package:remixicon/remixicon.dart';
 
@@ -171,6 +171,46 @@ class ModalMonstroAventura extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            // Botão de Habilidades
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [monstro.tipo.cor, monstro.tipo.cor.withOpacity(0.7)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: monstro.tipo.cor.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => _mostrarHabilidades(context),
+                icon: const Icon(Remix.magic_fill, color: Colors.white, size: 20),
+                label: Text(
+                  'Ver Habilidades (${monstro.habilidades.length})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
             // Removido o botão "Fechar" da parte inferior
           ],
         ),
@@ -201,6 +241,197 @@ class ModalMonstroAventura extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _mostrarHabilidades(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => _HabilidadesDialog(monstro: monstro),
+    );
+  }
+}
+
+class _HabilidadesDialog extends StatelessWidget {
+  final MonstroAventura monstro;
+
+  const _HabilidadesDialog({required this.monstro});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [monstro.tipo.cor.withOpacity(0.1), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header com título e botão fechar
+            Row(
+              children: [
+                Icon(Remix.magic_fill, color: monstro.tipo.cor, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Habilidades do ${monstro.tipo.displayName}',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: monstro.tipo.cor,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    color: Colors.black,
+                    iconSize: 18,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Lista de habilidades
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 400),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: monstro.habilidades.map((habilidade) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: habilidade.tipo == TipoHabilidade.suporte 
+                              ? Colors.green.withOpacity(0.3)
+                              : Colors.red.withOpacity(0.3),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: habilidade.tipo == TipoHabilidade.suporte 
+                                      ? Colors.green.withOpacity(0.2)
+                                      : Colors.red.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  habilidade.tipo.nome,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: habilidade.tipo == TipoHabilidade.suporte 
+                                        ? Colors.green.shade700
+                                        : Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Image.asset(
+                                habilidade.tipoElemental.iconAsset,
+                                width: 24,
+                                height: 24,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            habilidade.nome,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            habilidade.descricao,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                habilidade.efeito.nome,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: monstro.tipo.cor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${habilidade.valor}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: monstro.tipo.cor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
