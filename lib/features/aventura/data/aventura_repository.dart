@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import '../../../core/services/google_drive_service.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../../../shared/models/atributos_jogo_enum.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../../tipagem/data/tipagem_repository.dart';
@@ -80,12 +81,17 @@ class AventuraRepository {
       final outrosTipos = Tipo.values.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
+      
+      // Sorteia atributos usando os ranges definidos
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
-        vida: 50,
-        energia: 50,
+        vida: AtributoJogo.vida.sortearValor(random),
+        energia: AtributoJogo.energia.sortearValor(random),
+        agilidade: AtributoJogo.agilidade.sortearValor(random),
+        ataque: AtributoJogo.ataque.sortearValor(random),
+        defesa: AtributoJogo.defesa.sortearValor(random),
         habilidades: ['TODO', 'TODO', 'TODO', 'TODO'],
         item: 'TODO',
       );

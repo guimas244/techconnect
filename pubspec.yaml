@@ -46,6 +46,10 @@ dependencies:
   http: ^1.2.2
   image: ^4.3.0
   image_picker: ^1.1.2
+  material_symbols_icons: ^4.2867.0
+  font_awesome_flutter: ^10.9.1
+  remixicon: ^1.4.1
+  build_runner: ^2.7.0
 
 dev_dependencies:
   flutter_test:

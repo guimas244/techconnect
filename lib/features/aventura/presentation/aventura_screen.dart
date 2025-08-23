@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../models/monstro_aventura.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:remixicon/remixicon.dart';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -384,96 +388,292 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Widget _buildCardMonstroBonito(dynamic monstro) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(10),
-      height: 210,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [monstro.tipo.cor.withOpacity(0.7), Colors.white.withOpacity(0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: monstro.tipo.cor.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+    return InkWell(
+      onTap: () => _mostrarModalMonstro(monstro),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(10),
+        height: 210,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [monstro.tipo.cor.withOpacity(0.7), Colors.white.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-        border: Border.all(color: monstro.tipo.cor, width: 2),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: monstro.tipo.cor, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: monstro.tipo.cor.withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: monstro.tipo.cor.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          border: Border.all(color: monstro.tipo.cor, width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: monstro.tipo.cor, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: monstro.tipo.cor.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  monstro.imagem,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: monstro.tipo.cor.withOpacity(0.3),
+                      child: Icon(
+                        Icons.pets,
+                        color: monstro.tipo.cor,
+                        size: 30,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Ícones dos tipos (usando asset igual tela de tipagem)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildTipoIcon(monstro.tipo),
+                const SizedBox(width: 12),
+                _buildTipoIcon(monstro.tipoExtra),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Vida
+                Column(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Remix.heart_pulse_fill, color: Colors.red, size: 22),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text('${monstro.vida}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(width: 18),
+                // Energia
+                Column(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Remix.battery_charge_fill, color: Colors.blue, size: 22),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text('${monstro.energia}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                monstro.imagem,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: monstro.tipo.cor.withOpacity(0.3),
-                    child: Icon(
-                      Icons.pets,
-                      color: monstro.tipo.cor,
-                      size: 30,
-                    ),
-                  );
-                },
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _mostrarModalMonstro(MonstroAventura monstro) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [monstro.tipo.cor.withOpacity(0.8), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Cabeçalho com imagem e tipos
+                Row(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: monstro.tipo.cor, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: monstro.tipo.cor.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          monstro.imagem,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: monstro.tipo.cor.withOpacity(0.3),
+                              child: Icon(
+                                Icons.pets,
+                                color: monstro.tipo.cor,
+                                size: 40,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            monstro.tipo.displayName,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: monstro.tipo.cor,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                  offset: Offset(1, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _buildTipoIcon(monstro.tipo),
+                              const SizedBox(width: 8),
+                              _buildTipoIcon(monstro.tipoExtra),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Atributos
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Atributos',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: monstro.tipo.cor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildAtributoInfo('Vida', monstro.vida, Remix.heart_pulse_fill, Colors.red),
+                          _buildAtributoInfo('Energia', monstro.energia, Remix.battery_charge_fill, Colors.blue),
+                          _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.green),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildAtributoInfo('Ataque', monstro.ataque, Remix.boxing_fill, Colors.orange),
+                          _buildAtributoInfo('Defesa', monstro.defesa, Remix.shield_cross_fill, Colors.purple),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Botão fechar
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: monstro.tipo.cor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Fechar'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
-          // Ícones dos tipos (usando asset igual tela de tipagem)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildTipoIcon(monstro.tipo),
-              const SizedBox(width: 12),
-              _buildTipoIcon(monstro.tipoExtra),
-            ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAtributoInfo(String nome, int valor, IconData icone, Color cor) {
+    return Column(
+      children: [
+        Icon(icone, color: cor, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          nome,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
           ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Vida
-              Column(
-                children: [
-                  Icon(Icons.favorite, color: Colors.red, size: 18),
-                  const SizedBox(height: 2),
-                  Text('${monstro.vida}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(width: 18),
-              // Energia
-              Column(
-                children: [
-                  Icon(Icons.flash_on, color: Colors.blue, size: 18),
-                  const SizedBox(height: 2),
-                  Text('${monstro.energia}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$valor',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: cor,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
