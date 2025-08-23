@@ -70,14 +70,19 @@ class AventuraRepository {
     final random = Random();
     final tiposDisponiveis = List<Tipo>.from(Tipo.values);
     tiposDisponiveis.shuffle(random);
-    
+
     final monstrosSorteados = <MonstroAventura>[];
-    
+
     // Sorteia 3 tipos únicos
     for (int i = 0; i < 3 && i < tiposDisponiveis.length; i++) {
       final tipo = tiposDisponiveis[i];
+      // Sorteia tipo extra diferente do principal
+      final outrosTipos = Tipo.values.where((t) => t != tipo).toList();
+      outrosTipos.shuffle(random);
+      final tipoExtra = outrosTipos.first;
       final monstro = MonstroAventura(
         tipo: tipo,
+        tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
         vida: 50,
         energia: 50,

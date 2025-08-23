@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
+import '../../../shared/models/tipo_enum.dart';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -12,6 +13,31 @@ class AventuraScreen extends ConsumerStatefulWidget {
 }
 
 class _AventuraScreenState extends ConsumerState<AventuraScreen> {
+  // Mantém apenas uma definição do método _buildTipoIcon
+  Widget _buildTipoIcon(Tipo tipo) {
+    return Image.asset(
+      tipo.iconAsset,
+      width: 32,
+      height: 32,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        // Fallback para ícone material se asset não existir
+        return Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: tipo.cor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            tipo.icone,
+            color: tipo.cor,
+            size: 20,
+          ),
+        );
+      },
+    );
+  }
   String emailJogador = 'teste123@gmail.com'; // Por enquanto fixo, depois pegar do auth
   HistoriaJogador? historiaAtual;
 
@@ -361,7 +387,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(10),
-      height: 210, // altura fixa maior para todos os cards
+      height: 210,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [monstro.tipo.cor.withOpacity(0.7), Colors.white.withOpacity(0.7)],
@@ -413,31 +439,17 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 28,
-            child: Center(
-              child: Text(
-                monstro.tipo.displayName,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: monstro.tipo.cor,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(1, 1),
-                    ),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
+          const SizedBox(height: 14),
+          // Ícones dos tipos (usando asset igual tela de tipagem)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildTipoIcon(monstro.tipo),
+              const SizedBox(width: 12),
+              _buildTipoIcon(monstro.tipoExtra),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -1,7 +1,9 @@
 import '../../../shared/models/tipo_enum.dart';
 
+
 class MonstroAventura {
   final Tipo tipo;
+  final Tipo tipoExtra;
   final String imagem;
   final int vida;
   final int energia;
@@ -10,6 +12,7 @@ class MonstroAventura {
 
   const MonstroAventura({
     required this.tipo,
+    required this.tipoExtra,
     required this.imagem,
     required this.vida,
     required this.energia,
@@ -23,6 +26,10 @@ class MonstroAventura {
         (t) => t.name == json['tipo'],
         orElse: () => Tipo.normal,
       ),
+      tipoExtra: Tipo.values.firstWhere(
+        (t) => t.name == json['tipoExtra'],
+        orElse: () => Tipo.normal,
+      ),
       imagem: json['imagem'] ?? '',
       vida: json['vida'] ?? 50,
       energia: json['energia'] ?? 50,
@@ -34,6 +41,7 @@ class MonstroAventura {
   Map<String, dynamic> toJson() {
     return {
       'tipo': tipo.name,
+      'tipoExtra': tipoExtra.name,
       'imagem': imagem,
       'vida': vida,
       'energia': energia,
@@ -44,6 +52,7 @@ class MonstroAventura {
 
   MonstroAventura copyWith({
     Tipo? tipo,
+    Tipo? tipoExtra,
     String? imagem,
     int? vida,
     int? energia,
@@ -52,6 +61,7 @@ class MonstroAventura {
   }) {
     return MonstroAventura(
       tipo: tipo ?? this.tipo,
+      tipoExtra: tipoExtra ?? this.tipoExtra,
       imagem: imagem ?? this.imagem,
       vida: vida ?? this.vida,
       energia: energia ?? this.energia,
