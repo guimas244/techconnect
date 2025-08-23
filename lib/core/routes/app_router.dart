@@ -5,6 +5,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/admin/presentation/regras_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/monstros/monstros_menu_screen.dart';
@@ -58,7 +59,7 @@ class AppRouter {
           ),
           GoRoute(
             path: 'regras',
-            builder: (context, state) => const RegrasScreenPlaceholder(),
+            builder: (context, state) => const RegrasScreen(),
           ),
         ],
       ),

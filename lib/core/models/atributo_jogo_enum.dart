@@ -14,4 +14,5 @@ enum AtributoJogo {
   int sortear(Random random) {
     return min + random.nextInt(max - min + 1);
   }
+  String get rangeTexto => '$min a $max';
 }
