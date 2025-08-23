@@ -1,6 +1,8 @@
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/user_provider.dart';
 
 class GoogleAuthClient extends http.BaseClient {
   final Map<String, String> _headers;
@@ -28,7 +30,7 @@ class DriveClientFactory {
     throw Exception('Modo DEBUG: Configure o SHA-1 no Google Cloud Console primeiro');
   }
 
-  static Future<drive.DriveApi> create() async {
+  static Future<drive.DriveApi> create({ProviderContainer? container}) async {
     print('🔐 [DEBUG] DriveClientFactory: Iniciando GoogleSignIn...');
     
     try {
@@ -54,6 +56,13 @@ class DriveClientFactory {
       }
       
       print('✅ [DEBUG] DriveClientFactory: Usuário logado: ${account.email}');
+      
+      // Define o email no provider global para ser usado pela aplicação
+      if (container != null) {
+        print('📧 [DEBUG] DriveClientFactory: Definindo email no provider: ${account.email}');
+        container.read(currentUserEmailStateProvider.notifier).state = account.email;
+      }
+      
       print('🔐 [DEBUG] DriveClientFactory: Obtendo headers de autenticação...');
       
       final headers = await account.authHeaders;

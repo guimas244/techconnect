@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/menu_block.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 import '../../aventura/providers/aventura_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -103,10 +105,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Simulação de usuário logado sem Firebase
-    const userEmail = "usuario@techconnect.com";
+    // Obtém o email do usuário do provider
+    print('🏠 [HomeScreen] Iniciando build, chamando validUserEmailProvider...');
     
-    return Scaffold(
+    try {
+      // Primeiro vamos testar todos os providers
+      final firebaseUser = ref.watch(currentUserProvider);
+      final currentEmail = ref.watch(currentUserEmailProvider);
+      final driveEmail = ref.watch(currentUserEmailStateProvider);
+      
+      print('🏠 [HomeScreen] Firebase User: $firebaseUser');
+      print('🏠 [HomeScreen] Firebase Email: ${firebaseUser?.email}');
+      print('🏠 [HomeScreen] Current Email Provider: $currentEmail');
+      print('🏠 [HomeScreen] Drive Email State: $driveEmail');
+      
+      final userEmail = ref.watch(validUserEmailProvider);
+      print('🏠 [HomeScreen] Email do usuário final: $userEmail');
+      
+      return Scaffold(
       backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: Colors.blueGrey.shade900,
@@ -301,5 +317,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+    } catch (e) {
+      print('❌ [HomeScreen] Erro ao obter email: $e');
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Usuário não está logado'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => context.go('/login'),
+                child: const Text('Fazer Login'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }

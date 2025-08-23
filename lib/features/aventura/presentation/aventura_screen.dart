@@ -5,9 +5,9 @@ import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/monstro_aventura.dart';
+import '../../../core/providers/user_provider.dart';
 import 'package:remixicon/remixicon.dart';
 import 'mapa_aventura_screen.dart';
-import '../../../features/auth/providers/auth_provider.dart';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -42,7 +42,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       },
     );
   }
-  late String emailJogador;
   HistoriaJogador? historiaAtual;
 
   @override
@@ -50,18 +49,16 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     super.initState();
     // Move a verificação para depois que o widget foi construído
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Recupera o email do usuário autenticado
-      final user = ref.read(currentUserProvider);
-      emailJogador = user?.email ?? '';
       _verificarEstadoJogador();
     });
   }
 
   Future<void> _verificarEstadoJogador() async {
-    print('🎮 [AventuraScreen] Iniciando verificação do jogador: $emailJogador');
-    ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
-    
     try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      print('🎮 [AventuraScreen] Iniciando verificação do jogador: $emailJogador');
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
+    
       final repository = ref.read(aventuraRepositoryProvider);
       print('🎮 [AventuraScreen] Repository obtido, verificando histórico...');
       
@@ -94,6 +91,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Future<void> _sortearMonstros() async {
+    final emailJogador = ref.read(validUserEmailProvider);
     print('🎲 [AventuraScreen] Iniciando sorteio de monstros...');
     ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
     
@@ -128,6 +126,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Future<void> _iniciarAventura() async {
+    final emailJogador = ref.read(validUserEmailProvider);
     print('🚀 [AventuraScreen] Iniciando aventura...');
     ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
     

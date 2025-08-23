@@ -41,9 +41,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState(status: AuthStatus.initial)) {
     // Escuta mudanças no estado de autenticação
     _firebaseAuth.authStateChanges().listen((User? user) {
+      print('🔐 [AuthProvider] authStateChanges - User: $user');
+      print('🔐 [AuthProvider] authStateChanges - Email: ${user?.email}');
       if (user != null) {
+        print('✅ [AuthProvider] Usuário autenticado: ${user.email}');
         state = AuthState(status: AuthStatus.authenticated, user: user);
       } else {
+        print('❌ [AuthProvider] Usuário não autenticado');
         state = const AuthState(status: AuthStatus.unauthenticated);
       }
     });
@@ -154,5 +158,9 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
 
 final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authProvider);
-  return authState.user;
+  final user = authState.user;
+  print('🔐 [AuthProvider] currentUserProvider - AuthState: ${authState.status}');
+  print('🔐 [AuthProvider] currentUserProvider - User: $user');
+  print('🔐 [AuthProvider] currentUserProvider - Email: ${user?.email}');
+  return user;
 });

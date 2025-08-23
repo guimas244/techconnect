@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/drive/drive_service.dart';
 import '../google_drive_client.dart';
 
@@ -11,6 +12,12 @@ class GoogleDriveService {
 
   DriveService? _driveService;
   bool _isConnected = false;
+  static ProviderContainer? _container; // Container global para acessar providers
+  
+  /// Define o container global para acessar providers
+  static void setContainer(ProviderContainer container) {
+    _container = container;
+  }
 
   /// Inicializa conexão com Google Drive usando o padrão TECH CONNECT
   Future<bool> inicializarConexao() async {
@@ -18,7 +25,7 @@ class GoogleDriveService {
       print('🔐 [DEBUG] Iniciando conexão com Google Drive - TECH CONNECT...');
       print('🔐 [DEBUG] Chamando DriveClientFactory.create()...');
       
-      final api = await DriveClientFactory.create();
+      final api = await DriveClientFactory.create(container: _container);
       print('✅ [DEBUG] DriveClientFactory.create() bem-sucedido');
       
       _driveService = DriveService(api);

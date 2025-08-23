@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/google_drive_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -18,7 +19,16 @@ Future<void> main() async {
     // Inicializar Hive para armazenamento local
     await Hive.initFlutter();
     
-    runApp(const ProviderScope(child: TechConnectApp()));
+    // Criar container do Riverpod
+    final container = ProviderContainer();
+    
+    // Configurar container global para o GoogleDriveService
+    GoogleDriveService.setContainer(container);
+    
+    runApp(UncontrolledProviderScope(
+      container: container,
+      child: const TechConnectApp(),
+    ));
   } catch (e) {
     runApp(ErrorApp(error: e.toString()));
   }
