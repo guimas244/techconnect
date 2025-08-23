@@ -88,8 +88,15 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           setState(() {
             historiaAtual = historia;
           });
-          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
-          print('✅ [AventuraScreen] Estado: PODE INICIAR');
+          
+          // Verifica se a aventura já foi iniciada
+          if (historia.aventuraIniciada) {
+            ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+            print('✅ [AventuraScreen] Estado: AVENTURA INICIADA');
+          } else {
+            ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+            print('✅ [AventuraScreen] Estado: PODE INICIAR');
+          }
         } else {
           ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
           print('❌ [AventuraScreen] Estado: ERRO (história nula)');
@@ -118,15 +125,17 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       setState(() {
         historiaAtual = historia;
       });
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+      
+      // Como o sorteio já cria a aventura completa, definimos estado como aventura iniciada
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Monstros sorteados e salvos com sucesso!'),
+          content: Text('Aventura criada e salva com sucesso!'),
           backgroundColor: Colors.green,
         ),
       );
-      print('✅ [AventuraScreen] Sorteio concluído com sucesso');
+      print('✅ [AventuraScreen] Aventura completa criada com sucesso');
     } catch (e) {
       print('❌ [AventuraScreen] Erro no sorteio: $e');
       ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;

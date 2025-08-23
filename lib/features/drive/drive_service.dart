@@ -237,9 +237,10 @@ class DriveService {
     
     print('💾 [DEBUG] Criando novo arquivo JSON na pasta HISTORIAS: $name');
     final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
     final media = drive.Media(
-      http.ByteStream.fromBytes(utf8.encode(content)),
-      content.length,
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
     );
     final meta = drive.File()
       ..name = name

@@ -6,6 +6,7 @@ import '../../../core/models/atributo_jogo_enum.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
+import '../utils/gerador_habilidades.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
@@ -54,23 +55,53 @@ class AventuraRepository {
   Future<bool> salvarHistoricoJogador(HistoriaJogador historia) async {
     try {
       print('💾 [Repository] Salvando histórico para: ${historia.email}');
-      final nomeArquivo = 'historico_${historia.email}.json';
-      final json = jsonEncode(historia.toJson());
-      print('💾 [Repository] JSON gerado: ${json.length} caracteres');
+      print('💾 [Repository] Dados da história:');
+      print('   - Email: ${historia.email}');
+      print('   - Monstros: ${historia.monstros.length}');
+      print('   - Aventura iniciada: ${historia.aventuraIniciada}');
+      print('   - Mapa: ${historia.mapaAventura}');
+      print('   - Inimigos: ${historia.monstrosInimigos.length}');
       
+      final nomeArquivo = 'historico_${historia.email}.json';
+      print('💾 [Repository] Nome do arquivo: $nomeArquivo');
+      
+      // Tenta serializar JSON com try-catch específico
+      String json;
+      try {
+        final jsonData = historia.toJson();
+        print('💾 [Repository] Dados convertidos para Map com sucesso');
+        json = jsonEncode(jsonData);
+        print('💾 [Repository] JSON gerado: ${json.length} caracteres');
+      } catch (jsonError, jsonStackTrace) {
+        print('❌ [Repository] ERRO na serialização JSON: $jsonError');
+        print('❌ [Repository] Stack trace JSON: $jsonStackTrace');
+        return false;
+      }
+      
+      print('💾 [Repository] Primeiros 300 chars do JSON: ${json.substring(0, json.length > 300 ? 300 : json.length)}...');
+      
+      print('💾 [Repository] Chamando DriveService.salvarArquivoEmPasta...');
       final sucesso = await _driveService.salvarArquivoEmPasta(nomeArquivo, json, 'historias');
-      print('💾 [Repository] Salvamento ${sucesso ? "bem-sucedido" : "falhou"}');
+      print('💾 [Repository] Resultado do salvamento: $sucesso');
+      
+      if (sucesso) {
+        print('✅ [Repository] Histórico salvo com sucesso no Drive');
+      } else {
+        print('❌ [Repository] FALHA ao salvar no Drive');
+      }
+      
       return sucesso;
-    } catch (e) {
-      print('❌ [Repository] Erro ao salvar histórico: $e');
+    } catch (e, stackTrace) {
+      print('❌ [Repository] EXCEÇÃO ao salvar histórico: $e');
+      print('❌ [Repository] Stack trace: $stackTrace');
       return false;
     }
   }
 
-  /// Sorteia 3 monstros únicos para o jogador
+  /// Sorteia 3 monstros únicos para o jogador e já cria a aventura
   Future<HistoriaJogador> sortearMonstrosParaJogador(String email) async {
     final random = Random();
-    final tiposDisponiveis = List<Tipo>.from(Tipo.values);
+    final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
     tiposDisponiveis.shuffle(random);
 
     final monstrosSorteados = <MonstroAventura>[];
@@ -78,10 +109,13 @@ class AventuraRepository {
     // Sorteia 3 tipos únicos
     for (int i = 0; i < 3 && i < tiposDisponiveis.length; i++) {
       final tipo = tiposDisponiveis[i];
-      // Sorteia tipo extra diferente do principal
-      final outrosTipos = Tipo.values.where((t) => t != tipo).toList();
+      // Sorteia tipo extra diferente do principal (excluindo desconhecido)
+      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
+      
+      // Gera 4 habilidades para o monstro
+      final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
       
       // Sorteia atributos usando os ranges definidos
       final monstro = MonstroAventura(
@@ -93,19 +127,44 @@ class AventuraRepository {
         agilidade: AtributoJogo.agilidade.sortear(random),
         ataque: AtributoJogo.ataque.sortear(random),
         defesa: AtributoJogo.defesa.sortear(random),
-        habilidades: ['TODO', 'TODO', 'TODO', 'TODO'],
+        habilidades: habilidades,
         item: 'TODO',
       );
       monstrosSorteados.add(monstro);
     }
     
+    // Seleciona um mapa aleatório para a aventura
+    final mapas = [
+      'assets/mapas_aventura/cidade_abandonada.jpg',
+      'assets/mapas_aventura/deserto.jpg',
+      'assets/mapas_aventura/floresta_verde.jpg',
+      'assets/mapas_aventura/praia.jpg',
+      'assets/mapas_aventura/vulcao.jpg',
+    ];
+    final mapaEscolhido = mapas[random.nextInt(mapas.length)];
+    print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
+
+    // Sorteia 5 monstros inimigos para a aventura
+    final monstrosInimigos = await _sortearMonstrosInimigos();
+    print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
+    
     final historia = HistoriaJogador(
       email: email,
       monstros: monstrosSorteados,
+      aventuraIniciada: true,
+      mapaAventura: mapaEscolhido,
+      monstrosInimigos: monstrosInimigos,
     );
     
     // Salva automaticamente no Drive
-    await salvarHistoricoJogador(historia);
+    print('💾 [Repository] Tentando salvar aventura completa no Drive...');
+    final sucessoSalvamento = await salvarHistoricoJogador(historia);
+    if (sucessoSalvamento) {
+      print('✅ [Repository] Aventura completa criada e salva com ${monstrosSorteados.length} monstros do jogador e ${monstrosInimigos.length} inimigos');
+    } else {
+      print('❌ [Repository] ERRO: Falha ao salvar aventura no Drive!');
+      throw Exception('Falha ao salvar aventura no Drive');
+    }
     
     return historia;
   }
@@ -129,10 +188,14 @@ class AventuraRepository {
       print('🚀 [Repository] Iniciando aventura para: $email');
       
       // Carrega o histórico atual
-      final historiaAtual = await carregarHistoricoJogador(email);
+      HistoriaJogador? historiaAtual = await carregarHistoricoJogador(email);
+      
+      // Se não há histórico, cria um novo
       if (historiaAtual == null) {
-        print('❌ [Repository] Histórico não encontrado para iniciar aventura');
-        return null;
+        print('📝 [Repository] Histórico não encontrado, criando novo histórico...');
+        historiaAtual = await sortearMonstrosParaJogador(email);
+        print('✅ [Repository] Novo histórico criado com aventura já iniciada');
+        return historiaAtual;
       }
 
       // Verifica se já há uma aventura iniciada
@@ -143,7 +206,7 @@ class AventuraRepository {
         return historiaAtual; // Retorna a aventura existente
       }
 
-      print('🆕 [Repository] Criando nova aventura...');
+      print('🆕 [Repository] Atualizando histórico existente para iniciar aventura...');
       
       // Seleciona um mapa aleatório
       final mapas = [
@@ -183,26 +246,37 @@ class AventuraRepository {
     }
   }
 
-  /// Sorteia 5 monstros inimigos com apenas 1 tipo cada
+  /// Sorteia 5 monstros inimigos com tipos e habilidades
   Future<List<MonstroInimigo>> _sortearMonstrosInimigos() async {
     final random = Random();
     final monstrosInimigos = <MonstroInimigo>[];
     
     for (int i = 0; i < 5; i++) {
-      // Escolhe um tipo aleatório
+      // Escolhe um tipo principal aleatório
       final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
       final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
+      
+      // 50% de chance de ter tipo extra
+      Tipo? tipoExtra;
+      if (random.nextBool()) {
+        final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+        tipoExtra = outrosTipos[random.nextInt(outrosTipos.length)];
+      }
+      
+      // Gera 4 habilidades para o monstro
+      final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
       
       // Cria monstro inimigo com atributos sorteados
       final monstro = MonstroInimigo(
         tipo: tipo,
+        tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
         vida: AtributoJogo.vida.sortear(random),
         energia: AtributoJogo.energia.sortear(random),
         agilidade: AtributoJogo.agilidade.sortear(random),
         ataque: AtributoJogo.ataque.sortear(random),
         defesa: AtributoJogo.defesa.sortear(random),
-        habilidades: [],
+        habilidades: habilidades,
         item: '',
       );
       

@@ -1,5 +1,5 @@
 import '../../../shared/models/tipo_enum.dart';
-
+import 'habilidade.dart';
 
 class MonstroAventura {
   final Tipo tipo;
@@ -10,7 +10,7 @@ class MonstroAventura {
   final int agilidade;
   final int ataque;
   final int defesa;
-  final List<String> habilidades;
+  final List<Habilidade> habilidades;
   final String item;
 
   const MonstroAventura({
@@ -42,7 +42,9 @@ class MonstroAventura {
       agilidade: json['agilidade'] ?? 10,
       ataque: json['ataque'] ?? 10,
       defesa: json['defesa'] ?? 40,
-      habilidades: List<String>.from(json['habilidades'] ?? ['TODO', 'TODO', 'TODO', 'TODO']),
+      habilidades: (json['habilidades'] as List<dynamic>?)
+          ?.map((h) => Habilidade.fromJson(h))
+          .toList() ?? [],
       item: json['item'] ?? 'TODO',
     );
   }
@@ -57,7 +59,7 @@ class MonstroAventura {
       'agilidade': agilidade,
       'ataque': ataque,
       'defesa': defesa,
-      'habilidades': habilidades,
+      'habilidades': habilidades.map((h) => h.toJson()).toList(),
       'item': item,
     };
   }
@@ -71,7 +73,7 @@ class MonstroAventura {
     int? agilidade,
     int? ataque,
     int? defesa,
-    List<String>? habilidades,
+    List<Habilidade>? habilidades,
     String? item,
   }) {
     return MonstroAventura(
