@@ -6,7 +6,8 @@ import 'package:remixicon/remixicon.dart';
 class ModalMonstroAventura extends StatelessWidget {
   final MonstroAventura monstro;
   final VoidCallback? onClose;
-  const ModalMonstroAventura({super.key, required this.monstro, this.onClose});
+  final bool showCloseButton;
+  const ModalMonstroAventura({super.key, required this.monstro, this.onClose, this.showCloseButton = true});
 
   @override
   Widget build(BuildContext context) {
@@ -138,19 +139,21 @@ class ModalMonstroAventura extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: onClose ?? () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: monstro.tipo.cor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            if (showCloseButton) ...[
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: onClose ?? () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: monstro.tipo.cor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
+                child: const Text('Fechar'),
               ),
-              child: const Text('Fechar'),
-            ),
+            ],
           ],
         ),
       ),

@@ -26,7 +26,7 @@ class RegrasScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -65,6 +65,7 @@ class RegrasScreen extends StatelessWidget {
                 item: '',
               ),
               onClose: null,
+              showCloseButton: false,
             ),
             const SizedBox(height: 24),
             Text(
