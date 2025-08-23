@@ -17,6 +17,20 @@ class AventuraScreen extends ConsumerStatefulWidget {
 }
 
 class _AventuraScreenState extends ConsumerState<AventuraScreen> {
+  String _getTextoBotaoAventura() {
+    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      return 'CONTINUAR AVENTURA';
+    }
+    return 'INICIAR AVENTURA';
+  }
+
+  IconData _getIconeBotaoAventura() {
+    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      return Icons.play_circle_filled;
+    }
+    return Icons.play_arrow;
+  }
+
   // Mantém apenas uma definição do método _buildTipoIcon
   Widget _buildTipoIcon(Tipo tipo) {
     return Image.asset(
@@ -137,10 +151,15 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final historiaAtualizada = await repository.iniciarAventura(emailJogador);
       
       if (historiaAtualizada != null) {
-        print('🚀 [AventuraScreen] Aventura iniciada com sucesso!');
+        print('🚀 [AventuraScreen] Aventura processada com sucesso!');
         setState(() {
           historiaAtual = historiaAtualizada;
         });
+        
+        // Determina se é aventura nova ou continuada
+        final isAventuraNova = historiaAtualizada.aventuraIniciada && 
+                               historiaAtualizada.monstrosInimigos.isNotEmpty &&
+                               historiaAtualizada.mapaAventura != null;
         
         // Navegar para o mapa de aventura
         Navigator.push(
@@ -153,11 +172,16 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           ),
         );
         
-        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
         
+        // Mensagem diferente baseada no tipo de aventura
+        final mensagem = isAventuraNova 
+            ? 'Aventura iniciada! Boa sorte na jornada!'
+            : 'Aventura continuada! Bem-vindo de volta!';
+            
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Aventura iniciada! Boa sorte na jornada!'),
+          SnackBar(
+            content: Text(mensagem),
             backgroundColor: Colors.green,
           ),
         );
@@ -419,8 +443,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             onPressed: () {
               _iniciarAventura();
             },
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('INICIAR AVENTURA'),
+            icon: Icon(_getIconeBotaoAventura()),
+            label: Text(_getTextoBotaoAventura()),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,

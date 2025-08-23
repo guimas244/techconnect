@@ -135,6 +135,16 @@ class AventuraRepository {
         return null;
       }
 
+      // Verifica se já há uma aventura iniciada
+      if (historiaAtual.aventuraIniciada) {
+        print('🔄 [Repository] Aventura já iniciada! Carregando dados existentes...');
+        print('🗺️ [Repository] Mapa existente: ${historiaAtual.mapaAventura}');
+        print('👾 [Repository] Monstros existentes: ${historiaAtual.monstrosInimigos.length}');
+        return historiaAtual; // Retorna a aventura existente
+      }
+
+      print('🆕 [Repository] Criando nova aventura...');
+      
       // Seleciona um mapa aleatório
       final mapas = [
         'assets/mapas_aventura/cidade_abandonada.jpg',
@@ -145,10 +155,11 @@ class AventuraRepository {
       ];
       final random = Random();
       final mapaEscolhido = mapas[random.nextInt(mapas.length)];
-      print('🗺️ [Repository] Mapa escolhido para aventura: $mapaEscolhido');
+      print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
 
       // Sorteia 5 monstros inimigos (apenas 1 tipo cada)
       final monstrosInimigos = await _sortearMonstrosInimigos();
+      print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
 
       // Atualiza o histórico com a aventura iniciada
       final historiaAtualizada = historiaAtual.copyWith(
@@ -160,10 +171,10 @@ class AventuraRepository {
       // Salva no Drive
       final sucesso = await salvarHistoricoJogador(historiaAtualizada);
       if (sucesso) {
-        print('✅ [Repository] Aventura iniciada com sucesso');
+        print('✅ [Repository] Nova aventura criada e salva com sucesso');
         return historiaAtualizada;
       } else {
-        print('❌ [Repository] Erro ao salvar aventura');
+        print('❌ [Repository] Erro ao salvar nova aventura');
         return null;
       }
     } catch (e) {
