@@ -224,10 +224,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
             ],
           ),
-          child: Icon(
-            Icons.pets,
-            color: Colors.white,
-            size: 25,
+          child: Image.asset(
+            'assets/icons_gerais/evil_monster_viral_icon.png',
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
           ),
         ),
       ),
