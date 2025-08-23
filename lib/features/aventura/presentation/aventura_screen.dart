@@ -314,50 +314,19 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
     return Column(
       children: [
-        // Informações do jogador
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Jogador: ${historiaAtual!.email}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+        const SizedBox(height: 10),
+        // Cards dos monstros em linha, responsivo
+        Row(
+          children: historiaAtual!.monstros.map<Widget>((monstro) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                child: _buildCardMonstroBonito(monstro),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Seus ${historiaAtual!.monstros.length} Monstros:',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
-        
-        const SizedBox(height: 20),
-        
-        // Lista de monstros
-        Expanded(
-          child: ListView.builder(
-            itemCount: historiaAtual!.monstros.length,
-            itemBuilder: (context, index) {
-              final monstro = historiaAtual!.monstros[index];
-              return _buildCardMonstro(monstro, index + 1);
-            },
-          ),
-        ),
-        
-        const SizedBox(height: 20),
-        
+        const SizedBox(height: 30),
         // Botão Iniciar
         SizedBox(
           width: double.infinity,
@@ -388,49 +357,46 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     );
   }
 
-  Widget _buildCardMonstro(dynamic monstro, int numero) {
+  Widget _buildCardMonstroBonito(dynamic monstro) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(10),
+      height: 210, // altura fixa maior para todos os cards
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [monstro.tipo.cor.withOpacity(0.7), Colors.white.withOpacity(0.7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: monstro.tipo.cor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
         border: Border.all(color: monstro.tipo.cor, width: 2),
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Número do monstro
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: monstro.tipo.cor,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$numero',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // Imagem do monstro
           Container(
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: monstro.tipo.cor, width: 1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: monstro.tipo.cor, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: monstro.tipo.cor.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Image.asset(
                 monstro.imagem,
                 fit: BoxFit.cover,
@@ -447,46 +413,52 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               ),
             ),
           ),
-          
-          const SizedBox(width: 16),
-          
-          // Informações do monstro
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  monstro.tipo.displayName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: monstro.tipo.cor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.favorite, color: Colors.red, size: 16),
-                    const SizedBox(width: 4),
-                    Text('${monstro.vida}'),
-                    const SizedBox(width: 16),
-                    Icon(Icons.flash_on, color: Colors.blue, size: 16),
-                    const SizedBox(width: 4),
-                    Text('${monstro.energia}'),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 28,
+            child: Center(
+              child: Text(
+                monstro.tipo.displayName,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: monstro.tipo.cor,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(1, 1),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Habilidades: ${monstro.habilidades.join(", ")}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Vida
+              Column(
+                children: [
+                  Icon(Icons.favorite, color: Colors.red, size: 18),
+                  const SizedBox(height: 2),
+                  Text('${monstro.vida}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(width: 18),
+              // Energia
+              Column(
+                children: [
+                  Icon(Icons.flash_on, color: Colors.blue, size: 18),
+                  const SizedBox(height: 2),
+                  Text('${monstro.energia}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ],
           ),
         ],
       ),
