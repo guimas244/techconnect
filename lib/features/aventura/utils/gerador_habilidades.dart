@@ -56,11 +56,11 @@ class GeradorHabilidades {
       if (isCura) {
         return EfeitoHabilidade.curarVida;
       } else {
-        // Escolhe aleatoriamente entre os efeitos de aumento
+        // Escolhe aleatoriamente entre os efeitos de aumento (REMOVIDO aumentarAgilidade)
         final efeitosAumento = [
           EfeitoHabilidade.aumentarVida,
           EfeitoHabilidade.aumentarEnergia,
-          EfeitoHabilidade.aumentarAgilidade,
+          // EfeitoHabilidade.aumentarAgilidade, // REMOVIDO - não faz sentido
           EfeitoHabilidade.aumentarAtaque,
           EfeitoHabilidade.aumentarDefesa,
         ];
@@ -77,8 +77,6 @@ class GeradorHabilidades {
         return 10 + _random.nextInt(21); // 10-30
       case EfeitoHabilidade.aumentarEnergia:
         return 5 + _random.nextInt(11); // 5-15
-      case EfeitoHabilidade.aumentarAgilidade:
-        return 3 + _random.nextInt(8); // 3-10
       case EfeitoHabilidade.aumentarAtaque:
         return 5 + _random.nextInt(11); // 5-15
       case EfeitoHabilidade.aumentarDefesa:
@@ -87,6 +85,9 @@ class GeradorHabilidades {
         return 15 + _random.nextInt(26); // 15-40
       case EfeitoHabilidade.danoDirecto:
         return 20 + _random.nextInt(31); // 20-50
+      case EfeitoHabilidade.aumentarAgilidade:
+        // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
+        return 5; // Valor mínimo para não quebrar
     }
   }
 
@@ -98,8 +99,6 @@ class GeradorHabilidades {
         return 'Aumenta a vida máxima em $valor pontos durante toda a luta$sufixoTipo.';
       case EfeitoHabilidade.aumentarEnergia:
         return 'Aumenta a energia máxima em $valor pontos durante toda a luta$sufixoTipo.';
-      case EfeitoHabilidade.aumentarAgilidade:
-        return 'Aumenta a agilidade em $valor pontos durante toda a luta$sufixoTipo.';
       case EfeitoHabilidade.aumentarAtaque:
         return 'Aumenta o ataque em $valor pontos durante toda a luta$sufixoTipo.';
       case EfeitoHabilidade.aumentarDefesa:
@@ -108,6 +107,9 @@ class GeradorHabilidades {
         return 'Recupera $valor pontos de vida instantaneamente$sufixoTipo.';
       case EfeitoHabilidade.danoDirecto:
         return 'Causa $valor pontos de dano direto ao oponente$sufixoTipo.';
+      case EfeitoHabilidade.aumentarAgilidade:
+        // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
+        return 'Habilidade descontinuada$sufixoTipo.';
     }
   }
 

@@ -10,6 +10,7 @@ import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
+import 'modal_monstro_aventura.dart';
 
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
@@ -65,7 +66,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Determina quem começa baseado na agilidade
     jogadorComeca = widget.jogador.agilidade >= widget.inimigo.agilidade;
-    vezDoJogador = jogadorComeca;
+    vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
     
     // Estado inicial da batalha
     estadoAtual = EstadoBatalha(
@@ -82,17 +83,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       historicoAcoes: [],
     );
     
-    print('🏃 [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa');
-    
-    // Se for vez do inimigo, executa automaticamente
-    if (!vezDoJogador) {
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        _executarTurnoInimigo();
-      });
-    }
+    print('🏃 [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa a rodada');
   }
 
-  void _executarTurnoJogador() {
+  void _executarRodadaCompleta() {
     if (estadoAtual == null || batalhaConcluida) return;
     
     setState(() {
@@ -100,101 +94,154 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       aguardandoContinuar = false;
     });
     
+    // Executa rodada completa (ambos ataques) seguindo ordem de agilidade
+    _executarRodadaCompletatAsync();
+  }
+  
+  Future<void> _executarRodadaCompletatAsync() async {
+    if (estadoAtual == null || batalhaConcluida) return;
+    
+    // Determina ordem dos ataques baseada na agilidade
+    bool jogadorPrimeiro = widget.jogador.agilidade >= widget.inimigo.agilidade;
+    
+    print('🎯 [Rodada] Iniciando rodada completa - ${jogadorPrimeiro ? "Jogador" : "Inimigo"} ataca primeiro');
+    
+    EstadoBatalha estadoAtualizado = estadoAtual!;
+    
+    // Primeiro ataque
+    if (jogadorPrimeiro) {
+      estadoAtualizado = await _executarAtaqueJogador(estadoAtualizado);
+      if (estadoAtualizado.vidaAtualInimigo <= 0) {
+        _finalizarRodada(estadoAtualizado, 'jogador');
+        return;
+      }
+      
+      // Segundo ataque (inimigo)
+      await Future.delayed(const Duration(milliseconds: 1000));
+      estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
+      if (estadoAtualizado.vidaAtualJogador <= 0) {
+        _finalizarRodada(estadoAtualizado, 'inimigo');
+        return;
+      }
+    } else {
+      estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
+      if (estadoAtualizado.vidaAtualJogador <= 0) {
+        _finalizarRodada(estadoAtualizado, 'inimigo');
+        return;
+      }
+      
+      // Segundo ataque (jogador)
+      await Future.delayed(const Duration(milliseconds: 1000));
+      estadoAtualizado = await _executarAtaqueJogador(estadoAtualizado);
+      if (estadoAtualizado.vidaAtualInimigo <= 0) {
+        _finalizarRodada(estadoAtualizado, 'jogador');
+        return;
+      }
+    }
+    
+    // Se chegou aqui, ambos ainda estão vivos - continua para próxima rodada
+    _finalizarRodada(estadoAtualizado, null);
+  }
+  
+  Future<EstadoBatalha> _executarAtaqueJogador(EstadoBatalha estado) async {
     // Seleciona habilidade aleatória do jogador
     final habilidadesDisponiveis = widget.jogador.habilidades
         .where((h) => h.tipo == TipoHabilidade.ofensiva || 
-                     !estadoAtual!.habilidadesUsadasJogador.contains(h.nome))
+                     !estado.habilidadesUsadasJogador.contains(h.nome))
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      _finalizarBatalha('inimigo');
-      return;
+      print('⚠️ [Jogador] Sem habilidades disponíveis');
+      return estado;
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
+    print('⚔️ [Jogador] Usando ${habilidade.nome}');
     
-    Future.delayed(const Duration(milliseconds: 1500), () async {
-      final novoEstado = await _aplicarHabilidade(estadoAtual!, habilidade, true);
-      
-      setState(() {
-        estadoAtual = novoEstado;
-        ultimaAcao = novoEstado.historicoAcoes.last.descricao;
-        mostrandoAcao = false;
-        aguardandoContinuar = true;
-      });
-      
-      // Salva o estado após cada ação
-      _salvarEstadoBatalha();
-      
-      // Verifica se o inimigo morreu
-      if (novoEstado.vidaAtualInimigo <= 0) {
-        _finalizarBatalha('jogador');
-      }
-    });
+    return await _aplicarHabilidade(estado, habilidade, true);
   }
   
-  void _executarTurnoInimigo() {
-    if (estadoAtual == null || batalhaConcluida) return;
-    
-    setState(() {
-      mostrandoAcao = true;
-      aguardandoContinuar = false;
-    });
-    
+  Future<EstadoBatalha> _executarAtaqueInimigo(EstadoBatalha estado) async {
     // Seleciona habilidade aleatória do inimigo
     final habilidadesDisponiveis = widget.inimigo.habilidades
         .where((h) => h.tipo == TipoHabilidade.ofensiva || 
-                     !estadoAtual!.habilidadesUsadasInimigo.contains(h.nome))
+                     !estado.habilidadesUsadasInimigo.contains(h.nome))
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      _finalizarBatalha('jogador');
-      return;
+      print('⚠️ [Inimigo] Sem habilidades disponíveis');
+      return estado;
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
+    print('⚔️ [Inimigo] Usando ${habilidade.nome}');
     
-    Future.delayed(const Duration(milliseconds: 1500), () async {
-      final novoEstado = await _aplicarHabilidade(estadoAtual!, habilidade, false);
+    return await _aplicarHabilidade(estado, habilidade, false);
+  }
+  
+  void _finalizarRodada(EstadoBatalha estadoFinal, String? vencedorRodada) {
+    // Prepara um resumo mais claro da rodada
+    String resumoRodada = '';
+    if (estadoFinal.historicoAcoes.length >= 2) {
+      final ultimasAcoes = estadoFinal.historicoAcoes.sublist(estadoFinal.historicoAcoes.length - 2);
+      final primeiroAtaque = ultimasAcoes[0];
+      final segundoAtaque = ultimasAcoes[1];
       
-      setState(() {
-        estadoAtual = novoEstado;
-        ultimaAcao = novoEstado.historicoAcoes.last.descricao;
-        mostrandoAcao = false;
-        aguardandoContinuar = true;
-      });
-      
-      // Salva o estado após cada ação
-      _salvarEstadoBatalha();
-      
-      // Verifica se o jogador morreu
-      if (novoEstado.vidaAtualJogador <= 0) {
-        _finalizarBatalha('inimigo');
-      }
-      if (novoEstado.vidaAtualJogador <= 0) {
-        _finalizarBatalha('inimigo');
-      }
+      resumoRodada = 'Rodada $turnoAtual concluída!\n\n';
+      resumoRodada += '1º: ${_resumirAcao(primeiroAtaque)}\n';
+      resumoRodada += '2º: ${_resumirAcao(segundoAtaque)}\n\n';
+      resumoRodada += 'Vida atual: Jogador ${estadoFinal.vidaAtualJogador}/${widget.jogador.vida} | Inimigo ${estadoFinal.vidaAtualInimigo}/${widget.inimigo.vida}';
+    } else if (estadoFinal.historicoAcoes.isNotEmpty) {
+      final ultimaAcao = estadoFinal.historicoAcoes.last;
+      resumoRodada = 'Ação executada!\n${_resumirAcao(ultimaAcao)}';
+    } else {
+      resumoRodada = 'Rodada executada!';
+    }
+    
+    setState(() {
+      estadoAtual = estadoFinal;
+      turnoAtual++;
+      mostrandoAcao = false;
+      aguardandoContinuar = true;
+      ultimaAcao = resumoRodada;
     });
+    
+    // Salva o estado após a rodada completa
+    _salvarEstadoBatalha();
+    
+    // Se alguém morreu, finaliza batalha
+    if (vencedorRodada != null) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        _finalizarBatalha(vencedorRodada);
+      });
+    }
+  }
+  
+  String _resumirAcao(AcaoBatalha acao) {
+    // Verifica se foi dano ou cura/buff baseado na diferença de vida
+    bool foiDano = acao.vidaDepois < acao.vidaAntes;
+    bool foiCura = acao.vidaDepois > acao.vidaAntes;
+    
+    if (foiDano) {
+      return '${acao.atacante} causou ${acao.danoTotal} de dano';
+    } else if (foiCura) {
+      int cura = acao.vidaDepois - acao.vidaAntes;
+      return '${acao.atacante} curou $cura de vida';
+    } else {
+      // Buff/suporte sem alteração de vida
+      return '${acao.atacante} usou habilidade de suporte';
+    }
   }
   
   void _continuarBatalha() {
     setState(() {
-      turnoAtual++;
-      vezDoJogador = !vezDoJogador;
       aguardandoContinuar = false;
     });
     
-    // Executa próximo turno
-    if (vezDoJogador) {
-      // Aguarda um pouco para o jogador processar a ação anterior
-      Future.delayed(const Duration(milliseconds: 500), () {
-        // Jogador deve clicar em continuar para executar seu turno
-      });
-    } else {
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        _executarTurnoInimigo();
-      });
-    }
+    // Próxima rodada começa automaticamente
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _executarRodadaCompleta();
+    });
   }
 
   Future<EstadoBatalha> _aplicarHabilidade(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
@@ -218,37 +265,80 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int vidaAntes = estado.vidaAtualJogador;
           int novaVida = (estado.vidaAtualJogador + habilidade.valor).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
-          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
+          int curaReal = novaVida - vidaAntes;
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
           int novaVida = (estado.vidaAtualInimigo + habilidade.valor).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
-          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
+          int curaReal = novaVida - vidaAntes;
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
         }
         break;
         
       case EfeitoHabilidade.aumentarAtaque:
         if (isJogador) {
+          int ataqueAntes = estado.ataqueAtualJogador;
           int novoAtaque = estado.ataqueAtualJogador + habilidade.valor;
           novoEstado = estado.copyWith(ataqueAtualJogador: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valor}) usando ${habilidade.nome}';
         } else {
+          int ataqueAntes = estado.ataqueAtualInimigo;
           int novoAtaque = estado.ataqueAtualInimigo + habilidade.valor;
           novoEstado = estado.copyWith(ataqueAtualInimigo: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valor}) usando ${habilidade.nome}';
         }
         break;
         
       case EfeitoHabilidade.aumentarDefesa:
         if (isJogador) {
+          int defesaAntes = estado.defesaAtualJogador;
           int novaDefesa = estado.defesaAtualJogador + habilidade.valor;
           novoEstado = estado.copyWith(defesaAtualJogador: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valor}) usando ${habilidade.nome}';
         } else {
+          int defesaAntes = estado.defesaAtualInimigo;
           int novaDefesa = estado.defesaAtualInimigo + habilidade.valor;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valor}) usando ${habilidade.nome}';
         }
+        break;
+        
+      case EfeitoHabilidade.aumentarVida:
+        if (isJogador) {
+          // Aumenta vida máxima e vida atual proporcionalmente
+          int vidaMaximaAntes = estado.jogador.vida;
+          int vidaAtualAntes = estado.vidaAtualJogador;
+          int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
+          int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
+          
+          // Atualiza o monstro do jogador com nova vida máxima
+          final jogadorAtualizado = estado.jogador.copyWith(vida: novaVidaMaxima);
+          novoEstado = estado.copyWith(
+            jogador: jogadorAtualizado,
+            vidaAtualJogador: novaVidaAtual,
+          );
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+        } else {
+          // Aumenta vida máxima e vida atual proporcionalmente
+          int vidaMaximaAntes = estado.inimigo.vida;
+          int vidaAtualAntes = estado.vidaAtualInimigo;
+          int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
+          int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
+          
+          // Atualiza o monstro inimigo com nova vida máxima
+          final inimigoAtualizado = estado.inimigo.copyWith(vida: novaVidaMaxima);
+          novoEstado = estado.copyWith(
+            inimigo: inimigoAtualizado,
+            vidaAtualInimigo: novaVidaAtual,
+          );
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+        }
+        break;
+        
+      case EfeitoHabilidade.aumentarEnergia:
+        // Por enquanto só mostra o uso, energia não é usada em batalha
+        descricao = '$atacante aumentou a energia em ${habilidade.valor} pontos usando ${habilidade.nome}';
         break;
         
       default:
@@ -492,6 +582,39 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   // ========================================
+  // 🔍 MODAL DE DETALHAMENTO DE MONSTRO
+  // ========================================
+  
+  void _mostrarDetalheMonstro(dynamic monstro, bool isJogador) {
+    // Converte MonstroInimigo para MonstroAventura se necessário
+    MonstroAventura monstroAventura;
+    
+    if (monstro is MonstroAventura) {
+      monstroAventura = monstro;
+    } else {
+      // Converte MonstroInimigo para MonstroAventura
+      monstroAventura = MonstroAventura(
+        tipo: monstro.tipo,
+        tipoExtra: monstro.tipoExtra,
+        vida: monstro.vida,
+        vidaAtual: isJogador ? estadoAtual?.vidaAtualJogador ?? monstro.vida : estadoAtual?.vidaAtualInimigo ?? monstro.vida,
+        energia: 100, // Valor padrão para visualização
+        ataque: monstro.ataque,
+        defesa: monstro.defesa,
+        agilidade: monstro.agilidade,
+        habilidades: monstro.habilidades,
+        imagem: monstro.imagem,
+        item: '', // Sem item para inimigos
+      );
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => ModalMonstroAventura(monstro: monstroAventura),
+    );
+  }
+
+  // ========================================
   // 🎯 SISTEMA DE EFETIVIDADE DE TIPOS
   // ========================================
   
@@ -606,26 +729,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: vezDoJogador ? Colors.blue.shade100 : Colors.red.shade100,
+                color: Colors.purple.shade100,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: vezDoJogador ? Colors.blue : Colors.red,
+                  color: Colors.purple,
                   width: 2,
                 ),
               ),
               child: Icon(
                 Icons.flash_on,
-                color: vezDoJogador ? Colors.blue : Colors.red,
+                color: Colors.purple,
                 size: 24,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              vezDoJogador ? 'Sua vez' : 'Vez dele',
+              'VS',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: vezDoJogador ? Colors.blue : Colors.red,
+                color: Colors.purple,
               ),
             ),
           ],
@@ -658,21 +781,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }) {
     double percentualVida = vidaAtual / vidaMaxima;
     
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => _mostrarDetalheMonstro(
+        isJogador ? widget.jogador : widget.inimigo,
+        isJogador,
       ),
-      child: Column(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cor.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
         children: [
           // Imagem
           Container(
@@ -739,6 +867,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -798,7 +927,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            vezDoJogador ? 'Executando sua ação...' : 'Inimigo está atacando...',
+            'Executando rodada completa...',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -837,16 +966,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: vezDoJogador ? Colors.green.shade50 : Colors.orange.shade50,
+        color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: vezDoJogador ? Colors.green.shade200 : Colors.orange.shade200,
-        ),
+        border: Border.all(color: Colors.green.shade200),
       ),
       child: Text(
-        vezDoJogador 
-            ? 'É sua vez! Clique em "Atacar" para executar uma habilidade aleatória.'
-            : 'Vez do inimigo. Ele atacará automaticamente em breve.',
+        'Clique em "Atacar" para executar uma rodada completa!\n(Ambos atacarão seguindo a ordem da agilidade)',
         style: const TextStyle(fontSize: 14),
         textAlign: TextAlign.center,
       ),
@@ -955,14 +1080,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Widget _buildBotoesAcao() {
     return Column(
       children: [
-        if (vezDoJogador && aguardandoContinuar) ...[
-          // Botão de continuar após ação do jogador
+        if (aguardandoContinuar) ...[
+          // Botão de continuar após rodada completa
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _continuarBatalha,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -970,7 +1095,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 ),
               ),
               child: const Text(
-                'Continuar',
+                'Continuar para Próxima Rodada',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -978,12 +1103,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               ),
             ),
           ),
-        ] else if (vezDoJogador && !mostrandoAcao && !aguardandoContinuar) ...[
-          // Botão de atacar para o jogador
+        ] else if (!mostrandoAcao) ...[
+          // Botão de executar rodada completa
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _executarTurnoJogador,
+              onPressed: _executarRodadaCompleta,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
@@ -993,30 +1118,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 ),
               ),
               child: const Text(
-                'Atacar!',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ] else if (!vezDoJogador && aguardandoContinuar) ...[
-          // Botão de continuar após ação do inimigo
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _continuarBatalha,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Continuar',
+                'Atacar! (Rodada Completa)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
