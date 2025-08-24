@@ -6,6 +6,8 @@ import '../../../core/services/google_drive_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../aventura/providers/aventura_provider.dart';
+import '../../tipagem/data/tipagem_repository.dart';
+import '../../../shared/models/tipo_enum.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -35,11 +37,93 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       // Tenta verificar se já está conectado usando inicializarConexao
       final isConnected = await _driveService.inicializarConexao();
+      
+      if (isConnected) {
+        setState(() {
+          _connectionStatus = 'Conectado ao Google Drive - Inicializando tipos...';
+        });
+        
+        // 🔥 INICIALIZAÇÃO AUTOMÁTICA DO SISTEMA DE TIPAGEM
+        try {
+          print('🚀 [HomeScreen] Inicializando sistema de tipagem automaticamente...');
+          final tipagemRepository = TipagemRepository();
+          
+          // Diagnóstico detalhado
+          print('📊 [HomeScreen] === DIAGNÓSTICO DETALHADO DE TIPAGEM ===');
+          print('📊 [HomeScreen] Drive Conectado: ${tipagemRepository.isDriveConectado}');
+          print('📊 [HomeScreen] Foi Baixado do Drive: ${tipagemRepository.foiBaixadoDoDrive}');
+          print('📊 [HomeScreen] Is Inicializado: ${tipagemRepository.isInicializado}');
+          print('📊 [HomeScreen] Is Bloqueado: ${tipagemRepository.isBloqueado}');
+          
+          final isInicializadoAsync = await tipagemRepository.isInicializadoAsync;
+          print('📊 [HomeScreen] Is Inicializado Async: $isInicializadoAsync');
+          
+          // Verifica cache/dados locais salvos
+          setState(() {
+            _connectionStatus = 'Verificando dados locais salvos (Hive)...';
+          });
+          
+          print('🗃️ [HomeScreen] Verificando dados salvos no Hive para cada tipo...');
+          int tiposEncontrados = 0;
+          for (final tipo in Tipo.values) {
+            try {
+              final dados = await tipagemRepository.carregarDadosTipo(tipo);
+              if (dados != null && dados.isNotEmpty) {
+                tiposEncontrados++;
+                print('✅ [HomeScreen] Tipo ${tipo.name}: ${dados.length} dados encontrados');
+              } else {
+                print('❌ [HomeScreen] Tipo ${tipo.name}: NENHUM DADO ENCONTRADO');
+              }
+            } catch (e) {
+              print('❌ [HomeScreen] Tipo ${tipo.name}: ERRO - $e');
+            }
+          }
+          
+          print('📊 [HomeScreen] RESUMO: $tiposEncontrados/${Tipo.values.length} tipos encontrados no Hive');
+          
+          if (tiposEncontrados >= Tipo.values.length) {
+            print('✅ [HomeScreen] Todos os tipos estão salvos no Hive - Sistema pronto!');
+            setState(() {
+              _connectionStatus = 'Conectado ao Google Drive - Todos os tipos disponíveis!';
+            });
+          } else if (!isInicializadoAsync) {
+            print('⚠️ [HomeScreen] Tipos incompletos, iniciando download e salvamento...');
+            setState(() {
+              _connectionStatus = 'Baixando e salvando tipos no dispositivo...';
+            });
+            
+            final inicializacaoSucesso = await tipagemRepository.inicializarComDrive();
+            
+            if (inicializacaoSucesso) {
+              print('✅ [HomeScreen] Sistema de tipagem inicializado e salvo com sucesso!');
+              setState(() {
+                _connectionStatus = 'Conectado ao Google Drive - Tipos baixados e salvos!';
+              });
+            } else {
+              print('❌ [HomeScreen] Falha na inicialização do sistema de tipagem');
+              setState(() {
+                _connectionStatus = 'Conectado ao Google Drive - Erro no download dos tipos';
+              });
+            }
+          } else {
+            print('✅ [HomeScreen] Sistema já inicializado mas alguns tipos podem estar faltando');
+            setState(() {
+              _connectionStatus = 'Conectado ao Google Drive - Sistema parcialmente pronto';
+            });
+          }
+        } catch (e) {
+          print('❌ [HomeScreen] Erro na inicialização automática: $e');
+          setState(() {
+            _connectionStatus = 'Conectado ao Google Drive - Erro no diagnóstico: $e';
+          });
+        }
+      }
+      
       setState(() {
         _isDriveConnected = isConnected;
-        _connectionStatus = isConnected 
-            ? 'Conectado ao Google Drive' 
-            : 'É necessário conectar ao Google Drive para continuar';
+        if (!isConnected) {
+          _connectionStatus = 'É necessário conectar ao Google Drive para continuar';
+        }
         _isConnecting = false;
       });
     } catch (e) {
@@ -59,11 +143,87 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     try {
       final success = await _driveService.inicializarConexao();
+      
+      if (success) {
+        setState(() {
+          _connectionStatus = 'Conectado ao Google Drive - Inicializando tipos...';
+        });
+        
+        // 🔥 INICIALIZAÇÃO AUTOMÁTICA DO SISTEMA DE TIPAGEM
+        try {
+          print('🚀 [HomeScreen] Conectado! Inicializando sistema de tipagem...');
+          final tipagemRepository = TipagemRepository();
+          
+          // Diagnóstico detalhado
+          print('📊 [HomeScreen] === DIAGNÓSTICO DETALHADO DE TIPAGEM (CONNECT) ===');
+          print('📊 [HomeScreen] Drive Conectado: ${tipagemRepository.isDriveConectado}');
+          print('📊 [HomeScreen] Foi Baixado do Drive: ${tipagemRepository.foiBaixadoDoDrive}');
+          print('📊 [HomeScreen] Is Inicializado: ${tipagemRepository.isInicializado}');
+          print('📊 [HomeScreen] Is Bloqueado: ${tipagemRepository.isBloqueado}');
+          
+          final isInicializadoAsync = await tipagemRepository.isInicializadoAsync;
+          print('📊 [HomeScreen] Is Inicializado Async: $isInicializadoAsync');
+          
+          setState(() {
+            _connectionStatus = 'Verificando dados locais salvos (Hive)...';
+          });
+          
+          print('🗃️ [HomeScreen] Verificando dados salvos no Hive para cada tipo...');
+          int tiposEncontrados = 0;
+          for (final tipo in Tipo.values) {
+            try {
+              final dados = await tipagemRepository.carregarDadosTipo(tipo);
+              if (dados != null && dados.isNotEmpty) {
+                tiposEncontrados++;
+                print('✅ [HomeScreen] Tipo ${tipo.name}: ${dados.length} dados encontrados');
+              } else {
+                print('❌ [HomeScreen] Tipo ${tipo.name}: NENHUM DADO ENCONTRADO');
+              }
+            } catch (e) {
+              print('❌ [HomeScreen] Tipo ${tipo.name}: ERRO - $e');
+            }
+          }
+          
+          print('📊 [HomeScreen] RESUMO: $tiposEncontrados/${Tipo.values.length} tipos encontrados no Hive');
+          
+          if (tiposEncontrados >= Tipo.values.length) {
+            print('✅ [HomeScreen] Todos os tipos estão salvos no Hive - Sistema pronto!');
+            setState(() {
+              _connectionStatus = 'Conectado ao Google Drive - Todos os tipos disponíveis!';
+            });
+          } else {
+            print('⚠️ [HomeScreen] Iniciando download e salvamento completo no Hive...');
+            setState(() {
+              _connectionStatus = 'Baixando e salvando tipos no dispositivo...';
+            });
+            
+            final inicializacaoSucesso = await tipagemRepository.inicializarComDrive();
+            
+            if (inicializacaoSucesso) {
+              print('✅ [HomeScreen] Sistema de tipagem inicializado e salvo no Hive com sucesso!');
+              setState(() {
+                _connectionStatus = 'Conectado ao Google Drive - Tipos baixados e salvos no dispositivo!';
+              });
+            } else {
+              print('❌ [HomeScreen] Falha na inicialização do sistema de tipagem');
+              setState(() {
+                _connectionStatus = 'Conectado ao Google Drive - Erro no download dos tipos';
+              });
+            }
+          }
+        } catch (e) {
+          print('❌ [HomeScreen] Erro na inicialização automática: $e');
+          setState(() {
+            _connectionStatus = 'Conectado ao Google Drive - Erro no diagnóstico: $e';
+          });
+        }
+      }
+      
       setState(() {
         _isDriveConnected = success;
-        _connectionStatus = success
-            ? 'Conectado ao Google Drive com sucesso!'
-            : 'Falha ao conectar ao Google Drive';
+        if (!success) {
+          _connectionStatus = 'Falha ao conectar ao Google Drive';
+        }
         _isConnecting = false;
       });
       

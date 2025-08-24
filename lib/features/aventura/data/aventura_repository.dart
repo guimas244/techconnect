@@ -172,9 +172,36 @@ class AventuraRepository {
   /// Verifica se todos os tipos de monstros foram baixados e estão disponíveis localmente
   Future<bool> verificarTiposBaixados() async {
     try {
+      print('🔍 [Aventura] === VERIFICAÇÃO DETALHADA DE TIPOS BAIXADOS ===');
+      
+      // Status atual do TipagemRepository
+      print('📊 [Aventura] Drive Conectado: ${_tipagemRepository.isDriveConectado}');
+      print('📊 [Aventura] Foi Baixado do Drive: ${_tipagemRepository.foiBaixadoDoDrive}');
+      print('📊 [Aventura] Is Inicializado: ${_tipagemRepository.isInicializado}');
+      print('📊 [Aventura] Is Bloqueado: ${_tipagemRepository.isBloqueado}');
+      
       // Verifica se os dados de tipagem estão disponíveis localmente
       final isInicializado = await _tipagemRepository.isInicializadoAsync;
-      print('🔍 [Aventura] Verificação de tipos baixados: $isInicializado');
+      print('� [Aventura] Is Inicializado Async: $isInicializado');
+      
+      if (!isInicializado) {
+        print('⚠️ [Aventura] Sistema não inicializado - verificando se pode inicializar...');
+        
+        // Tenta inicializar se estiver conectado ao Drive
+        if (_tipagemRepository.isDriveConectado && _tipagemRepository.isBloqueado) {
+          print('🔄 [Aventura] Drive conectado mas bloqueado - tentando inicializar...');
+          final inicializou = await _tipagemRepository.inicializarComDrive();
+          if (inicializou) {
+            print('✅ [Aventura] Sistema inicializado com sucesso durante verificação!');
+            return true;
+          } else {
+            print('❌ [Aventura] Falha na inicialização durante verificação');
+            return false;
+          }
+        }
+      }
+      
+      print('🔍 [Aventura] Resultado final da verificação: $isInicializado');
       return isInicializado;
     } catch (e) {
       print('❌ [Aventura] Erro ao verificar tipos baixados: $e');
