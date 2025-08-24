@@ -7,12 +7,16 @@ class ModalMonstroInimigo extends StatelessWidget {
   final MonstroInimigo monstro;
   final VoidCallback? onClose;
   final bool showCloseButton;
+  final bool showBattleButton;
+  final VoidCallback? onBattle;
 
   const ModalMonstroInimigo({
     super.key,
     required this.monstro,
     this.onClose,
     this.showCloseButton = true,
+    this.showBattleButton = false,
+    this.onBattle,
   });
 
   @override
@@ -225,6 +229,49 @@ class ModalMonstroInimigo extends StatelessWidget {
                 ),
               ),
             ),
+            
+            // Botão de BATALHAR (apenas se showBattleButton for true)
+            if (showBattleButton) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.red.shade600, Colors.red.shade800],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: onBattle,
+                  icon: const Icon(Remix.sword_fill, color: Colors.white, size: 20),
+                  label: const Text(
+                    'BATALHAR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

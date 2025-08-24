@@ -7,6 +7,7 @@ import '../models/historia_jogador.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../presentation/modal_monstro_inimigo.dart';
+import '../presentation/selecao_monstro_screen.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -239,8 +240,24 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ModalMonstroInimigo(monstro: monstro);
+        return ModalMonstroInimigo(
+          monstro: monstro,
+          showBattleButton: true,
+          onBattle: () {
+            Navigator.of(context).pop(); // Fecha o modal
+            _iniciarBatalha(monstro);
+          },
+        );
       },
+    );
+  }
+
+  void _iniciarBatalha(MonstroInimigo monstroInimigo) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SelecaoMonstroScreen(monstroInimigo: monstroInimigo),
+      ),
     );
   }
 }
