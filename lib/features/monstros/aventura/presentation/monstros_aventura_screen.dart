@@ -226,7 +226,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
     'nostalgico': Tipo.nostalgico, // nostálgico -> nostálgico (direto)
     'planta': Tipo.planta,       // planta -> planta (direto)
     'psiquico': Tipo.psiquico,   // psíquico -> psíquico (direto)
-    'subsolo': Tipo.subterraneo, // subsolo -> subterrâneo
+    'subterraneo': Tipo.subterraneo, // subterraneo -> subterrâneo
     'tecnologia': Tipo.tecnologia, // tecnologia -> tecnologia (direto)
     'tempo': Tipo.tempo,         // tempo -> tempo (direto)
     'terrestre': Tipo.terrestre, // terrestre -> terrestre (direto)
