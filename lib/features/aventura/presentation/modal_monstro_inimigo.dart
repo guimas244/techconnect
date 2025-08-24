@@ -21,6 +21,9 @@ class ModalMonstroInimigo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Verifica se o monstro está morto
+    final bool estaMorto = monstro.vidaAtual <= 0;
+    
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -30,7 +33,9 @@ class ModalMonstroInimigo extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [monstro.tipo.cor.withOpacity(0.8), Colors.white],
+            colors: estaMorto 
+                ? [Colors.grey.withOpacity(0.8), Colors.white]
+                : [monstro.tipo.cor.withOpacity(0.8), Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -77,10 +82,15 @@ class ModalMonstroInimigo extends StatelessWidget {
                   height: 80,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: monstro.tipo.cor, width: 3),
+                    border: Border.all(
+                      color: estaMorto ? Colors.grey : monstro.tipo.cor, 
+                      width: 3
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: monstro.tipo.cor.withOpacity(0.3),
+                        color: estaMorto 
+                            ? Colors.grey.withOpacity(0.3)
+                            : monstro.tipo.cor.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -88,19 +98,36 @@ class ModalMonstroInimigo extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      monstro.imagem,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: monstro.tipo.cor.withOpacity(0.3),
-                          child: Icon(
-                            Icons.pets,
-                            color: monstro.tipo.cor,
-                            size: 40,
-                          ),
-                        );
-                      },
+                    child: ColorFiltered(
+                      colorFilter: estaMorto
+                          ? const ColorFilter.matrix([
+                              0.2126, 0.7152, 0.0722, 0, 0, // Red
+                              0.2126, 0.7152, 0.0722, 0, 0, // Green  
+                              0.2126, 0.7152, 0.0722, 0, 0, // Blue
+                              0,      0,      0,      1, 0, // Alpha
+                            ])
+                          : const ColorFilter.matrix([
+                              1, 0, 0, 0, 0,
+                              0, 1, 0, 0, 0,
+                              0, 0, 1, 0, 0,
+                              0, 0, 0, 1, 0,
+                            ]),
+                      child: Image.asset(
+                        monstro.imagem,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: estaMorto 
+                                ? Colors.grey.withOpacity(0.3)
+                                : monstro.tipo.cor.withOpacity(0.3),
+                            child: Icon(
+                              Icons.pets,
+                              color: estaMorto ? Colors.grey : monstro.tipo.cor,
+                              size: 40,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -118,20 +145,42 @@ class ModalMonstroInimigo extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        monstro.tipo.displayName,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: monstro.tipo.cor,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                              offset: Offset(1, 1),
+                      Row(
+                        children: [
+                          Text(
+                            monstro.tipo.displayName,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: estaMorto ? Colors.grey : monstro.tipo.cor,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                  offset: Offset(1, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (estaMorto) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade600,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                'MORTO',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Image.asset(
@@ -237,25 +286,33 @@ class ModalMonstroInimigo extends StatelessWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.red.shade600, Colors.red.shade800],
+                    colors: estaMorto 
+                        ? [Colors.grey.shade400, Colors.grey.shade600]
+                        : [Colors.red.shade600, Colors.red.shade800],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withOpacity(0.3),
+                      color: estaMorto 
+                          ? Colors.grey.withOpacity(0.3)
+                          : Colors.red.withOpacity(0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: onBattle,
-                  icon: const Icon(Remix.sword_fill, color: Colors.white, size: 20),
-                  label: const Text(
-                    'BATALHAR',
-                    style: TextStyle(
+                  onPressed: estaMorto ? null : onBattle,
+                  icon: Icon(
+                    estaMorto ? Remix.skull_2_fill : Remix.sword_fill, 
+                    color: Colors.white, 
+                    size: 20
+                  ),
+                  label: Text(
+                    estaMorto ? 'DERROTADO' : 'BATALHAR',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

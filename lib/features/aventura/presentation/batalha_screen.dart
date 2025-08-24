@@ -8,6 +8,7 @@ import '../models/habilidade.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
+import '../../../shared/models/tipo_enum.dart';
 
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
@@ -275,13 +276,23 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   EstadoBatalha _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) {
     String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
     
-    // Calcula dano
+    // Determina tipos do atacante e defensor
+    Tipo tipoAtacante = isJogador ? estado.jogador.tipo : estado.inimigo.tipo;
+    Tipo tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo; // Considera apenas o primeiro tipo para receber dano
+    
+    // Calcula dano base
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
     
     int danoBase = habilidade.valor;
     int danoComAtaque = danoBase + ataqueAtacante;
-    int danoFinal = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque); // Mínimo 1 de dano
+    
+    // Calcula efetividade de tipo
+    double efetividade = _calcularEfetividade(tipoAtacante, tipoDefensor);
+    
+    // Aplica efetividade ao dano
+    int danoComTipo = (danoComAtaque * efetividade).round();
+    int danoFinal = (danoComTipo - defesaAlvo).clamp(1, danoComTipo); // Mínimo 1 de dano
     
     // Aplica dano
     int vidaAntes, vidaDepois;
@@ -299,7 +310,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
-    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes/$vidaDepois';
+    // Cria descrição detalhada com informações de tipo
+    String efetividadeTexto = _obterTextoEfetividade(efetividade);
+    String descricao = '$atacante (${tipoAtacante.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(
@@ -326,8 +339,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vencedor = vencedorBatalha;
     });
     
-    // SAVE FIRST: Salva no Drive antes de mostrar o resultado
-    _salvarResultadoNoDrive();
+    // SAVE FIRST: Salva no Drive antes de redirecionar
+    _salvarResultadoNoDrive().then((_) {
+      // Após salvar, aguarda 3 segundos e volta ao mapa automaticamente
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      });
+    });
   }
 
   Future<void> _salvarResultadoNoDrive() async {
@@ -349,25 +369,37 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         throw Exception('História do jogador não encontrada');
       }
       
-      // Atualiza a vida do monstro se ele perdeu
-      if (vencedor == 'inimigo') {
-        // Encontra o monstro do jogador na história e atualiza sua vida
-        final monstrosAtualizados = historia.monstros.map((m) {
-          if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-            // Cria uma nova instância do monstro com vida atualizada
-            return m.copyWith(
-              vidaAtual: estadoAtual!.vidaAtualJogador,
-            );
-          }
-          return m;
-        }).toList();
-        
-        // Atualiza a história com os monstros modificados
-        final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-        
-        // Salva a história atualizada
-        await repository.salvarHistoricoJogador(historiaAtualizada);
-      }
+      // Sempre atualiza a vida atual do monstro do jogador, independente de quem venceu
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
+          // Atualiza a vida atual do monstro (seja vitória ou derrota)
+          return m.copyWith(
+            vidaAtual: estadoAtual!.vidaAtualJogador,
+          );
+        }
+        return m;
+      }).toList();
+      
+      // Atualiza a vida atual dos monstros inimigos
+      final inimigosAtualizados = historia.monstrosInimigos.map((m) {
+        if (m.tipo == widget.inimigo.tipo && 
+            m.tipoExtra == widget.inimigo.tipoExtra) {
+          // Atualiza a vida atual do inimigo
+          return m.copyWith(
+            vidaAtual: estadoAtual!.vidaAtualInimigo,
+          );
+        }
+        return m;
+      }).toList();
+      
+      // Atualiza a história com os monstros modificados
+      final historiaAtualizada = historia.copyWith(
+        monstros: monstrosAtualizados,
+        monstrosInimigos: inimigosAtualizados,
+      );
+      
+      // Salva a história atualizada
+      await repository.salvarHistoricoJogador(historiaAtualizada);
       
       print('✅ [BatalhaScreen] Resultado salvo com sucesso!');
       
@@ -414,8 +446,21 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         return m;
       }).toList();
       
-      // Salva a história atualizada com a vida atual
-      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      // Atualiza a vida atual dos inimigos na história  
+      final inimigosAtualizados = historia.monstrosInimigos.map((m) {
+        if (m.tipo == widget.inimigo.tipo && 
+            m.tipoExtra == widget.inimigo.tipoExtra) {
+          // Atualiza a vida atual do inimigo
+          return m.copyWith(vidaAtual: estadoAtual!.vidaAtualInimigo);
+        }
+        return m;
+      }).toList();
+      
+      // Salva a história atualizada com a vida atual de todos
+      final historiaAtualizada = historia.copyWith(
+        monstros: monstrosAtualizados,
+        monstrosInimigos: inimigosAtualizados,
+      );
       await repository.salvarHistoricoJogador(historiaAtualizada);
       
       print('✅ [BatalhaScreen] Estado da batalha salvo!');
@@ -424,6 +469,130 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('❌ [BatalhaScreen] Erro ao salvar estado: $e');
       // Não mostra erro na UI para não atrapalhar a batalha
     }
+  }
+
+  // ========================================
+  // 🎯 SISTEMA DE EFETIVIDADE DE TIPOS
+  // ========================================
+  
+  /// Calcula a efetividade do tipo atacante contra o tipo defensor
+  double _calcularEfetividade(Tipo tipoAtacante, Tipo tipoDefensor) {
+    // Tabela básica de efetividade - você pode expandir conforme necessário
+    // Valores: 2.0 = super efetivo, 1.0 = normal, 0.5 = não muito efetivo, 0.25 = pouco efetivo
+    
+    switch (tipoAtacante) {
+      case Tipo.fogo:
+        switch (tipoDefensor) {
+          case Tipo.planta: return 2.0;
+          case Tipo.gelo: return 2.0;
+          case Tipo.agua: return 0.5;
+          case Tipo.pedra: return 0.5;
+          case Tipo.fogo: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.agua:
+        switch (tipoDefensor) {
+          case Tipo.fogo: return 2.0;
+          case Tipo.pedra: return 2.0;
+          case Tipo.terrestre: return 2.0;
+          case Tipo.planta: return 0.5;
+          case Tipo.agua: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.planta:
+        switch (tipoDefensor) {
+          case Tipo.agua: return 2.0;
+          case Tipo.pedra: return 2.0;
+          case Tipo.terrestre: return 2.0;
+          case Tipo.fogo: return 0.5;
+          case Tipo.inseto: return 0.5;
+          case Tipo.voador: return 0.5;
+          case Tipo.venenoso: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.eletrico:
+        switch (tipoDefensor) {
+          case Tipo.agua: return 2.0;
+          case Tipo.voador: return 2.0;
+          case Tipo.terrestre: return 0.0; // Imune
+          case Tipo.subterraneo: return 0.0; // Imune
+          case Tipo.planta: return 0.5;
+          case Tipo.eletrico: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.subterraneo:
+        switch (tipoDefensor) {
+          case Tipo.eletrico: return 2.0;
+          case Tipo.fogo: return 2.0;
+          case Tipo.pedra: return 2.0;
+          case Tipo.planta: return 0.5;
+          case Tipo.voador: return 0.0; // Não afeta
+          default: return 1.0;
+        }
+        
+      case Tipo.voador:
+        switch (tipoDefensor) {
+          case Tipo.planta: return 2.0;
+          case Tipo.inseto: return 2.0;
+          case Tipo.eletrico: return 0.5;
+          case Tipo.pedra: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.inseto:
+        switch (tipoDefensor) {
+          case Tipo.planta: return 2.0;
+          case Tipo.psiquico: return 2.0;
+          case Tipo.fogo: return 0.5;
+          case Tipo.voador: return 0.5;
+          case Tipo.pedra: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.pedra:
+        switch (tipoDefensor) {
+          case Tipo.fogo: return 2.0;
+          case Tipo.voador: return 2.0;
+          case Tipo.gelo: return 2.0;
+          case Tipo.agua: return 0.5;
+          case Tipo.planta: return 0.5;
+          case Tipo.terrestre: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.luz:
+        switch (tipoDefensor) {
+          case Tipo.trevas: return 2.0;
+          case Tipo.zumbi: return 2.0;
+          case Tipo.luz: return 0.5;
+          default: return 1.0;
+        }
+        
+      case Tipo.trevas:
+        switch (tipoDefensor) {
+          case Tipo.luz: return 2.0;
+          case Tipo.psiquico: return 2.0;
+          case Tipo.trevas: return 0.5;
+          default: return 1.0;
+        }
+        
+      default:
+        return 1.0; // Efetividade normal para outros tipos
+    }
+  }
+  
+  /// Obtém o texto descritivo da efetividade
+  String _obterTextoEfetividade(double efetividade) {
+    if (efetividade >= 2.0) return '(Super Efetivo!)';
+    if (efetividade > 1.0) return '(Efetivo)';
+    if (efetividade == 1.0) return '(Normal)';
+    if (efetividade > 0.5) return '(Pouco Efetivo)';
+    if (efetividade > 0.0) return '(Não Muito Efetivo)';
+    return '(Não Afeta)';
   }
 
   @override
@@ -668,6 +837,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: venceuBatalha ? Colors.green.shade700 : Colors.red.shade700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Retornando ao mapa em breve...',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
             ),
           ),
         ],

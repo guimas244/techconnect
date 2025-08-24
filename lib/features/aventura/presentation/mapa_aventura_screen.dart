@@ -200,6 +200,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
 
     final monstro = monstros[index];
+    final bool estaMorto = monstro.vidaAtual <= 0;
     
     // Limita a posição máxima do topo para não colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
@@ -214,22 +215,41 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: monstro.tipo.cor.withOpacity(0.9),
+            color: estaMorto 
+                ? Colors.grey.withOpacity(0.9)
+                : monstro.tipo.cor.withOpacity(0.9),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: monstro.tipo.cor.withOpacity(0.6),
+                color: estaMorto 
+                    ? Colors.grey.withOpacity(0.6)
+                    : monstro.tipo.cor.withOpacity(0.6),
                 blurRadius: 15,
                 spreadRadius: 3,
               ),
             ],
           ),
-          child: Image.asset(
-            'assets/icons_gerais/evil_monster_viral_icon.png',
-            width: 32,
-            height: 32,
-            fit: BoxFit.contain,
+          child: ColorFiltered(
+            colorFilter: estaMorto
+                ? const ColorFilter.matrix([
+                    0.2126, 0.7152, 0.0722, 0, 0, // Red
+                    0.2126, 0.7152, 0.0722, 0, 0, // Green  
+                    0.2126, 0.7152, 0.0722, 0, 0, // Blue
+                    0,      0,      0,      1, 0, // Alpha
+                  ])
+                : const ColorFilter.matrix([
+                    1, 0, 0, 0, 0,
+                    0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0,
+                    0, 0, 0, 1, 0,
+                  ]),
+            child: Image.asset(
+              'assets/icons_gerais/evil_monster_viral_icon.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),

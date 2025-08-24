@@ -172,9 +172,10 @@ class DriveService {
   }
 
   Future<drive.File> createTextFile(String name, String content) async {
+    final contentBytes = utf8.encode(content);
     final media = drive.Media(
-      http.ByteStream.fromBytes(utf8.encode(content)),
-      content.length,
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
     );
     final meta = drive.File()
       ..name = name
@@ -198,9 +199,10 @@ class DriveService {
     }
     
     final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
     final media = drive.Media(
-      http.ByteStream.fromBytes(utf8.encode(content)),
-      content.length,
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
     );
     final meta = drive.File()
       ..name = name
@@ -254,9 +256,10 @@ class DriveService {
     print('� [DEBUG] Atualizando arquivo JSON na pasta HISTORIAS (ID: $fileId)');
     
     final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
     final media = drive.Media(
-      http.ByteStream.fromBytes(utf8.encode(content)),
-      content.length,
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
     );
     final meta = drive.File();
     return await api.files.update(meta, fileId, uploadMedia: media);
@@ -277,9 +280,10 @@ class DriveService {
     }
     
     final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
     final media = drive.Media(
-      http.ByteStream.fromBytes(utf8.encode(content)),
-      content.length,
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
     );
     final meta = drive.File();
     return await api.files.update(meta, fileId, uploadMedia: media);
