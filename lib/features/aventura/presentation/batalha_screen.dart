@@ -57,8 +57,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
       inimigo: widget.inimigo,
-      vidaAtualJogador: widget.jogador.vida,
-      vidaAtualInimigo: widget.inimigo.vida,
+      vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
+      vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
       ataqueAtualJogador: widget.jogador.ataque,
       defesaAtualJogador: widget.jogador.defesa,
       ataqueAtualInimigo: widget.inimigo.ataque,
@@ -109,6 +109,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         aguardandoContinuar = true;
       });
       
+      // Salva o estado após cada ação
+      _salvarEstadoBatalha();
+      
       // Verifica se o inimigo morreu
       if (novoEstado.vidaAtualInimigo <= 0) {
         _finalizarBatalha('jogador');
@@ -147,7 +150,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         aguardandoContinuar = true;
       });
       
+      // Salva o estado após cada ação
+      _salvarEstadoBatalha();
+      
       // Verifica se o jogador morreu
+      if (novoEstado.vidaAtualJogador <= 0) {
+        _finalizarBatalha('inimigo');
+      }
       if (novoEstado.vidaAtualJogador <= 0) {
         _finalizarBatalha('inimigo');
       }
@@ -346,17 +355,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final monstrosAtualizados = historia.monstros.map((m) {
           if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
             // Cria uma nova instância do monstro com vida atualizada
-            return MonstroAventura(
-              tipo: m.tipo,
-              tipoExtra: m.tipoExtra,
-              imagem: m.imagem,
-              vida: estadoAtual!.vidaAtualJogador,
-              energia: m.energia,
-              agilidade: m.agilidade,
-              ataque: m.ataque,
-              defesa: m.defesa,
-              habilidades: m.habilidades,
-              item: m.item,
+            return m.copyWith(
+              vidaAtual: estadoAtual!.vidaAtualJogador,
             );
           }
           return m;
@@ -387,6 +387,42 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           salvandoResultado = false;
         });
       }
+    }
+  }
+
+  Future<void> _salvarEstadoBatalha() async {
+    if (estadoAtual == null) return;
+    
+    try {
+      print('💾 [BatalhaScreen] Salvando estado da batalha...');
+      
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      // Carrega a história atual
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia == null) {
+        throw Exception('História do jogador não encontrada');
+      }
+      
+      // Atualiza a vida atual do jogador na história
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
+          // Atualiza a vida atual do monstro
+          return m.copyWith(vidaAtual: estadoAtual!.vidaAtualJogador);
+        }
+        return m;
+      }).toList();
+      
+      // Salva a história atualizada com a vida atual
+      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      await repository.salvarHistoricoJogador(historiaAtualizada);
+      
+      print('✅ [BatalhaScreen] Estado da batalha salvo!');
+      
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao salvar estado: $e');
+      // Não mostra erro na UI para não atrapalhar a batalha
     }
   }
 

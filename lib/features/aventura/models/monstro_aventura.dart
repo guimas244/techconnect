@@ -5,7 +5,8 @@ class MonstroAventura {
   final Tipo tipo;
   final Tipo tipoExtra;
   final String imagem;
-  final int vida;
+  final int vida; // Vida máxima/inicial
+  final int vidaAtual; // Vida atual (após combates)
   final int energia;
   final int agilidade;
   final int ataque;
@@ -18,13 +19,14 @@ class MonstroAventura {
     required this.tipoExtra,
     required this.imagem,
     required this.vida,
+    int? vidaAtual, // Opcional, padrão é vida máxima
     required this.energia,
     required this.agilidade,
     required this.ataque,
     required this.defesa,
     required this.habilidades,
     required this.item,
-  });
+  }) : vidaAtual = vidaAtual ?? vida;
 
   factory MonstroAventura.fromJson(Map<String, dynamic> json) {
     return MonstroAventura(
@@ -38,6 +40,7 @@ class MonstroAventura {
       ),
       imagem: json['imagem'] ?? '',
       vida: json['vida'] ?? 50,
+      vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 50, // Se não tem vidaAtual, usa vida
       energia: json['energia'] ?? 20,
       agilidade: json['agilidade'] ?? 10,
       ataque: json['ataque'] ?? 10,
@@ -55,6 +58,7 @@ class MonstroAventura {
       'tipoExtra': tipoExtra.name,
       'imagem': imagem,
       'vida': vida,
+      'vidaAtual': vidaAtual,
       'energia': energia,
       'agilidade': agilidade,
       'ataque': ataque,
@@ -69,6 +73,7 @@ class MonstroAventura {
     Tipo? tipoExtra,
     String? imagem,
     int? vida,
+    int? vidaAtual,
     int? energia,
     int? agilidade,
     int? ataque,
@@ -81,6 +86,7 @@ class MonstroAventura {
       tipoExtra: tipoExtra ?? this.tipoExtra,
       imagem: imagem ?? this.imagem,
       vida: vida ?? this.vida,
+      vidaAtual: vidaAtual ?? this.vidaAtual,
       energia: energia ?? this.energia,
       agilidade: agilidade ?? this.agilidade,
       ataque: ataque ?? this.ataque,

@@ -155,7 +155,7 @@ class ModalMonstroAventura extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildAtributoInfo('Vida', monstro.vida, Remix.heart_pulse_fill, Colors.red),
+                      _buildVidaInfo(), // Nova função para mostrar vida atual/máxima
                       _buildAtributoInfo('Energia', monstro.energia, Remix.battery_charge_fill, Colors.blue),
                       _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.green),
                     ],
@@ -238,6 +238,64 @@ class ModalMonstroAventura extends StatelessWidget {
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: cor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVidaInfo() {
+    // Calcula a cor da vida baseada na porcentagem
+    double percentualVida = monstro.vidaAtual / monstro.vida;
+    Color corVida = percentualVida > 0.5 
+        ? Colors.green 
+        : percentualVida > 0.25 
+            ? Colors.orange 
+            : Colors.red;
+    
+    return Column(
+      children: [
+        Icon(
+          Remix.heart_pulse_fill,
+          color: corVida,
+          size: 24,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Vida',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        // Mostra vida atual / vida máxima
+        Text(
+          '${monstro.vidaAtual}/${monstro.vida}',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: corVida,
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Barra de vida
+        Container(
+          width: 50,
+          height: 6,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentualVida,
+            child: Container(
+              decoration: BoxDecoration(
+                color: corVida,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
           ),
         ),
       ],
