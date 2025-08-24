@@ -9,6 +9,7 @@ import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../../tipagem/data/tipagem_repository.dart';
 
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
@@ -26,6 +27,7 @@ class BatalhaScreen extends ConsumerStatefulWidget {
 
 class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   final Random _random = Random();
+  final TipagemRepository _tipagemRepository = TipagemRepository();
   
   // Estado da batalha
   EstadoBatalha? estadoAtual;
@@ -45,6 +47,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   void initState() {
     super.initState();
     _inicializarBatalha();
+    _verificarInicializacaoTipagem();
+  }
+
+  void _verificarInicializacaoTipagem() async {
+    // Verifica se o sistema de tipagem está inicializado
+    final isInicializado = await _tipagemRepository.isInicializadoAsync;
+    if (!isInicializado) {
+      print('⚠️ [Batalha] Sistema de tipagem não inicializado, usando valores padrão');
+    } else {
+      print('✅ [Batalha] Sistema de tipagem inicializado e pronto');
+    }
   }
 
   void _inicializarBatalha() {
@@ -100,8 +113,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
     
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      final novoEstado = _aplicarHabilidade(estadoAtual!, habilidade, true);
+    Future.delayed(const Duration(milliseconds: 1500), () async {
+      final novoEstado = await _aplicarHabilidade(estadoAtual!, habilidade, true);
       
       setState(() {
         estadoAtual = novoEstado;
@@ -141,8 +154,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
     
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      final novoEstado = _aplicarHabilidade(estadoAtual!, habilidade, false);
+    Future.delayed(const Duration(milliseconds: 1500), () async {
+      final novoEstado = await _aplicarHabilidade(estadoAtual!, habilidade, false);
       
       setState(() {
         estadoAtual = novoEstado;
@@ -184,11 +197,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
-  EstadoBatalha _aplicarHabilidade(EstadoBatalha estado, Habilidade habilidade, bool isJogador) {
+  Future<EstadoBatalha> _aplicarHabilidade(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
     if (habilidade.tipo == TipoHabilidade.suporte) {
       return _aplicarHabilidadeSuporte(estado, habilidade, isJogador);
     } else {
-      return _aplicarHabilidadeDano(estado, habilidade, isJogador);
+      return await _aplicarHabilidadeDano(estado, habilidade, isJogador);
     }
   }
 
@@ -273,7 +286,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     return novoEstado;
   }
 
-  EstadoBatalha _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) {
+  Future<EstadoBatalha> _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
     String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
     
     // Determina tipos do atacante e defensor
@@ -288,7 +301,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int danoComAtaque = danoBase + ataqueAtacante;
     
     // Calcula efetividade de tipo
-    double efetividade = _calcularEfetividade(tipoAtacante, tipoDefensor);
+    double efetividade = await _calcularEfetividade(tipoAtacante, tipoDefensor);
     
     // Aplica efetividade ao dano
     int danoComTipo = (danoComAtaque * efetividade).round();
@@ -370,8 +383,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
       
       // Sempre atualiza a vida atual do monstro do jogador, independente de quem venceu
+      print('🔍 [DEBUG] Procurando monstro do jogador para atualizar:');
+      print('  - Tipo: ${widget.jogador.tipo}');
+      print('  - TipoExtra: ${widget.jogador.tipoExtra}');
+      print('  - Vida atual no estado: ${estadoAtual!.vidaAtualJogador}');
+      
       final monstrosAtualizados = historia.monstros.map((m) {
+        print('  - Comparando com monstro: ${m.tipo} / ${m.tipoExtra} (vida atual: ${m.vidaAtual})');
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
+          print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para ${estadoAtual!.vidaAtualJogador}');
           // Atualiza a vida atual do monstro (seja vitória ou derrota)
           return m.copyWith(
             vidaAtual: estadoAtual!.vidaAtualJogador,
@@ -475,113 +495,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // 🎯 SISTEMA DE EFETIVIDADE DE TIPOS
   // ========================================
   
-  /// Calcula a efetividade do tipo atacante contra o tipo defensor
-  double _calcularEfetividade(Tipo tipoAtacante, Tipo tipoDefensor) {
-    // Tabela básica de efetividade - você pode expandir conforme necessário
-    // Valores: 2.0 = super efetivo, 1.0 = normal, 0.5 = não muito efetivo, 0.25 = pouco efetivo
-    
-    switch (tipoAtacante) {
-      case Tipo.fogo:
-        switch (tipoDefensor) {
-          case Tipo.planta: return 2.0;
-          case Tipo.gelo: return 2.0;
-          case Tipo.agua: return 0.5;
-          case Tipo.pedra: return 0.5;
-          case Tipo.fogo: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.agua:
-        switch (tipoDefensor) {
-          case Tipo.fogo: return 2.0;
-          case Tipo.pedra: return 2.0;
-          case Tipo.terrestre: return 2.0;
-          case Tipo.planta: return 0.5;
-          case Tipo.agua: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.planta:
-        switch (tipoDefensor) {
-          case Tipo.agua: return 2.0;
-          case Tipo.pedra: return 2.0;
-          case Tipo.terrestre: return 2.0;
-          case Tipo.fogo: return 0.5;
-          case Tipo.inseto: return 0.5;
-          case Tipo.voador: return 0.5;
-          case Tipo.venenoso: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.eletrico:
-        switch (tipoDefensor) {
-          case Tipo.agua: return 2.0;
-          case Tipo.voador: return 2.0;
-          case Tipo.terrestre: return 0.0; // Imune
-          case Tipo.subterraneo: return 0.0; // Imune
-          case Tipo.planta: return 0.5;
-          case Tipo.eletrico: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.subterraneo:
-        switch (tipoDefensor) {
-          case Tipo.eletrico: return 2.0;
-          case Tipo.fogo: return 2.0;
-          case Tipo.pedra: return 2.0;
-          case Tipo.planta: return 0.5;
-          case Tipo.voador: return 0.0; // Não afeta
-          default: return 1.0;
-        }
-        
-      case Tipo.voador:
-        switch (tipoDefensor) {
-          case Tipo.planta: return 2.0;
-          case Tipo.inseto: return 2.0;
-          case Tipo.eletrico: return 0.5;
-          case Tipo.pedra: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.inseto:
-        switch (tipoDefensor) {
-          case Tipo.planta: return 2.0;
-          case Tipo.psiquico: return 2.0;
-          case Tipo.fogo: return 0.5;
-          case Tipo.voador: return 0.5;
-          case Tipo.pedra: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.pedra:
-        switch (tipoDefensor) {
-          case Tipo.fogo: return 2.0;
-          case Tipo.voador: return 2.0;
-          case Tipo.gelo: return 2.0;
-          case Tipo.agua: return 0.5;
-          case Tipo.planta: return 0.5;
-          case Tipo.terrestre: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.luz:
-        switch (tipoDefensor) {
-          case Tipo.trevas: return 2.0;
-          case Tipo.zumbi: return 2.0;
-          case Tipo.luz: return 0.5;
-          default: return 1.0;
-        }
-        
-      case Tipo.trevas:
-        switch (tipoDefensor) {
-          case Tipo.luz: return 2.0;
-          case Tipo.psiquico: return 2.0;
-          case Tipo.trevas: return 0.5;
-          default: return 1.0;
-        }
-        
-      default:
-        return 1.0; // Efetividade normal para outros tipos
+  /// Calcula a efetividade do tipo atacante contra o tipo defensor usando as tabelas JSON
+  Future<double> _calcularEfetividade(Tipo tipoAtacante, Tipo tipoDefensor) async {
+    try {
+      // CORRETO: Carrega a tabela de DEFESA do tipo DEFENSOR (quem recebe o ataque)
+      final tabelaDefesa = await _tipagemRepository.carregarDadosTipo(tipoDefensor);
+      
+      if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante)) {
+        // O valor na tabela indica quanto de dano o defensor recebe do atacante
+        final multiplicadorDano = tabelaDefesa[tipoAtacante]!;
+        print('🎯 [Efetividade] ${tipoDefensor.name} recebe ${multiplicadorDano}x dano de ${tipoAtacante.name}');
+        return multiplicadorDano;
+      }
+      
+      // Se não encontrar na tabela, retorna efetividade normal
+      print('⚠️ [Efetividade] Não encontrada defesa de ${tipoDefensor.name} vs ${tipoAtacante.name}, usando 1.0x');
+      return 1.0;
+    } catch (e) {
+      print('❌ [Efetividade] Erro ao calcular: $e');
+      return 1.0; // Fallback para efetividade normal
     }
   }
   
