@@ -25,6 +25,8 @@ class BatalhaService {
       defesaAtualJogador: jogador.defesa,
       ataqueAtualInimigo: inimigo.ataque,
       defesaAtualInimigo: inimigo.defesa,
+      energiaAtualJogador: 50, // Energia inicial
+      energiaAtualInimigo: 50, // Energia inicial
       habilidadesUsadasJogador: [],
       habilidadesUsadasInimigo: [],
       historicoAcoes: [],

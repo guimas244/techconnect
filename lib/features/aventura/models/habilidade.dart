@@ -8,6 +8,7 @@ class Habilidade {
   final EfeitoHabilidade efeito;
   final Tipo tipoElemental;
   final int valor;
+  final int custoEnergia;
 
   const Habilidade({
     required this.nome,
@@ -16,6 +17,7 @@ class Habilidade {
     required this.efeito,
     required this.tipoElemental,
     required this.valor,
+    required this.custoEnergia,
   });
 
   Map<String, dynamic> toJson() {
@@ -26,6 +28,7 @@ class Habilidade {
       'efeito': efeito.name,
       'tipoElemental': tipoElemental.name,
       'valor': valor,
+      'custoEnergia': custoEnergia,
     };
   }
 
@@ -46,6 +49,7 @@ class Habilidade {
         orElse: () => Tipo.normal,
       ),
       valor: json['valor'] ?? 0,
+      custoEnergia: json['custoEnergia'] ?? 1, // Valor padrão para compatibilidade
     );
   }
 
@@ -57,7 +61,8 @@ class Habilidade {
         other.tipo == tipo &&
         other.efeito == efeito &&
         other.tipoElemental == tipoElemental &&
-        other.valor == valor;
+        other.valor == valor &&
+        other.custoEnergia == custoEnergia;
   }
 
   @override
@@ -66,11 +71,12 @@ class Habilidade {
         tipo.hashCode ^
         efeito.hashCode ^
         tipoElemental.hashCode ^
-        valor.hashCode;
+        valor.hashCode ^
+        custoEnergia.hashCode;
   }
 
   @override
   String toString() {
-    return 'Habilidade($nome, $tipo, $efeito, $tipoElemental, $valor)';
+    return 'Habilidade($nome, $tipo, $efeito, $tipoElemental, $valor, custo: $custoEnergia)';
   }
 }

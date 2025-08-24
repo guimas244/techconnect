@@ -233,6 +233,7 @@ class RegrasScreen extends StatelessWidget {
                 efeito: EfeitoHabilidade.danoDirecto,
                 tipoElemental: Tipo.fogo,
                 valor: 25,
+                custoEnergia: 3,
               ),
               Habilidade(
                 nome: 'Rajada Devastadora',
@@ -241,6 +242,7 @@ class RegrasScreen extends StatelessWidget {
                 efeito: EfeitoHabilidade.danoDirecto,
                 tipoElemental: Tipo.voador,
                 valor: 18,
+                custoEnergia: 2,
               ),
               Habilidade(
                 nome: 'Força Ardente',
@@ -249,6 +251,7 @@ class RegrasScreen extends StatelessWidget {
                 efeito: EfeitoHabilidade.aumentarAtaque,
                 tipoElemental: Tipo.fogo,
                 valor: 12,
+                custoEnergia: 4,
               ),
               Habilidade(
                 nome: 'Regeneração',
@@ -257,6 +260,7 @@ class RegrasScreen extends StatelessWidget {
                 efeito: EfeitoHabilidade.curarVida,
                 tipoElemental: Tipo.fogo,
                 valor: 20,
+                custoEnergia: 5,
               ),
             ],
             item: '',

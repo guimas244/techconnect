@@ -34,9 +34,12 @@ class GeradorHabilidades {
     // Gera valor baseado no efeito
     final valor = _gerarValor(efeito);
     
+    // Gera custo de energia (1 a 5)
+    final custoEnergia = _gerarCustoEnergia();
+    
     // Gera nome e descrição usando o novo gerador
     final nome = GeradorNomesHabilidades.gerarNome(tipoElemental, efeito);
-    final descricao = _gerarDescricao(efeito, valor, tipoElemental);
+    final descricao = _gerarDescricao(efeito, valor, tipoElemental, custoEnergia);
     
     return Habilidade(
       nome: nome,
@@ -45,6 +48,7 @@ class GeradorHabilidades {
       efeito: efeito,
       tipoElemental: tipoElemental,
       valor: valor,
+      custoEnergia: custoEnergia,
     );
   }
 
@@ -91,25 +95,31 @@ class GeradorHabilidades {
     }
   }
 
-  static String _gerarDescricao(EfeitoHabilidade efeito, int valor, Tipo tipo) {
+  /// Gera custo de energia aleatório de 1 a 5
+  static int _gerarCustoEnergia() {
+    return 1 + _random.nextInt(5); // 1-5
+  }
+
+  static String _gerarDescricao(EfeitoHabilidade efeito, int valor, Tipo tipo, int custoEnergia) {
     final sufixoTipo = _obterSufixoTipo(tipo);
+    final custoTexto = ' (Custo: $custoEnergia energia)';
     
     switch (efeito) {
       case EfeitoHabilidade.aumentarVida:
-        return 'Aumenta a vida máxima em $valor pontos durante toda a luta$sufixoTipo.';
+        return 'Aumenta a vida máxima em $valor pontos durante toda a luta$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.aumentarEnergia:
-        return 'Aumenta a energia máxima em $valor pontos durante toda a luta$sufixoTipo.';
+        return 'Aumenta a energia máxima em $valor pontos durante toda a luta$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.aumentarAtaque:
-        return 'Aumenta o ataque em $valor pontos durante toda a luta$sufixoTipo.';
+        return 'Aumenta o ataque em $valor pontos durante toda a luta$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.aumentarDefesa:
-        return 'Aumenta a defesa em $valor pontos durante toda a luta$sufixoTipo.';
+        return 'Aumenta a defesa em $valor pontos durante toda a luta$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.curarVida:
-        return 'Recupera $valor pontos de vida instantaneamente$sufixoTipo.';
+        return 'Recupera $valor pontos de vida instantaneamente$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.danoDirecto:
-        return 'Causa $valor pontos de dano direto ao oponente$sufixoTipo.';
+        return 'Causa $valor pontos de dano direto ao oponente$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.aumentarAgilidade:
         // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
-        return 'Habilidade descontinuada$sufixoTipo.';
+        return 'Habilidade descontinuada$sufixoTipo$custoTexto.';
     }
   }
 

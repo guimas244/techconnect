@@ -108,6 +108,8 @@ class EstadoBatalha {
   final MonstroInimigo inimigo;
   final int vidaAtualJogador;
   final int vidaAtualInimigo;
+  final int energiaAtualJogador;
+  final int energiaAtualInimigo;
   final int ataqueAtualJogador;
   final int defesaAtualJogador;
   final int ataqueAtualInimigo;
@@ -121,6 +123,8 @@ class EstadoBatalha {
     required this.inimigo,
     required this.vidaAtualJogador,
     required this.vidaAtualInimigo,
+    required this.energiaAtualJogador,
+    required this.energiaAtualInimigo,
     required this.ataqueAtualJogador,
     required this.defesaAtualJogador,
     required this.ataqueAtualInimigo,
@@ -135,6 +139,8 @@ class EstadoBatalha {
     MonstroInimigo? inimigo,
     int? vidaAtualJogador,
     int? vidaAtualInimigo,
+    int? energiaAtualJogador,
+    int? energiaAtualInimigo,
     int? ataqueAtualJogador,
     int? defesaAtualJogador,
     int? ataqueAtualInimigo,
@@ -148,6 +154,8 @@ class EstadoBatalha {
       inimigo: inimigo ?? this.inimigo,
       vidaAtualJogador: vidaAtualJogador ?? this.vidaAtualJogador,
       vidaAtualInimigo: vidaAtualInimigo ?? this.vidaAtualInimigo,
+      energiaAtualJogador: energiaAtualJogador ?? this.energiaAtualJogador,
+      energiaAtualInimigo: energiaAtualInimigo ?? this.energiaAtualInimigo,
       ataqueAtualJogador: ataqueAtualJogador ?? this.ataqueAtualJogador,
       defesaAtualJogador: defesaAtualJogador ?? this.defesaAtualJogador,
       ataqueAtualInimigo: ataqueAtualInimigo ?? this.ataqueAtualInimigo,

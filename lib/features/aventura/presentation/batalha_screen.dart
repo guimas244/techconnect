@@ -74,6 +74,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       inimigo: widget.inimigo,
       vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
       vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
+      energiaAtualJogador: widget.jogador.energia, // Energia inicial
+      energiaAtualInimigo: 100, // Energia padrão para inimigos
       ataqueAtualJogador: widget.jogador.ataque,
       defesaAtualJogador: widget.jogador.defesa,
       ataqueAtualInimigo: widget.inimigo.ataque,
@@ -144,39 +146,81 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
   
   Future<EstadoBatalha> _executarAtaqueJogador(EstadoBatalha estado) async {
-    // Seleciona habilidade aleatória do jogador
+    // Seleciona habilidade aleatória do jogador que pode ser usada
     final habilidadesDisponiveis = widget.jogador.habilidades
-        .where((h) => h.tipo == TipoHabilidade.ofensiva || 
-                     !estado.habilidadesUsadasJogador.contains(h.nome))
+        .where((h) => (h.tipo == TipoHabilidade.ofensiva || 
+                      !estado.habilidadesUsadasJogador.contains(h.nome)) &&
+                     h.custoEnergia <= estado.energiaAtualJogador) // Verifica se tem energia
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Jogador] Sem habilidades disponíveis');
-      return estado;
+      print('⚠️ [Jogador] Sem habilidades disponíveis ou energia insuficiente');
+      // Se não tem energia para nenhuma habilidade, pula o turno
+      return estado.copyWith(
+        historicoAcoes: [...estado.historicoAcoes, AcaoBatalha(
+          atacante: widget.jogador.tipo.displayName,
+          habilidadeNome: 'Sem Energia',
+          danoBase: 0,
+          danoTotal: 0,
+          defesaAlvo: 0,
+          vidaAntes: estado.vidaAtualJogador,
+          vidaDepois: estado.vidaAtualJogador,
+          descricao: '${widget.jogador.tipo.displayName} não tem energia para usar habilidades!'
+        )]
+      );
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
-    print('⚔️ [Jogador] Usando ${habilidade.nome}');
+    print('⚔️ [Jogador] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
     
-    return await _aplicarHabilidade(estado, habilidade, true);
+    // Aplica habilidade e desconta energia
+    var novoEstado = await _aplicarHabilidade(estado, habilidade, true);
+    
+    // Desconta energia
+    novoEstado = novoEstado.copyWith(
+      energiaAtualJogador: (estado.energiaAtualJogador - habilidade.custoEnergia).clamp(0, widget.jogador.energia)
+    );
+    
+    return novoEstado;
   }
   
   Future<EstadoBatalha> _executarAtaqueInimigo(EstadoBatalha estado) async {
-    // Seleciona habilidade aleatória do inimigo
+    // Seleciona habilidade aleatória do inimigo que pode ser usada
     final habilidadesDisponiveis = widget.inimigo.habilidades
-        .where((h) => h.tipo == TipoHabilidade.ofensiva || 
-                     !estado.habilidadesUsadasInimigo.contains(h.nome))
+        .where((h) => (h.tipo == TipoHabilidade.ofensiva || 
+                      !estado.habilidadesUsadasInimigo.contains(h.nome)) &&
+                     h.custoEnergia <= estado.energiaAtualInimigo) // Verifica se tem energia
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Inimigo] Sem habilidades disponíveis');
-      return estado;
+      print('⚠️ [Inimigo] Sem habilidades disponíveis ou energia insuficiente');
+      // Se não tem energia para nenhuma habilidade, pula o turno
+      return estado.copyWith(
+        historicoAcoes: [...estado.historicoAcoes, AcaoBatalha(
+          atacante: widget.inimigo.tipo.displayName,
+          habilidadeNome: 'Sem Energia',
+          danoBase: 0,
+          danoTotal: 0,
+          defesaAlvo: 0,
+          vidaAntes: estado.vidaAtualInimigo,
+          vidaDepois: estado.vidaAtualInimigo,
+          descricao: '${widget.inimigo.tipo.displayName} não tem energia para usar habilidades!'
+        )]
+      );
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
-    print('⚔️ [Inimigo] Usando ${habilidade.nome}');
+    print('⚔️ [Inimigo] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
     
-    return await _aplicarHabilidade(estado, habilidade, false);
+    // Aplica habilidade e desconta energia
+    var novoEstado = await _aplicarHabilidade(estado, habilidade, false);
+    
+    // Desconta energia
+    novoEstado = novoEstado.copyWith(
+      energiaAtualInimigo: (estado.energiaAtualInimigo - habilidade.custoEnergia).clamp(0, 100)
+    );
+    
+    return novoEstado;
   }
   
   void _finalizarRodada(EstadoBatalha estadoFinal, String? vencedorRodada) {
@@ -190,7 +234,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       resumoRodada = 'Rodada $turnoAtual concluída!\n\n';
       resumoRodada += '1º: ${_resumirAcao(primeiroAtaque)}\n';
       resumoRodada += '2º: ${_resumirAcao(segundoAtaque)}\n\n';
-      resumoRodada += 'Vida atual: Jogador ${estadoFinal.vidaAtualJogador}/${widget.jogador.vida} | Inimigo ${estadoFinal.vidaAtualInimigo}/${widget.inimigo.vida}';
+      resumoRodada += 'Vida atual: Jogador ${estadoFinal.vidaAtualJogador}/${widget.jogador.vida} | Inimigo ${estadoFinal.vidaAtualInimigo}/${widget.inimigo.vida}\n';
+      resumoRodada += 'Energia atual: Jogador ${estadoFinal.energiaAtualJogador}/${widget.jogador.energia} | Inimigo ${estadoFinal.energiaAtualInimigo}/100';
     } else if (estadoFinal.historicoAcoes.isNotEmpty) {
       final ultimaAcao = estadoFinal.historicoAcoes.last;
       resumoRodada = 'Ação executada!\n${_resumirAcao(ultimaAcao)}';
@@ -716,6 +761,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             imagem: widget.jogador.imagem,
             vidaAtual: estadoAtual!.vidaAtualJogador,
             vidaMaxima: widget.jogador.vida,
+            energiaAtual: estadoAtual!.energiaAtualJogador,
+            energiaMaxima: widget.jogador.energia,
             cor: Colors.blue,
             isJogador: true,
           ),
@@ -763,6 +810,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             imagem: widget.inimigo.imagem,
             vidaAtual: estadoAtual!.vidaAtualInimigo,
             vidaMaxima: widget.inimigo.vida,
+            energiaAtual: estadoAtual!.energiaAtualInimigo,
+            energiaMaxima: 100, // Energia padrão para inimigos
             cor: Colors.red,
             isJogador: false,
           ),
@@ -776,10 +825,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     required String imagem,
     required int vidaAtual,
     required int vidaMaxima,
+    required int energiaAtual,
+    required int energiaMaxima,
     required Color cor,
     required bool isJogador,
   }) {
     double percentualVida = vidaAtual / vidaMaxima;
+    double percentualEnergia = energiaAtual / energiaMaxima;
     
     return GestureDetector(
       onTap: () => _mostrarDetalheMonstro(
@@ -862,6 +914,42 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             '$vidaAtual/$vidaMaxima',
             style: const TextStyle(
               fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Barra de energia
+          Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: percentualEnergia,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: percentualEnergia > 0.5 
+                      ? Colors.blue 
+                      : percentualEnergia > 0.25 
+                          ? Colors.orange 
+                          : Colors.red,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 2),
+          
+          // Energia numérica
+          Text(
+            'E: $energiaAtual/$energiaMaxima',
+            style: const TextStyle(
+              fontSize: 9,
               fontWeight: FontWeight.bold,
             ),
           ),
