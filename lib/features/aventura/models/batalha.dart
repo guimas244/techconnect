@@ -108,6 +108,8 @@ class EstadoBatalha {
   final MonstroInimigo inimigo;
   final int vidaAtualJogador;
   final int vidaAtualInimigo;
+  final int vidaMaximaJogador; // Vida máxima com buffs
+  final int vidaMaximaInimigo; // Vida máxima com buffs
   final int energiaAtualJogador;
   final int energiaAtualInimigo;
   final int ataqueAtualJogador;
@@ -123,6 +125,8 @@ class EstadoBatalha {
     required this.inimigo,
     required this.vidaAtualJogador,
     required this.vidaAtualInimigo,
+    required this.vidaMaximaJogador,
+    required this.vidaMaximaInimigo,
     required this.energiaAtualJogador,
     required this.energiaAtualInimigo,
     required this.ataqueAtualJogador,
@@ -139,6 +143,8 @@ class EstadoBatalha {
     MonstroInimigo? inimigo,
     int? vidaAtualJogador,
     int? vidaAtualInimigo,
+    int? vidaMaximaJogador,
+    int? vidaMaximaInimigo,
     int? energiaAtualJogador,
     int? energiaAtualInimigo,
     int? ataqueAtualJogador,
@@ -154,6 +160,8 @@ class EstadoBatalha {
       inimigo: inimigo ?? this.inimigo,
       vidaAtualJogador: vidaAtualJogador ?? this.vidaAtualJogador,
       vidaAtualInimigo: vidaAtualInimigo ?? this.vidaAtualInimigo,
+      vidaMaximaJogador: vidaMaximaJogador ?? this.vidaMaximaJogador,
+      vidaMaximaInimigo: vidaMaximaInimigo ?? this.vidaMaximaInimigo,
       energiaAtualJogador: energiaAtualJogador ?? this.energiaAtualJogador,
       energiaAtualInimigo: energiaAtualInimigo ?? this.energiaAtualInimigo,
       ataqueAtualJogador: ataqueAtualJogador ?? this.ataqueAtualJogador,

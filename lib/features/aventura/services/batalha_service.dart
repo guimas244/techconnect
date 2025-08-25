@@ -21,12 +21,14 @@ class BatalhaService {
       inimigo: inimigo,
       vidaAtualJogador: jogador.vida,
       vidaAtualInimigo: inimigo.vida,
+      vidaMaximaJogador: jogador.vida, // Vida máxima inicial igual à vida base
+      vidaMaximaInimigo: inimigo.vida, // Vida máxima inicial igual à vida base
       ataqueAtualJogador: jogador.ataque,
       defesaAtualJogador: jogador.defesa,
       ataqueAtualInimigo: inimigo.ataque,
       defesaAtualInimigo: inimigo.defesa,
-      energiaAtualJogador: 50, // Energia inicial
-      energiaAtualInimigo: 50, // Energia inicial
+      energiaAtualJogador: jogador.energiaAtual, // Energia atual do jogador
+      energiaAtualInimigo: inimigo.energiaAtual, // Energia atual do inimigo
       habilidadesUsadasJogador: [],
       habilidadesUsadasInimigo: [],
       historicoAcoes: [],
@@ -186,6 +188,26 @@ class BatalhaService {
           int novaDefesa = estado.defesaAtualInimigo + habilidade.valor;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
           descricao = '$atacante aumentou a defesa em ${habilidade.valor} (${habilidade.nome})';
+        }
+        break;
+        
+      case EfeitoHabilidade.aumentarVida:
+        if (isJogador) {
+          int novaVidaMaxima = estado.vidaMaximaJogador + habilidade.valor;
+          int novaVidaAtual = estado.vidaAtualJogador + habilidade.valor; // Também aumenta a vida atual
+          novoEstado = estado.copyWith(
+            vidaMaximaJogador: novaVidaMaxima,
+            vidaAtualJogador: novaVidaAtual,
+          );
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valor} (${habilidade.nome})';
+        } else {
+          int novaVidaMaxima = estado.vidaMaximaInimigo + habilidade.valor;
+          int novaVidaAtual = estado.vidaAtualInimigo + habilidade.valor; // Também aumenta a vida atual
+          novoEstado = estado.copyWith(
+            vidaMaximaInimigo: novaVidaMaxima,
+            vidaAtualInimigo: novaVidaAtual,
+          );
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valor} (${habilidade.nome})';
         }
         break;
         

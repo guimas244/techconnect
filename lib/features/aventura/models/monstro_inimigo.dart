@@ -7,7 +7,8 @@ class MonstroInimigo {
   final String imagem;
   final int vida; // Vida máxima/inicial
   final int vidaAtual; // Vida atual (após combates)
-  final int energia;
+  final int energia; // Energia máxima/inicial
+  final int energiaAtual; // Energia atual (após usar habilidades)
   final int agilidade;
   final int ataque;
   final int defesa;
@@ -21,12 +22,14 @@ class MonstroInimigo {
     required this.vida,
     int? vidaAtual, // Opcional, padrão é vida máxima
     required this.energia,
+    int? energiaAtual, // Opcional, padrão é energia máxima
     required this.agilidade,
     required this.ataque,
     required this.defesa,
     required this.habilidades,
     required this.item,
-  }) : vidaAtual = vidaAtual ?? vida;
+  }) : vidaAtual = vidaAtual ?? vida,
+       energiaAtual = energiaAtual ?? energia;
 
   factory MonstroInimigo.fromJson(Map<String, dynamic> json) {
     return MonstroInimigo(
@@ -44,6 +47,7 @@ class MonstroInimigo {
       vida: json['vida'] ?? 50,
       vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 50, // Se não tem vidaAtual, usa vida
       energia: json['energia'] ?? 20,
+      energiaAtual: json['energiaAtual'] ?? json['energia'] ?? 20, // Se não tem energiaAtual, usa energia
       agilidade: json['agilidade'] ?? 10,
       ataque: json['ataque'] ?? 10,
       defesa: json['defesa'] ?? 40,
@@ -62,6 +66,7 @@ class MonstroInimigo {
       'vida': vida,
       'vidaAtual': vidaAtual,
       'energia': energia,
+      'energiaAtual': energiaAtual,
       'agilidade': agilidade,
       'ataque': ataque,
       'defesa': defesa,
@@ -77,6 +82,7 @@ class MonstroInimigo {
     int? vida,
     int? vidaAtual,
     int? energia,
+    int? energiaAtual,
     int? agilidade,
     int? ataque,
     int? defesa,
@@ -90,6 +96,7 @@ class MonstroInimigo {
       vida: vida ?? this.vida,
       vidaAtual: vidaAtual ?? this.vidaAtual,
       energia: energia ?? this.energia,
+      energiaAtual: energiaAtual ?? this.energiaAtual,
       agilidade: agilidade ?? this.agilidade,
       ataque: ataque ?? this.ataque,
       defesa: defesa ?? this.defesa,

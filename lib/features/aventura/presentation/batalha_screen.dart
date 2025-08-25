@@ -74,8 +74,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       inimigo: widget.inimigo,
       vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
       vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
-      energiaAtualJogador: widget.jogador.energia, // Energia inicial
-      energiaAtualInimigo: 100, // Energia padrão para inimigos
+      vidaMaximaJogador: widget.jogador.vida, // Vida máxima inicial
+      vidaMaximaInimigo: widget.inimigo.vida, // Vida máxima inicial
+      energiaAtualJogador: widget.jogador.energiaAtual, // Energia atual do jogador
+      energiaAtualInimigo: widget.inimigo.energiaAtual, // Energia atual do inimigo
       ataqueAtualJogador: widget.jogador.ataque,
       defesaAtualJogador: widget.jogador.defesa,
       ataqueAtualInimigo: widget.inimigo.ataque,
@@ -154,20 +156,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Jogador] Sem habilidades disponíveis ou energia insuficiente');
-      // Se não tem energia para nenhuma habilidade, pula o turno
-      return estado.copyWith(
-        historicoAcoes: [...estado.historicoAcoes, AcaoBatalha(
-          atacante: widget.jogador.tipo.displayName,
-          habilidadeNome: 'Sem Energia',
-          danoBase: 0,
-          danoTotal: 0,
-          defesaAlvo: 0,
-          vidaAntes: estado.vidaAtualJogador,
-          vidaDepois: estado.vidaAtualJogador,
-          descricao: '${widget.jogador.tipo.displayName} não tem energia para usar habilidades!'
-        )]
-      );
+      print('⚠️ [Jogador] Sem energia para habilidades - usando ataque básico');
+      // Executa ataque básico quando não tem energia para habilidades
+      return await _executarAtaqueBasico(estado, true); // true = é jogador
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
@@ -193,20 +184,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Inimigo] Sem habilidades disponíveis ou energia insuficiente');
-      // Se não tem energia para nenhuma habilidade, pula o turno
-      return estado.copyWith(
-        historicoAcoes: [...estado.historicoAcoes, AcaoBatalha(
-          atacante: widget.inimigo.tipo.displayName,
-          habilidadeNome: 'Sem Energia',
-          danoBase: 0,
-          danoTotal: 0,
-          defesaAlvo: 0,
-          vidaAntes: estado.vidaAtualInimigo,
-          vidaDepois: estado.vidaAtualInimigo,
-          descricao: '${widget.inimigo.tipo.displayName} não tem energia para usar habilidades!'
-        )]
-      );
+      print('⚠️ [Inimigo] Sem energia para habilidades - usando ataque básico');
+      // Executa ataque básico quando não tem energia para habilidades
+      return await _executarAtaqueBasico(estado, false); // false = é inimigo
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
@@ -217,7 +197,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Desconta energia
     novoEstado = novoEstado.copyWith(
-      energiaAtualInimigo: (estado.energiaAtualInimigo - habilidade.custoEnergia).clamp(0, 100)
+      energiaAtualInimigo: (estado.energiaAtualInimigo - habilidade.custoEnergia).clamp(0, widget.inimigo.energia)
     );
     
     return novoEstado;
@@ -235,7 +215,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       resumoRodada += '1º: ${_resumirAcao(primeiroAtaque)}\n';
       resumoRodada += '2º: ${_resumirAcao(segundoAtaque)}\n\n';
       resumoRodada += 'Vida atual: Jogador ${estadoFinal.vidaAtualJogador}/${widget.jogador.vida} | Inimigo ${estadoFinal.vidaAtualInimigo}/${widget.inimigo.vida}\n';
-      resumoRodada += 'Energia atual: Jogador ${estadoFinal.energiaAtualJogador}/${widget.jogador.energia} | Inimigo ${estadoFinal.energiaAtualInimigo}/100';
+      resumoRodada += 'Energia atual: Jogador ${estadoFinal.energiaAtualJogador}/${widget.jogador.energia} | Inimigo ${estadoFinal.energiaAtualInimigo}/${widget.inimigo.energia}';
     } else if (estadoFinal.historicoAcoes.isNotEmpty) {
       final ultimaAcao = estadoFinal.historicoAcoes.last;
       resumoRodada = 'Ação executada!\n${_resumirAcao(ultimaAcao)}';
@@ -352,29 +332,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       case EfeitoHabilidade.aumentarVida:
         if (isJogador) {
           // Aumenta vida máxima e vida atual proporcionalmente
-          int vidaMaximaAntes = estado.jogador.vida;
+          int vidaMaximaAntes = estado.vidaMaximaJogador;
           int vidaAtualAntes = estado.vidaAtualJogador;
           int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
           int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
           
-          // Atualiza o monstro do jogador com nova vida máxima
-          final jogadorAtualizado = estado.jogador.copyWith(vida: novaVidaMaxima);
           novoEstado = estado.copyWith(
-            jogador: jogadorAtualizado,
+            vidaMaximaJogador: novaVidaMaxima,
             vidaAtualJogador: novaVidaAtual,
           );
           descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
         } else {
           // Aumenta vida máxima e vida atual proporcionalmente
-          int vidaMaximaAntes = estado.inimigo.vida;
+          int vidaMaximaAntes = estado.vidaMaximaInimigo;
           int vidaAtualAntes = estado.vidaAtualInimigo;
           int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
           int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
           
-          // Atualiza o monstro inimigo com nova vida máxima
-          final inimigoAtualizado = estado.inimigo.copyWith(vida: novaVidaMaxima);
           novoEstado = estado.copyWith(
-            inimigo: inimigoAtualizado,
+            vidaMaximaInimigo: novaVidaMaxima,
             vidaAtualInimigo: novaVidaAtual,
           );
           descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
@@ -577,6 +553,48 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
+  // 🗡️ ATAQUE BÁSICO (QUANDO SEM ENERGIA)
+  // ========================================
+  
+  Future<EstadoBatalha> _executarAtaqueBasico(EstadoBatalha estado, bool isJogador) async {
+    final atacanteNome = isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName;
+    final vidaMaximaDefensor = isJogador ? widget.inimigo.vida : widget.jogador.vida;
+    
+    // Calcula o ataque básico sem habilidades
+    final ataqueAtual = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
+    final defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
+    final vidaAntes = isJogador ? estado.vidaAtualInimigo : estado.vidaAtualJogador;
+    
+    // Cálculo simples de dano: ataque - defesa (mínimo 1)
+    final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
+    final vidaDepois = (vidaAntes - danoCalculado).clamp(0, vidaMaximaDefensor);
+    
+    // Cria ação no histórico
+    final acao = AcaoBatalha(
+      atacante: atacanteNome,
+      habilidadeNome: 'Ataque Básico',
+      danoBase: ataqueAtual,
+      danoTotal: danoCalculado,
+      defesaAlvo: defesaAlvo,
+      vidaAntes: vidaAntes,
+      vidaDepois: vidaDepois,
+      descricao: '$atacanteNome usou Ataque Básico por falta de energia! Causou $danoCalculado de dano.',
+    );
+    
+    // Atualiza estado
+    if (isJogador) {
+      return estado.copyWith(
+        vidaAtualInimigo: vidaDepois,
+        historicoAcoes: [...estado.historicoAcoes, acao],
+      );
+    } else {
+      return estado.copyWith(
+        vidaAtualJogador: vidaDepois,
+        historicoAcoes: [...estado.historicoAcoes, acao],
+      );
+    }
+  }
+
   Future<void> _salvarEstadoBatalha() async {
     if (estadoAtual == null) return;
     
@@ -643,7 +661,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         tipoExtra: monstro.tipoExtra,
         vida: monstro.vida,
         vidaAtual: isJogador ? estadoAtual?.vidaAtualJogador ?? monstro.vida : estadoAtual?.vidaAtualInimigo ?? monstro.vida,
-        energia: 100, // Valor padrão para visualização
+        energia: monstro.energia, // Usa energia real do inimigo
+        energiaAtual: monstro.energiaAtual, // Usa energia atual real do inimigo
         ataque: monstro.ataque,
         defesa: monstro.defesa,
         agilidade: monstro.agilidade,
@@ -653,9 +672,22 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
     }
     
+    // Obtém os valores atuais do estado da batalha
+    final ataqueAtual = isJogador ? estadoAtual?.ataqueAtualJogador : estadoAtual?.ataqueAtualInimigo;
+    final defesaAtual = isJogador ? estadoAtual?.defesaAtualJogador : estadoAtual?.defesaAtualInimigo;
+    final energiaAtual = isJogador ? estadoAtual?.energiaAtualJogador : estadoAtual?.energiaAtualInimigo;
+    final vidaMaximaAtual = isJogador ? estadoAtual?.vidaMaximaJogador : estadoAtual?.vidaMaximaInimigo;
+    
     showDialog(
       context: context,
-      builder: (context) => ModalMonstroAventura(monstro: monstroAventura),
+      builder: (context) => ModalMonstroAventura(
+        monstro: monstroAventura,
+        isBatalha: true,
+        ataqueAtual: ataqueAtual,
+        defesaAtual: defesaAtual,
+        energiaAtual: energiaAtual,
+        vidaMaximaAtual: vidaMaximaAtual,
+      ),
     );
   }
 
@@ -716,6 +748,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                   
                   const SizedBox(height: 20),
                   
+                  // Botões de ação (movido para cima)
+                  if (!batalhaConcluida)
+                    _buildBotoesAcao(),
+                  
+                  const SizedBox(height: 20),
+                  
                   // Ação atual ou resultado
                   if (batalhaConcluida)
                     _buildResultadoFinal()
@@ -728,26 +766,27 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                   
                   const SizedBox(height: 20),
                   
-                  // Histórico das ações
+                  // Histórico das ações (movido para baixo)
                   if (estadoAtual!.historicoAcoes.isNotEmpty)
                     _buildHistoricoBatalha(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Botões de ação
-                  if (!batalhaConcluida)
-                    _buildBotoesAcao(),
                   
                   // Indicador de salvamento
                   if (salvandoResultado)
                     _buildIndicadorSalvamento(),
-                  
-                  // Botão de voltar (só aparece quando a batalha termina)
-                  if (batalhaConcluida && !salvandoResultado)
-                    _buildBotaoVoltar(),
                 ],
               ),
             ),
+            bottomNavigationBar: batalhaConcluida && !salvandoResultado
+                ? Container(
+                    padding: const EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      bottom: 30, // Espaço adicional para botões virtuais
+                      top: 10,
+                    ),
+                    child: _buildBotaoVoltar(),
+                  )
+                : null,
     );
   }
 
@@ -760,7 +799,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             nome: widget.jogador.tipo.displayName,
             imagem: widget.jogador.imagem,
             vidaAtual: estadoAtual!.vidaAtualJogador,
-            vidaMaxima: widget.jogador.vida,
+            vidaMaxima: estadoAtual!.vidaMaximaJogador, // Usa vida máxima com buffs
             energiaAtual: estadoAtual!.energiaAtualJogador,
             energiaMaxima: widget.jogador.energia,
             cor: Colors.blue,
@@ -809,9 +848,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             nome: widget.inimigo.tipo.displayName,
             imagem: widget.inimigo.imagem,
             vidaAtual: estadoAtual!.vidaAtualInimigo,
-            vidaMaxima: widget.inimigo.vida,
+            vidaMaxima: estadoAtual!.vidaMaximaInimigo, // Usa vida máxima com buffs
             energiaAtual: estadoAtual!.energiaAtualInimigo,
-            energiaMaxima: 100, // Energia padrão para inimigos
+            energiaMaxima: widget.inimigo.energia, // Energia real do inimigo
             cor: Colors.red,
             isJogador: false,
           ),
@@ -1092,11 +1131,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ...estadoAtual!.historicoAcoes.asMap().entries.map((entry) {
-            final index = entry.key;
+          ...estadoAtual!.historicoAcoes.reversed.toList().asMap().entries.map((entry) {
+            final index = estadoAtual!.historicoAcoes.length - entry.key;
             final acao = entry.value;
             final isJogadorAcao = acao.atacante == widget.jogador.tipo.displayName;
-            return _buildAcaoItem(index + 1, acao, isJogadorAcao);
+            return _buildAcaoItem(index, acao, isJogadorAcao);
           }),
         ],
       ),
