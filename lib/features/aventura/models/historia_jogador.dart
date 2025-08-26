@@ -7,6 +7,7 @@ class HistoriaJogador {
   final bool aventuraIniciada;
   final String? mapaAventura;
   final List<MonstroInimigo> monstrosInimigos;
+  final int tier;
 
   const HistoriaJogador({
     required this.email,
@@ -14,6 +15,7 @@ class HistoriaJogador {
     this.aventuraIniciada = false,
     this.mapaAventura,
     this.monstrosInimigos = const [],
+    this.tier = 1,
   });
 
   factory HistoriaJogador.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class HistoriaJogador {
       monstrosInimigos: (json['monstrosInimigos'] as List<dynamic>?)
           ?.map((m) => MonstroInimigo.fromJson(m as Map<String, dynamic>))
           .toList() ?? [],
+      tier: json['tier'] ?? 1,
     );
   }
 
@@ -37,6 +40,7 @@ class HistoriaJogador {
       'aventuraIniciada': aventuraIniciada,
       'mapaAventura': mapaAventura,
       'monstrosInimigos': monstrosInimigos.map((m) => m.toJson()).toList(),
+      'tier': tier,
     };
   }
 
@@ -46,6 +50,7 @@ class HistoriaJogador {
     bool? aventuraIniciada,
     String? mapaAventura,
     List<MonstroInimigo>? monstrosInimigos,
+    int? tier,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -53,6 +58,7 @@ class HistoriaJogador {
       aventuraIniciada: aventuraIniciada ?? this.aventuraIniciada,
       mapaAventura: mapaAventura ?? this.mapaAventura,
       monstrosInimigos: monstrosInimigos ?? this.monstrosInimigos,
+      tier: tier ?? this.tier,
     );
   }
 }

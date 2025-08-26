@@ -132,6 +132,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       );
     }
 
+    int tierAtual = historiaAtual?.tier ?? 1;
+    int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
+    bool podeAvancarTier = mortosNoTier >= 3;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -164,6 +168,42 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     ),
                   );
                 },
+              ),
+            ),
+            // TIER e botão avançar
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'TIER $tierAtual',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: null, // Etapa 1: desabilitado sempre
+                    icon: const Icon(Icons.arrow_upward),
+                    label: const Text('Avançar Tier'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             ),
             // Pontos interativos do mapa (5 pontos fixos)
