@@ -42,9 +42,9 @@ class SelecaoMonstroScreen extends ConsumerWidget {
           }
 
           final historia = snapshot.data!;
-          final monstrosVivos = historia.monstros.where((m) => m.vida > 0).toList();
+          final monstros = historia.monstros;
 
-          if (monstrosVivos.isEmpty) {
+          if (monstros.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -52,7 +52,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                   Icon(Icons.sentiment_dissatisfied, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
-                    'Nenhum monstro com vida disponível!',
+                    'Nenhum monstro disponível!',
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
@@ -148,9 +148,9 @@ class SelecaoMonstroScreen extends ConsumerWidget {
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: monstrosVivos.length,
+                  itemCount: monstros.length,
                   itemBuilder: (context, index) {
-                    final monstro = monstrosVivos[index];
+                    final monstro = monstros[index];
                     return _buildMonstroCard(context, monstro, ref);
                   },
                 ),
@@ -163,76 +163,76 @@ class SelecaoMonstroScreen extends ConsumerWidget {
   }
 
   Widget _buildMonstroCard(BuildContext context, MonstroAventura monstro, WidgetRef ref) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: monstro.tipo.cor.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _selecionarMonstro(context, monstro, ref),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Imagem do monstro
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  image: DecorationImage(
-                    image: AssetImage(monstro.imagem),
-                    fit: BoxFit.cover,
+    final isMorto = monstro.vidaAtual <= 0;
+    return Opacity(
+      opacity: isMorto ? 0.5 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: monstro.tipo.cor.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: isMorto ? null : () => _selecionarMonstro(context, monstro, ref),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Imagem do monstro
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    image: DecorationImage(
+                      image: AssetImage(monstro.imagem),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              
-              // Informações do monstro
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      monstro.tipo.displayName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 16),
+                // Informações do monstro
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        monstro.tipo.displayName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        _buildStatChip(Icons.favorite, '${monstro.vida}', Colors.red),
-                        const SizedBox(width: 8),
-                        _buildStatChip(Remix.sword_fill, '${monstro.ataque}', Colors.orange),
-                        const SizedBox(width: 8),
-                        _buildStatChip(Icons.shield, '${monstro.defesa}', Colors.blue),
-                        const SizedBox(width: 8),
-                        _buildStatChip(Icons.speed, '${monstro.agilidade}', Colors.green),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _buildStatChip(Icons.favorite, '${monstro.vida}', Colors.red),
+                          const SizedBox(width: 8),
+                          _buildStatChip(Remix.sword_fill, '${monstro.ataque}', Colors.orange),
+                          const SizedBox(width: 8),
+                          _buildStatChip(Icons.shield, '${monstro.defesa}', Colors.blue),
+                          const SizedBox(width: 8),
+                          _buildStatChip(Icons.speed, '${monstro.agilidade}', Colors.green),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              
-              // Ícone de seleção
-              Icon(
-                Icons.play_circle_fill,
-                color: monstro.tipo.cor,
-                size: 32,
-              ),
-            ],
+                // Ícone de seleção ou morto
+                isMorto
+                  ? Icon(Icons.close, color: Colors.grey, size: 32)
+                  : Icon(Icons.play_circle_fill, color: monstro.tipo.cor, size: 32),
+              ],
+            ),
           ),
         ),
       ),

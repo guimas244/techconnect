@@ -5,7 +5,7 @@ import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../../../core/providers/user_provider.dart';
-import 'card_monstro_aventura.dart';
+import '../../../core/services/google_drive_service.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 
@@ -60,12 +60,28 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final repository = ref.read(aventuraRepositoryProvider);
       debugPrint('🎮 [AventuraScreen] Repository obtido, verificando histórico...');
 
-      final temHistorico = await repository.jogadorTemHistorico(emailJogador);
+      bool temHistorico;
+      try {
+        temHistorico = await repository.jogadorTemHistorico(emailJogador);
+      } catch (e) {
+        debugPrint('❌ [AventuraScreen] Erro de autenticação, tentando refresh...');
+        // Tenta refresh do token
+        await GoogleDriveService().inicializarConexao();
+        // Tenta novamente
+        temHistorico = await repository.jogadorTemHistorico(emailJogador);
+      }
       debugPrint('🎮 [AventuraScreen] Tem histórico: $temHistorico');
 
       if (temHistorico) {
         debugPrint('🎮 [AventuraScreen] Carregando histórico existente...');
-        final historia = await repository.carregarHistoricoJogador(emailJogador);
+        HistoriaJogador? historia;
+        try {
+          historia = await repository.carregarHistoricoJogador(emailJogador);
+        } catch (e) {
+          debugPrint('❌ [AventuraScreen] Erro de autenticação ao carregar histórico, tentando refresh...');
+          await GoogleDriveService().inicializarConexao();
+          historia = await repository.carregarHistoricoJogador(emailJogador);
+        }
         debugPrint('🎮 [AventuraScreen] História carregada: ${historia != null}');
 
         if (historia != null) {

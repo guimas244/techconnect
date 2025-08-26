@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
+import 'aventura_screen.dart';
 import '../models/batalha.dart';
 import '../models/habilidade.dart';
 import '../models/item.dart';
@@ -488,11 +489,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (vencedorBatalha == 'jogador') {
       _gerarEMostrarItem();
     } else {
-      // Se perdeu, apenas salva e volta
+      // Se perdeu, apenas salva e volta para aventura com refresh
       _salvarResultadoNoDrive().then((_) {
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => AventuraScreen()),
+            );
           }
         });
       });
@@ -531,21 +534,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           ),
         );
       }
-      // Após equipar item, salva tudo e volta ao mapa
+      // Após equipar item, salva tudo e volta para aventura com refresh
       _salvarResultadoNoDrive().then((_) {
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => AventuraScreen()),
+            );
           }
         });
       });
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao gerar item: $e');
-      // Em caso de erro, apenas salva e volta
+      // Em caso de erro, apenas salva e volta para aventura com refresh
       _salvarResultadoNoDrive().then((_) {
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => AventuraScreen()),
+            );
           }
         });
       });
@@ -664,6 +671,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final vidaDepois = (vidaAntes - danoCalculado).clamp(0, vidaMaximaDefensor);
 
     // Cria ação no histórico
+    final energiaRestaurada = isJogador
+        ? (estado.jogador.energia * 0.1).round()
+        : (estado.inimigo.energia * 0.1).round();
     final acao = AcaoBatalha(
       atacante: atacanteNome,
       habilidadeNome: 'Ataque Básico',
@@ -672,18 +682,24 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       defesaAlvo: defesaAlvo,
       vidaAntes: vidaAntes,
       vidaDepois: vidaDepois,
-      descricao: '$atacanteNome usou Ataque Básico por falta de energia! Causou $danoCalculado de dano.',
+      descricao: '$atacanteNome usou Ataque Básico por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
     );
 
-    // Atualiza estado
+    // Restaura 10% da energia máxima do atacante
     if (isJogador) {
+      final energiaRestaurada = (estado.jogador.energia * 0.1).round();
+      final novaEnergia = (estado.energiaAtualJogador + energiaRestaurada).clamp(0, estado.jogador.energia);
       return estado.copyWith(
         vidaAtualInimigo: vidaDepois,
+        energiaAtualJogador: novaEnergia,
         historicoAcoes: [...estado.historicoAcoes, acao],
       );
     } else {
+      final energiaRestaurada = (estado.inimigo.energia * 0.1).round();
+      final novaEnergia = (estado.energiaAtualInimigo + energiaRestaurada).clamp(0, estado.inimigo.energia);
       return estado.copyWith(
         vidaAtualJogador: vidaDepois,
+        energiaAtualInimigo: novaEnergia,
         historicoAcoes: [...estado.historicoAcoes, acao],
       );
     }
