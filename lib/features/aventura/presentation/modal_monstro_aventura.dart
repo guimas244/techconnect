@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../shared/models/habilidade_enum.dart';
+import 'modal_item_obtido.dart';
 import '../models/monstro_aventura.dart';
 import 'package:remixicon/remixicon.dart';
+// Garante que RemixIcon está disponível
 
 class ModalMonstroAventura extends StatelessWidget {
   final MonstroAventura monstro;
@@ -77,6 +79,7 @@ class ModalMonstroAventura extends StatelessWidget {
               ),
             if (showCloseButton) const SizedBox(height: 10),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 80,
@@ -136,6 +139,27 @@ class ModalMonstroAventura extends StatelessWidget {
                           Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
                           const SizedBox(width: 8),
                           Image.asset(monstro.tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                          const SizedBox(width: 8),
+                          // Ícone da mochila para detalhar item
+                          GestureDetector(
+                            onTap: monstro.itemEquipado != null
+                                ? () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => ModalItemObtido(
+                                        item: monstro.itemEquipado!,
+                                        monstrosDisponiveis: [],
+                                        onEquiparItem: (_, __) {},
+                                      ),
+                                    );
+                                  }
+                                : null,
+                            child: Icon(
+                              Icons.backpack,
+                              color: monstro.itemEquipado != null ? Colors.brown : Colors.grey,
+                              size: 32,
+                            ),
+                          ),
                         ],
                       ),
                     ],

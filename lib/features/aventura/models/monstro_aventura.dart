@@ -1,5 +1,6 @@
 import '../../../shared/models/tipo_enum.dart';
 import 'habilidade.dart';
+import 'item.dart';
 
 class MonstroAventura {
   final Tipo tipo;
@@ -13,7 +14,7 @@ class MonstroAventura {
   final int ataque;
   final int defesa;
   final List<Habilidade> habilidades;
-  final String item;
+  final Item? itemEquipado; // Item equipado (opcional)
 
   const MonstroAventura({
     required this.tipo,
@@ -27,7 +28,7 @@ class MonstroAventura {
     required this.ataque,
     required this.defesa,
     required this.habilidades,
-    required this.item,
+    this.itemEquipado, // Item equipado (opcional)
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -52,7 +53,9 @@ class MonstroAventura {
       habilidades: (json['habilidades'] as List<dynamic>?)
           ?.map((h) => Habilidade.fromJson(h))
           .toList() ?? [],
-      item: json['item'] ?? 'TODO',
+      itemEquipado: json['itemEquipado'] != null 
+          ? Item.fromMap(json['itemEquipado'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -69,7 +72,7 @@ class MonstroAventura {
       'ataque': ataque,
       'defesa': defesa,
       'habilidades': habilidades.map((h) => h.toJson()).toList(),
-      'item': item,
+      'itemEquipado': itemEquipado?.toMap(),
     };
   }
 
@@ -85,7 +88,7 @@ class MonstroAventura {
     int? ataque,
     int? defesa,
     List<Habilidade>? habilidades,
-    String? item,
+    Item? itemEquipado,
   }) {
     return MonstroAventura(
       tipo: tipo ?? this.tipo,
@@ -99,7 +102,14 @@ class MonstroAventura {
       ataque: ataque ?? this.ataque,
       defesa: defesa ?? this.defesa,
       habilidades: habilidades ?? this.habilidades,
-      item: item ?? this.item,
+      itemEquipado: itemEquipado ?? this.itemEquipado,
     );
   }
+
+  // Getters para atributos totais (base + item equipado)
+  int get vidaTotal => vida + (itemEquipado?.vida ?? 0);
+  int get energiaTotal => energia + (itemEquipado?.energia ?? 0);
+  int get ataqueTotal => ataque + (itemEquipado?.ataque ?? 0);
+  int get defesaTotal => defesa + (itemEquipado?.defesa ?? 0);
+  int get agilidadeTotal => agilidade + (itemEquipado?.agilidade ?? 0);
 }

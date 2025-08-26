@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
-import '../../../shared/models/tipo_enum.dart';
 import '../models/monstro_aventura.dart';
 import '../../../core/providers/user_provider.dart';
-import 'package:remixicon/remixicon.dart';
+import 'card_monstro_aventura.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 
@@ -33,30 +32,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   // Mantém apenas uma definição do método _buildTipoIcon
-  Widget _buildTipoIcon(Tipo tipo) {
-    return Image.asset(
-      tipo.iconAsset,
-      width: 32,
-      height: 32,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        // Fallback para ícone material se asset não existir
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: tipo.cor.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            tipo.icone,
-            color: tipo.cor,
-            size: 20,
-          ),
-        );
-      },
-    );
-  }
   HistoriaJogador? historiaAtual;
 
   @override
@@ -471,108 +446,36 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Widget _buildCardMonstroBonito(dynamic monstro) {
-    return InkWell(
+    return GestureDetector(
       onTap: () => _mostrarModalMonstro(monstro),
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(10),
-        height: 210,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [monstro.tipo.cor.withOpacity(0.7), Colors.white.withOpacity(0.7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: monstro.tipo.cor.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-          border: Border.all(color: monstro.tipo.cor, width: 2),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: monstro.tipo.cor, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: monstro.tipo.cor.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: 6,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.asset(
                   monstro.imagem,
+                  width: 60,
+                  height: 60,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: monstro.tipo.cor.withOpacity(0.3),
-                      child: Icon(
-                        Icons.pets,
-                        color: monstro.tipo.cor,
-                        size: 30,
-                      ),
-                    );
-                  },
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            // Ícones dos tipos (usando asset igual tela de tipagem)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTipoIcon(monstro.tipo),
-                const SizedBox(width: 12),
-                _buildTipoIcon(monstro.tipoExtra),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Vida
-                Column(
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Remix.heart_pulse_fill, color: Colors.red, size: 22),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text('${monstro.vida}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(width: 18),
-                // Energia
-                Column(
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Remix.battery_charge_fill, color: Colors.blue, size: 22),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text('${monstro.energia}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                  const SizedBox(width: 8),
+                  Image.asset(monstro.tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

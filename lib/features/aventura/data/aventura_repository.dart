@@ -128,7 +128,7 @@ class AventuraRepository {
         ataque: AtributoJogo.ataque.sortear(random),
         defesa: AtributoJogo.defesa.sortear(random),
         habilidades: habilidades,
-        item: 'TODO',
+        itemEquipado: null, // Sem item inicial
       );
       monstrosSorteados.add(monstro);
     }

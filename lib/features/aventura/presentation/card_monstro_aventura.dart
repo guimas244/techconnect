@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../models/item.dart';
 
 class CardMonstroAventura extends StatelessWidget {
   final String imagem;
@@ -10,6 +11,7 @@ class CardMonstroAventura extends StatelessWidget {
   final int agilidade;
   final int ataque;
   final int defesa;
+  final Item? itemEquipado;
   final VoidCallback? onTap;
 
   const CardMonstroAventura({
@@ -22,6 +24,7 @@ class CardMonstroAventura extends StatelessWidget {
     required this.agilidade,
     required this.ataque,
     required this.defesa,
+    this.itemEquipado,
     this.onTap,
   });
 
@@ -88,13 +91,61 @@ class CardMonstroAventura extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
                 const SizedBox(width: 12),
                 Image.asset(tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                Spacer(),
+                GestureDetector(
+                  onTap: itemEquipado != null
+                      ? () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Item Equipado'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(itemEquipado!.nome, style: TextStyle(fontWeight: FontWeight.bold, color: itemEquipado!.raridade.cor)),
+                                  const SizedBox(height: 8),
+                                  Text('Raridade: ${itemEquipado!.raridade.nome}', style: TextStyle(color: itemEquipado!.raridade.cor)),
+                                  const SizedBox(height: 8),
+                                  ...itemEquipado!.atributos.entries.map((e) => Text('${e.key}: +${e.value}', style: const TextStyle(fontSize: 14))),
+                                  const SizedBox(height: 8),
+                                  Text('Obtido em: ${itemEquipado!.dataObtencao.toString().substring(0, 19)}', style: const TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Fechar'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      : null,
+                  child: Icon(
+                    Icons.backpack,
+                    color: itemEquipado != null ? itemEquipado!.raridade.cor : Colors.grey,
+                    size: 28,
+                  ),
+                ),
               ],
             ),
+            if (itemEquipado != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                itemEquipado!.nome,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: itemEquipado!.raridade.cor,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -103,7 +154,13 @@ class CardMonstroAventura extends StatelessWidget {
                   children: [
                     Icon(Icons.favorite, color: Colors.red, size: 22),
                     const SizedBox(height: 2),
-                    Text('$vida', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text('$vida', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (itemEquipado != null && (itemEquipado!.atributos['vida'] ?? 0) > 0)
+                          Text(' (+${itemEquipado!.atributos['vida']})', style: TextStyle(color: itemEquipado!.raridade.cor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(width: 18),
@@ -111,7 +168,13 @@ class CardMonstroAventura extends StatelessWidget {
                   children: [
                     Icon(Icons.flash_on, color: Colors.blue, size: 22),
                     const SizedBox(height: 2),
-                    Text('$energia', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text('$energia', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (itemEquipado != null && (itemEquipado!.atributos['energia'] ?? 0) > 0)
+                          Text(' (+${itemEquipado!.atributos['energia']})', style: TextStyle(color: itemEquipado!.raridade.cor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(width: 18),
@@ -119,7 +182,13 @@ class CardMonstroAventura extends StatelessWidget {
                   children: [
                     Icon(Icons.speed, color: Colors.green, size: 22),
                     const SizedBox(height: 2),
-                    Text('$agilidade', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text('$agilidade', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (itemEquipado != null && (itemEquipado!.atributos['agilidade'] ?? 0) > 0)
+                          Text(' (+${itemEquipado!.atributos['agilidade']})', style: TextStyle(color: itemEquipado!.raridade.cor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
                   ],
                 ),
               ],
@@ -132,7 +201,13 @@ class CardMonstroAventura extends StatelessWidget {
                   children: [
                     Icon(Icons.local_fire_department, color: Colors.orange, size: 22),
                     const SizedBox(height: 2),
-                    Text('$ataque', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text('$ataque', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (itemEquipado != null && (itemEquipado!.atributos['ataque'] ?? 0) > 0)
+                          Text(' (+${itemEquipado!.atributos['ataque']})', style: TextStyle(color: itemEquipado!.raridade.cor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(width: 18),
@@ -140,7 +215,13 @@ class CardMonstroAventura extends StatelessWidget {
                   children: [
                     Icon(Icons.security, color: Colors.purple, size: 22),
                     const SizedBox(height: 2),
-                    Text('$defesa', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text('$defesa', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (itemEquipado != null && (itemEquipado!.atributos['defesa'] ?? 0) > 0)
+                          Text(' (+${itemEquipado!.atributos['defesa']})', style: TextStyle(color: itemEquipado!.raridade.cor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
                   ],
                 ),
               ],

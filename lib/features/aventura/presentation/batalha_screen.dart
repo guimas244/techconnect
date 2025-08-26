@@ -5,12 +5,15 @@ import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../models/batalha.dart';
 import '../models/habilidade.dart';
+import '../models/item.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
+import '../services/item_service.dart';
 import 'modal_monstro_aventura.dart';
+import 'modal_item_obtido.dart';
 
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
@@ -35,6 +38,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool batalhaConcluida = false;
   bool salvandoResultado = false;
   bool jogadorComeca = true;
+  bool itemGerado = false;
   int turnoAtual = 1;
   bool vezDoJogador = true;
   String? ultimaAcao;
@@ -463,15 +467,93 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vencedor = vencedorBatalha;
     });
     
-    // SAVE FIRST: Salva no Drive antes de redirecionar
-    _salvarResultadoNoDrive().then((_) {
-      // Após salvar, aguarda 3 segundos e volta ao mapa automaticamente
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
+    // Se o jogador venceu, gerar item
+    if (vencedorBatalha == 'jogador') {
+      _gerarEMostrarItem();
+    } else {
+      // Se perdeu, apenas salva e volta
+      _salvarResultadoNoDrive().then((_) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        });
       });
-    });
+    }
+  }
+
+  Future<void> _gerarEMostrarItem() async {
+    if (itemGerado) return;
+    itemGerado = true;
+    try {
+      // Gera um item aleatório
+      final itemService = ItemService();
+      final itemObtido = itemService.gerarItemAleatorio();
+      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name})');
+      // Carrega os monstros do jogador para seleção
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia == null || historia.monstros.isEmpty) {
+        throw Exception('Nenhum monstro encontrado para equipar item');
+      }
+      // Mostra modal de seleção de item
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => ModalItemObtido(
+            item: itemObtido,
+            monstrosDisponiveis: historia.monstros,
+            onEquiparItem: (monstro, item) async {
+              await _equiparItemEMonstro(monstro, item);
+              Navigator.of(context).pop();
+            },
+          ),
+        );
+      }
+      // Após equipar item, salva tudo e volta ao mapa
+      _salvarResultadoNoDrive().then((_) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        });
+      });
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao gerar item: $e');
+      // Em caso de erro, apenas salva e volta
+      _salvarResultadoNoDrive().then((_) {
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        });
+      });
+    }
+  }
+
+  Future<void> _equiparItemEMonstro(MonstroAventura monstro, Item item) async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      // Carrega história atual
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia == null) return;
+      // Atualiza o monstro com o item equipado
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
+          return m.copyWith(itemEquipado: item);
+        }
+        return m;
+      }).toList();
+      // Salva a história com o item equipado imediatamente
+      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      await repository.salvarHistoricoJogador(historiaAtualizada);
+      print('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao equipar item: $e');
+    }
   }
 
   Future<void> _salvarResultadoNoDrive() async {
@@ -668,7 +750,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         agilidade: monstro.agilidade,
         habilidades: monstro.habilidades,
         imagem: monstro.imagem,
-        item: '', // Sem item para inimigos
+        itemEquipado: null, // Sem item para inimigos
       );
     }
     
@@ -677,7 +759,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final defesaAtual = isJogador ? estadoAtual?.defesaAtualJogador : estadoAtual?.defesaAtualInimigo;
     final energiaAtual = isJogador ? estadoAtual?.energiaAtualJogador : estadoAtual?.energiaAtualInimigo;
     final vidaMaximaAtual = isJogador ? estadoAtual?.vidaMaximaJogador : estadoAtual?.vidaMaximaInimigo;
-    
+        
+    // Exibe detalhes do monstro (apenas uma vez)
     showDialog(
       context: context,
       builder: (context) => ModalMonstroAventura(
