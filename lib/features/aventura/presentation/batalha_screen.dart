@@ -73,17 +73,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
     
     // Estado inicial da batalha
+    // Aplica bônus do item equipado do jogador
+    final item = widget.jogador.itemEquipado;
+    final ataqueComItem = widget.jogador.ataque + (item?.atributos['ataque'] ?? 0);
+    final defesaComItem = widget.jogador.defesa + (item?.atributos['defesa'] ?? 0);
+    final vidaComItem = widget.jogador.vida + (item?.atributos['vida'] ?? 0);
+    final energiaComItem = widget.jogador.energia + (item?.atributos['energia'] ?? 0);
+    final agilidadeComItem = widget.jogador.agilidade + (item?.atributos['agilidade'] ?? 0);
+
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
       inimigo: widget.inimigo,
       vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
       vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
-      vidaMaximaJogador: widget.jogador.vida, // Vida máxima inicial
+      vidaMaximaJogador: vidaComItem, // Vida máxima inicial + item
       vidaMaximaInimigo: widget.inimigo.vida, // Vida máxima inicial
       energiaAtualJogador: widget.jogador.energiaAtual, // Energia atual do jogador
       energiaAtualInimigo: widget.inimigo.energiaAtual, // Energia atual do inimigo
-      ataqueAtualJogador: widget.jogador.ataque,
-      defesaAtualJogador: widget.jogador.defesa,
+      ataqueAtualJogador: ataqueComItem,
+      defesaAtualJogador: defesaComItem,
       ataqueAtualInimigo: widget.inimigo.ataque,
       defesaAtualInimigo: widget.inimigo.defesa,
       habilidadesUsadasJogador: [],
@@ -516,7 +524,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             monstrosDisponiveis: historia.monstros,
             onEquiparItem: (monstro, item) async {
               await _equiparItemEMonstro(monstro, item);
-              Navigator.of(context).pop();
+              if (mounted) {
+                Navigator.of(context).pop();
+              }
             },
           ),
         );
@@ -1366,28 +1376,4 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
   }
 
-  Widget _buildBotaoVoltar() {
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueGrey.shade900,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: const Text(
-          'Voltar ao Mapa',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
 }

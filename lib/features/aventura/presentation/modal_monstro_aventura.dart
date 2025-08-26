@@ -135,12 +135,12 @@ class ModalMonstroAventura extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
                           const SizedBox(width: 8),
                           Image.asset(monstro.tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
                           const SizedBox(width: 8),
-                          // Ícone da mochila para detalhar item
                           GestureDetector(
                             onTap: monstro.itemEquipado != null
                                 ? () {
@@ -158,6 +158,10 @@ class ModalMonstroAventura extends StatelessWidget {
                               size: 32,
                             ),
                           ),
+                          if (monstro.vidaAtual <= 0) ...[
+                            const SizedBox(width: 8),
+                            Icon(Remix.skull_fill, color: Colors.red, size: 32),
+                          ],
                         ],
                       ),
                     ],
