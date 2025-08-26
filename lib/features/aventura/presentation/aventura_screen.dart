@@ -301,59 +301,117 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
       case AventuraEstado.semHistorico:
         return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
+          child: SingleChildScrollView(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth = constraints.maxWidth < 400 ? constraints.maxWidth : 400.0;
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.casino,
-                      size: 64,
-                      color: Colors.orange,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Primeira Aventura!',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOut,
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+                      padding: const EdgeInsets.all(16),
+                      width: maxWidth,
+                      decoration: BoxDecoration(
                         color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.18),
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Você ainda não possui monstros.\nSorteie 3 monstros para começar!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
+                      child: Column(
+                        children: [
+                          SizedBox(height: 8),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            children: [
+                              Icon(Icons.star, color: Colors.amber, size: 32),
+                              Text(
+                                'Primeira Aventura!',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple.shade700,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              Icon(Icons.star, color: Colors.amber, size: 32),
+                            ],
+                          ),
+                          SizedBox(height: 18),
+                          Text(
+                            'Você ainda não possui monstros.\nSorteie 3 monstros para começar sua jornada!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.deepPurple.shade400,
+                            ),
+                          ),
+                          SizedBox(height: 18),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: _sortearMonstros,
+                                splashColor: Colors.deepPurple.shade100,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.orange.shade400, Colors.deepPurple.shade400],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.orange.withOpacity(0.18),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                  child: Center(
+                                    child: Wrap(
+                                      alignment: WrapAlignment.center,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 10,
+                                      children: [
+                                        Icon(Icons.casino, color: Colors.white, size: 26),
+                                        Text(
+                                          'SORTEAR MONSTROS',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton.icon(
-                onPressed: _sortearMonstros,
-                icon: const Icon(Icons.casino),
-                label: const Text('SORTEAR MONSTROS'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
         );
 
