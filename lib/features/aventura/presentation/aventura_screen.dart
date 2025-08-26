@@ -17,6 +17,14 @@ class AventuraScreen extends ConsumerStatefulWidget {
 }
 
 class _AventuraScreenState extends ConsumerState<AventuraScreen> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    FlutterError.onError = (FlutterErrorDetails details) {
+      debugPrint('❌ [FlutterError] ${details.exceptionAsString()}');
+      debugPrint('❌ [FlutterError] Stacktrace: ${details.stack}');
+    };
+  }
   String _getTextoBotaoAventura() {
     if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
       return 'CONTINUAR AVENTURA';
@@ -37,8 +45,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   @override
   void initState() {
     super.initState();
-    // Move a verificação para depois que o widget foi construído
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('🟢 [AventuraScreen] initState chamado, mounted=$mounted');
       _verificarEstadoJogador();
     });
   }
@@ -46,43 +54,49 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   Future<void> _verificarEstadoJogador() async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
-      print('🎮 [AventuraScreen] Iniciando verificação do jogador: $emailJogador');
+      debugPrint('🎮 [AventuraScreen] Iniciando verificação do jogador: $emailJogador');
       ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
-    
+
       final repository = ref.read(aventuraRepositoryProvider);
-      print('🎮 [AventuraScreen] Repository obtido, verificando histórico...');
-      
+      debugPrint('🎮 [AventuraScreen] Repository obtido, verificando histórico...');
+
       final temHistorico = await repository.jogadorTemHistorico(emailJogador);
-      print('🎮 [AventuraScreen] Tem histórico: $temHistorico');
-      
+      debugPrint('🎮 [AventuraScreen] Tem histórico: $temHistorico');
+
       if (temHistorico) {
-        print('🎮 [AventuraScreen] Carregando histórico existente...');
+        debugPrint('🎮 [AventuraScreen] Carregando histórico existente...');
         final historia = await repository.carregarHistoricoJogador(emailJogador);
-        print('🎮 [AventuraScreen] História carregada: ${historia != null}');
-        
+        debugPrint('🎮 [AventuraScreen] História carregada: ${historia != null}');
+
         if (historia != null) {
-          setState(() {
-            historiaAtual = historia;
-          });
-          
+          if (mounted) {
+            debugPrint('🟢 [AventuraScreen] Atualizando estado com história carregada');
+            setState(() {
+              historiaAtual = historia;
+            });
+          } else {
+            debugPrint('⚠️ [AventuraScreen] Widget não está montado ao tentar atualizar estado');
+          }
+
           // Verifica se a aventura já foi iniciada
           if (historia.aventuraIniciada) {
             ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
-            print('✅ [AventuraScreen] Estado: AVENTURA INICIADA');
+            debugPrint('✅ [AventuraScreen] Estado: AVENTURA INICIADA');
           } else {
             ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
-            print('✅ [AventuraScreen] Estado: PODE INICIAR');
+            debugPrint('✅ [AventuraScreen] Estado: PODE INICIAR');
           }
         } else {
           ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
-          print('❌ [AventuraScreen] Estado: ERRO (história nula)');
+          debugPrint('❌ [AventuraScreen] Estado: ERRO (história nula)');
         }
       } else {
         ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
-        print('📝 [AventuraScreen] Estado: SEM HISTÓRICO');
+        debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO');
       }
-    } catch (e) {
-      print('❌ [AventuraScreen] Erro na verificação: $e');
+    } catch (e, stack) {
+      debugPrint('❌ [AventuraScreen] Erro na verificação: $e');
+      debugPrint('❌ [AventuraScreen] Stacktrace: $stack');
       ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
     }
   }
@@ -131,21 +145,25 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     
     try {
       final repository = ref.read(aventuraRepositoryProvider);
-      print('🚀 [AventuraScreen] Chamando iniciarAventura no repository...');
-      
+      debugPrint('🚀 [AventuraScreen] Chamando iniciarAventura no repository...');
+
       final historiaAtualizada = await repository.iniciarAventura(emailJogador);
-      
+
       if (historiaAtualizada != null) {
-        print('🚀 [AventuraScreen] Aventura processada com sucesso!');
-        setState(() {
-          historiaAtual = historiaAtualizada;
-        });
-        
+        debugPrint('🚀 [AventuraScreen] Aventura processada com sucesso!');
+        if (mounted) {
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+        } else {
+          debugPrint('⚠️ [AventuraScreen] Widget não está montado ao tentar atualizar estado');
+        }
+
         // Determina se é aventura nova ou continuada
         final isAventuraNova = historiaAtualizada.aventuraIniciada && 
                                historiaAtualizada.monstrosInimigos.isNotEmpty &&
                                historiaAtualizada.mapaAventura != null;
-        
+
         // Navegar para o mapa de aventura
         Navigator.push(
           context,
@@ -156,14 +174,14 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         );
-        
+
         ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
-        
+
         // Mensagem diferente baseada no tipo de aventura
         final mensagem = isAventuraNova 
             ? 'Aventura iniciada! Boa sorte na jornada!'
             : 'Aventura continuada! Bem-vindo de volta!';
-            
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(mensagem),
@@ -173,8 +191,9 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       } else {
         throw Exception('Falha ao iniciar aventura');
       }
-    } catch (e) {
-      print('❌ [AventuraScreen] Erro ao iniciar aventura: $e');
+    } catch (e, stack) {
+      debugPrint('❌ [AventuraScreen] Erro ao iniciar aventura: $e');
+      debugPrint('❌ [AventuraScreen] Stacktrace: $stack');
       ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

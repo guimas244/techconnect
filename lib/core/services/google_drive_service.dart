@@ -52,16 +52,14 @@ class GoogleDriveService {
 
   /// Salva um arquivo JSON no Drive (pasta TECH CONNECT)
   Future<bool> salvarJson(String tipoNome, Map<String, dynamic> jsonData) async {
-    if (_driveService == null || !_isConnected) {
-      print('⚠️ Google Drive não conectado, tentando conectar...');
-      final conectou = await inicializarConexao();
-      if (!conectou) return false;
-    }
-
-    try {
+    Future<bool> _salvar() async {
+      if (_driveService == null || !_isConnected) {
+        print('⚠️ Google Drive não conectado, tentando conectar...');
+        final conectou = await inicializarConexao();
+        if (!conectou) return false;
+      }
       final nomeArquivo = '$tipoNome.json';
       print('💾 Salvando arquivo JSON no Drive: $nomeArquivo');
-      
       // Verificar se a pasta TECH CONNECT foi configurada
       if (_driveService!.folderId == "PASTE_TECH_CONNECT_FOLDER_ID_HERE") {
         print('📁 [DEBUG] FOLDER_ID não configurado, criando pasta TECH CONNECT...');
@@ -72,19 +70,16 @@ class GoogleDriveService {
         }
         print('✅ [DEBUG] Pasta criada com ID: $novoFolderId');
         print('⚠️ [INFO] ATENÇÃO: Atualize o FOLDER_ID no código para: $novoFolderId');
-        
         // Recriar DriveService com o novo FOLDER_ID
         final api = await DriveClientFactory.create();
         _driveService = DriveService(api, folderId: novoFolderId);
       }
-      
       // Verificar se arquivo já existe
       final arquivosExistentes = await _driveService!.listInRootFolder();
       final arquivoExistente = arquivosExistentes.firstWhere(
         (file) => file.name == nomeArquivo,
         orElse: () => drive.File(),
       );
-
       if (arquivoExistente.id != null) {
         // Atualizar arquivo existente
         await _driveService!.updateJsonFile(arquivoExistente.id!, jsonData);
@@ -94,18 +89,31 @@ class GoogleDriveService {
         await _driveService!.createJsonFile(nomeArquivo, jsonData);
         print('✅ Arquivo criado no Drive: $nomeArquivo');
       }
-      
       return true;
+    }
+    try {
+      return await _salvar();
     } catch (e) {
-      // Se for erro 401 (token expirado), marca como desconectado
       if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado durante salvamento, marcando como desconectado');
+        print('🔒 Token expirado durante salvamento, tentando renovar...');
         _isConnected = false;
         _driveService = null;
+        final conectou = await inicializarConexao();
+        if (conectou) {
+          try {
+            return await _salvar();
+          } catch (e2) {
+            print('❌ Erro ao salvar JSON após renovar token: $e2');
+            return false;
+          }
+        } else {
+          print('❌ Falha ao renovar token, reautenticação necessária.');
+          return false;
+        }
       } else {
         print('❌ Erro ao salvar JSON no Drive: $e');
+        return false;
       }
-      return false;
     }
   }
 
@@ -145,64 +153,87 @@ class GoogleDriveService {
 
   /// Lista todos os arquivos JSON na pasta TECH CONNECT
   Future<List<String>> listarArquivosDrive() async {
-    if (_driveService == null || !_isConnected) {
-      final conectou = await inicializarConexao();
-      if (!conectou) return [];
-    }
-
-    try {
+    Future<List<String>> _listar() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return [];
+      }
       final arquivos = await _driveService!.listInRootFolder();
       final nomesJson = arquivos
           .where((file) => file.name?.endsWith('.json') == true)
           .map((file) => file.name!)
           .toList();
-      
       print('📋 Encontrados ${nomesJson.length} JSONs na pasta TECH CONNECT');
       return nomesJson;
+    }
+    try {
+      return await _listar();
     } catch (e) {
-      // Se for erro 401 (token expirado), marca como desconectado
       if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado durante listagem, marcando como desconectado');
+        print('🔒 Token expirado durante listagem, tentando renovar...');
         _isConnected = false;
         _driveService = null;
+        final conectou = await inicializarConexao();
+        if (conectou) {
+          try {
+            return await _listar();
+          } catch (e2) {
+            print('❌ Erro ao listar arquivos após renovar token: $e2');
+            return [];
+          }
+        } else {
+          print('❌ Falha ao renovar token, reautenticação necessária.');
+          return [];
+        }
       } else {
         print('❌ Erro ao listar arquivos do Drive: $e');
+        return [];
       }
-      return [];
     }
   }
 
   /// Baixa o conteúdo de um arquivo JSON específico
   Future<Map<String, dynamic>?> baixarJson(String nomeArquivo) async {
-    if (_driveService == null || !_isConnected) {
-      final conectou = await inicializarConexao();
-      if (!conectou) return null;
-    }
-
-    try {
+    Future<Map<String, dynamic>?> _baixar() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return null;
+      }
       final arquivos = await _driveService!.listInRootFolder();
       final arquivo = arquivos.firstWhere(
         (file) => file.name == nomeArquivo,
         orElse: () => drive.File(),
       );
-
       if (arquivo.id == null) {
         print('! Arquivo não encontrado: $nomeArquivo');
         return null;
       }
-
       final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
       return json.decode(conteudo) as Map<String, dynamic>;
+    }
+    try {
+      return await _baixar();
     } catch (e) {
-      // Se for erro 401 (token expirado), marca como desconectado
       if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado para $nomeArquivo, marcando como desconectado');
+        print('🔒 Token expirado para $nomeArquivo, tentando renovar...');
         _isConnected = false;
         _driveService = null;
+        final conectou = await inicializarConexao();
+        if (conectou) {
+          try {
+            return await _baixar();
+          } catch (e2) {
+            print('❌ Erro ao baixar JSON após renovar token: $e2');
+            return null;
+          }
+        } else {
+          print('❌ Falha ao renovar token, reautenticação necessária.');
+          return null;
+        }
       } else {
         print('❌ Erro ao baixar JSON do Drive ($nomeArquivo): $e');
+        return null;
       }
-      return null;
     }
   }
 

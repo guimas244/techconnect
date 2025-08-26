@@ -403,29 +403,38 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   Future<EstadoBatalha> _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
     String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
-    
-    // Determina tipos do atacante e defensor
-    Tipo tipoAtacante = isJogador ? estado.jogador.tipo : estado.inimigo.tipo;
-    Tipo tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo; // Considera apenas o primeiro tipo para receber dano
-    
+
+    // Determina tipo do ataque (tipoElemental da habilidade ou tipo principal do monstro no ataque básico)
+    Tipo tipoAtaque;
+    if (habilidade.tipo == TipoHabilidade.ofensiva) {
+      tipoAtaque = Tipo.values.firstWhere(
+        (t) => t.name == habilidade.tipoElemental,
+        orElse: () => isJogador ? estado.jogador.tipo : estado.inimigo.tipo,
+      );
+    } else {
+      // Suporte não causa dano, mas se for ataque básico, usa tipo principal
+      tipoAtaque = isJogador ? estado.jogador.tipo : estado.inimigo.tipo;
+    }
+    Tipo tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo;
+
     // Calcula dano base
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
-    
+
     int danoBase = habilidade.valor;
     int danoComAtaque = danoBase + ataqueAtacante;
-    
-    // Calcula efetividade de tipo
-    double efetividade = await _calcularEfetividade(tipoAtacante, tipoDefensor);
-    
+
+    // Calcula efetividade de tipo usando tipo da habilidade
+    double efetividade = await _calcularEfetividade(tipoAtaque, tipoDefensor);
+
     // Aplica efetividade ao dano
     int danoComTipo = (danoComAtaque * efetividade).round();
     int danoFinal = (danoComTipo - defesaAlvo).clamp(1, danoComTipo); // Mínimo 1 de dano
-    
+
     // Aplica dano
     int vidaAntes, vidaDepois;
     EstadoBatalha novoEstado;
-    
+
     if (isJogador) {
       // Jogador ataca inimigo
       vidaAntes = estado.vidaAtualInimigo;
@@ -437,11 +446,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vidaDepois = (estado.vidaAtualJogador - danoFinal).clamp(0, estado.jogador.vida);
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
-    
+
     // Cria descrição detalhada com informações de tipo
     String efetividadeTexto = _obterTextoEfetividade(efetividade);
-    String descricao = '$atacante (${tipoAtacante.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
-    
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(
       atacante: atacante,
@@ -453,11 +462,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vidaDepois: vidaDepois,
       descricao: descricao,
     );
-    
+
     novoEstado = novoEstado.copyWith(
       historicoAcoes: [...estado.historicoAcoes, acao],
     );
-    
+
     return novoEstado;
   }
 
@@ -542,15 +551,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       if (historia == null) return;
       // Atualiza o monstro com o item equipado
       final monstrosAtualizados = historia.monstros.map((m) {
-        if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
+        if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra && m.imagem == monstro.imagem) {
+          debugPrint('🟢 [BatalhaScreen] Equipando item no monstro: ${m.tipo.displayName}');
+          debugPrint('🟢 [BatalhaScreen] Item: ${item.toString()}');
           return m.copyWith(itemEquipado: item);
         }
         return m;
       }).toList();
+      // Log do monstro atualizado
+      final monstroLog = monstrosAtualizados.firstWhere((m) => m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra && m.imagem == monstro.imagem);
+      debugPrint('🟢 [BatalhaScreen] Monstro após equipar: ${monstroLog.toJson()}');
       // Salva a história com o item equipado imediatamente
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
       await repository.salvarHistoricoJogador(historiaAtualizada);
-      print('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
+      debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao equipar item: $e');
     }
@@ -617,40 +631,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('✅ [BatalhaScreen] Resultado salvo com sucesso!');
       
     } catch (e) {
+
       print('❌ [BatalhaScreen] Erro ao salvar resultado: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao salvar resultado: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Erro ao salvar resultado: $e')),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          salvandoResultado = false;
-        });
       }
     }
   }
 
-  // 🗡️ ATAQUE BÁSICO (QUANDO SEM ENERGIA)
-  // ========================================
-  
+  // Stub para ataque básico
   Future<EstadoBatalha> _executarAtaqueBasico(EstadoBatalha estado, bool isJogador) async {
-    final atacanteNome = isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName;
-    final vidaMaximaDefensor = isJogador ? widget.inimigo.vida : widget.jogador.vida;
-    
-    // Calcula o ataque básico sem habilidades
-    final ataqueAtual = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
-    final defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
-    final vidaAntes = isJogador ? estado.vidaAtualInimigo : estado.vidaAtualJogador;
-    
-    // Cálculo simples de dano: ataque - defesa (mínimo 1)
+    // Define variáveis usadas
+    int ataqueAtual = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
+    int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
+    int vidaAntes = isJogador ? estado.vidaAtualInimigo : estado.vidaAtualJogador;
+    int vidaMaximaDefensor = isJogador ? estado.inimigo.vida : estado.jogador.vida;
+    String atacanteNome = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
+
     final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
     final vidaDepois = (vidaAntes - danoCalculado).clamp(0, vidaMaximaDefensor);
-    
+
     // Cria ação no histórico
     final acao = AcaoBatalha(
       atacante: atacanteNome,
@@ -662,7 +664,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vidaDepois: vidaDepois,
       descricao: '$atacanteNome usou Ataque Básico por falta de energia! Causou $danoCalculado de dano.',
     );
-    
+
     // Atualiza estado
     if (isJogador) {
       return estado.copyWith(
@@ -733,33 +735,51 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   void _mostrarDetalheMonstro(dynamic monstro, bool isJogador) {
     // Converte MonstroInimigo para MonstroAventura se necessário
     MonstroAventura monstroAventura;
-    
     if (monstro is MonstroAventura) {
-      monstroAventura = monstro;
+      // ...aplica bônus do item...
+      final item = monstro.itemEquipado;
+      int ataque = monstro.ataque + (item?.atributos['ataque'] ?? 0);
+      int defesa = monstro.defesa + (item?.atributos['defesa'] ?? 0);
+      int agilidade = monstro.agilidade + (item?.atributos['agilidade'] ?? 0);
+      int vida = monstro.vida + (item?.atributos['vida'] ?? 0);
+      int energia = monstro.energia + (item?.atributos['energia'] ?? 0);
+      monstroAventura = monstro.copyWith(
+        ataque: ataque,
+        defesa: defesa,
+        agilidade: agilidade,
+        vida: vida,
+        energia: energia,
+      );
     } else {
       // Converte MonstroInimigo para MonstroAventura
+      // Adiciona logs para inspecionar dados
+      debugPrint('🟠 [BatalhaScreen] Abrindo modal de monstro inimigo. Dados recebidos:');
+      debugPrint('tipo: ${monstro.tipo}');
+      debugPrint('tipoExtra: ${monstro.tipoExtra}');
+      debugPrint('imagem: ${monstro.imagem}');
+      // Garante que tipo e tipoExtra nunca sejam nulos
+      final tipoSeguro = monstro.tipo ?? Tipo.values.first;
+      final tipoExtraSeguro = monstro.tipoExtra ?? Tipo.values.first;
       monstroAventura = MonstroAventura(
-        tipo: monstro.tipo,
-        tipoExtra: monstro.tipoExtra,
+        tipo: tipoSeguro,
+        tipoExtra: tipoExtraSeguro,
         vida: monstro.vida,
         vidaAtual: isJogador ? estadoAtual?.vidaAtualJogador ?? monstro.vida : estadoAtual?.vidaAtualInimigo ?? monstro.vida,
-        energia: monstro.energia, // Usa energia real do inimigo
-        energiaAtual: monstro.energiaAtual, // Usa energia atual real do inimigo
+        energia: monstro.energia,
+        energiaAtual: monstro.energiaAtual,
         ataque: monstro.ataque,
         defesa: monstro.defesa,
         agilidade: monstro.agilidade,
         habilidades: monstro.habilidades,
         imagem: monstro.imagem,
-        itemEquipado: null, // Sem item para inimigos
+        itemEquipado: null,
       );
     }
-    
     // Obtém os valores atuais do estado da batalha
     final ataqueAtual = isJogador ? estadoAtual?.ataqueAtualJogador : estadoAtual?.ataqueAtualInimigo;
     final defesaAtual = isJogador ? estadoAtual?.defesaAtualJogador : estadoAtual?.defesaAtualInimigo;
     final energiaAtual = isJogador ? estadoAtual?.energiaAtualJogador : estadoAtual?.energiaAtualInimigo;
     final vidaMaximaAtual = isJogador ? estadoAtual?.vidaMaximaJogador : estadoAtual?.vidaMaximaInimigo;
-        
     // Exibe detalhes do monstro (apenas uma vez)
     showDialog(
       context: context,
@@ -812,64 +832,50 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEEEEEE),
-      appBar: AppBar(
-        backgroundColor: Colors.blueGrey.shade900,
-        title: Text('Batalha - Turno $turnoAtual'),
-        centerTitle: true,
-        elevation: 2,
-      ),
-      body: estadoAtual == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Status dos monstros
-                  _buildStatusMonstros(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Botões de ação (movido para cima)
-                  if (!batalhaConcluida)
-                    _buildBotoesAcao(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Ação atual ou resultado
-                  if (batalhaConcluida)
-                    _buildResultadoFinal()
-                  else if (mostrandoAcao)
-                    _buildAcaoEmAndamento()
-                  else if (aguardandoContinuar)
-                    _buildUltimaAcao()
-                  else
-                    _buildProximaAcao(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Histórico das ações (movido para baixo)
-                  if (estadoAtual!.historicoAcoes.isNotEmpty)
-                    _buildHistoricoBatalha(),
-                  
-                  // Indicador de salvamento
-                  if (salvandoResultado)
-                    _buildIndicadorSalvamento(),
-                ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Bloqueia o botão de voltar do sistema enquanto a batalha não terminou
+        return batalhaConcluida;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFEEEEEE),
+        appBar: AppBar(
+          backgroundColor: Colors.blueGrey.shade900,
+          title: Text('Batalha - Turno $turnoAtual'),
+          centerTitle: true,
+          elevation: 2,
+          automaticallyImplyLeading: false, // Remove seta de voltar
+        ),
+        body: estadoAtual == null
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildStatusMonstros(),
+                    const SizedBox(height: 20),
+                    if (!batalhaConcluida)
+                      _buildBotoesAcao(),
+                    const SizedBox(height: 20),
+                    if (batalhaConcluida)
+                      _buildResultadoFinal()
+                    else if (mostrandoAcao)
+                      _buildAcaoEmAndamento()
+                    else if (aguardandoContinuar)
+                      _buildUltimaAcao()
+                    else
+                      _buildProximaAcao(),
+                    const SizedBox(height: 20),
+                    if (estadoAtual!.historicoAcoes.isNotEmpty)
+                      _buildHistoricoBatalha(),
+                    if (salvandoResultado)
+                      _buildIndicadorSalvamento(),
+                  ],
+                ),
               ),
-            ),
-            bottomNavigationBar: batalhaConcluida && !salvandoResultado
-                ? Container(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      bottom: 30, // Espaço adicional para botões virtuais
-                      top: 10,
-                    ),
-                    child: _buildBotaoVoltar(),
-                  )
-                : null,
+        // Remove bottomNavigationBar de voltar
+        bottomNavigationBar: null,
+      ),
     );
   }
 

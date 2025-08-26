@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../shared/models/habilidade_enum.dart';
-import 'modal_item_obtido.dart';
+import 'modal_detalhe_item_equipado.dart';
 import '../models/monstro_aventura.dart';
 import 'package:remixicon/remixicon.dart';
 // Garante que RemixIcon está disponível
@@ -146,10 +146,8 @@ class ModalMonstroAventura extends StatelessWidget {
                                 ? () {
                                     showDialog(
                                       context: context,
-                                      builder: (ctx) => ModalItemObtido(
+                                      builder: (ctx) => ModalDetalheItemEquipado(
                                         item: monstro.itemEquipado!,
-                                        monstrosDisponiveis: [],
-                                        onEquiparItem: (_, __) {},
                                       ),
                                     );
                                   }
@@ -284,24 +282,49 @@ class ModalMonstroAventura extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        if (valorOriginal != null && valorOriginal != valor)
-          Text(
-            '$valorOriginal+${valor - valorOriginal}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: cor,
-            ),
-          )
-        else
-          Text(
-            '$valor',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: cor,
-            ),
-          ),
+        Builder(
+          builder: (context) {
+            int bonus = 0;
+            if (monstro.itemEquipado != null) {
+              switch (nome.toLowerCase()) {
+                case 'vida':
+                  bonus = monstro.itemEquipado!.atributos['vida'] ?? 0;
+                  break;
+                case 'energia':
+                  bonus = monstro.itemEquipado!.atributos['energia'] ?? 0;
+                  break;
+                case 'ataque':
+                  bonus = monstro.itemEquipado!.atributos['ataque'] ?? 0;
+                  break;
+                case 'defesa':
+                  bonus = monstro.itemEquipado!.atributos['defesa'] ?? 0;
+                  break;
+                case 'agilidade':
+                  bonus = monstro.itemEquipado!.atributos['agilidade'] ?? 0;
+                  break;
+              }
+            }
+            if (bonus > 0) {
+              return Text(
+                '$valor (+$bonus)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: cor,
+                ),
+              );
+            } else {
+              return Text(
+                '$valor',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: cor,
+                ),
+              );
+            }
+          },
+        ),
       ],
     );
   }
