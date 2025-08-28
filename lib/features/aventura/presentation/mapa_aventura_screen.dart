@@ -365,7 +365,6 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
   Future<void> _avancarTier() async {
     try {
-      final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       
       if (historiaAtual == null) return;
@@ -378,11 +377,14 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         }
       }
       
-      // Atualiza a história com novo tier e score acumulado
+      // Gera novos monstros para o próximo tier
+      final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
+      
+      // Atualiza a história com novo tier, score acumulado e novos monstros
       final historiaAtualizada = historiaAtual!.copyWith(
         tier: historiaAtual!.tier + 1,
         score: historiaAtual!.score + scoreGanho,
-        monstrosInimigos: _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1),
+        monstrosInimigos: novosMonstros,
       );
       
       // Salva no repositório
@@ -400,23 +402,17 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
   }
 
-  List<MonstroInimigo> _gerarNovosMonstrosParaTier(int novoTier) {
-    // Regenera os monstros para o novo tier mantendo o mesmo padrão
-    final monstrosOriginais = widget.monstrosInimigos;
-    return monstrosOriginais.map((monstro) {
-      // Ajusta os stats dos monstros baseado no tier
-      final multiplicadorTier = 1.0 + (novoTier - 1) * 0.3;
-      
-      return monstro.copyWith(
-        ataque: (monstro.ataque * multiplicadorTier).round(),
-        defesa: (monstro.defesa * multiplicadorTier).round(),
-        vida: (monstro.vida * multiplicadorTier).round(),
-        vidaAtual: (monstro.vida * multiplicadorTier).round(),
-        energia: (monstro.energia * multiplicadorTier).round(),
-        energiaAtual: (monstro.energia * multiplicadorTier).round(),
-        agilidade: (monstro.agilidade * multiplicadorTier).round(),
-      );
-    }).toList();
+  Future<List<MonstroInimigo>> _gerarNovosMonstrosParaTier(int novoTier) async {
+    // Gera novos monstros usando o repository para o novo tier
+    final repository = ref.read(aventuraRepositoryProvider);
+    
+    print('🔄 [MapaAventura] Gerando novos monstros inimigos para tier $novoTier');
+    
+    // Chama o método público do repository para gerar novos monstros com itens
+    final novosMonstros = await repository.gerarMonstrosInimigosPorTier(novoTier);
+    
+    print('✅ [MapaAventura] Novos monstros gerados com tier $novoTier');
+    return novosMonstros;
   }
 
   void _mostrarModalAvancarTier(bool podeAvancar, int monstrosMortos) {

@@ -1,5 +1,6 @@
 import '../../../shared/models/tipo_enum.dart';
 import 'habilidade.dart';
+import 'item.dart';
 
 class MonstroInimigo {
   final Tipo tipo;
@@ -13,7 +14,7 @@ class MonstroInimigo {
   final int ataque;
   final int defesa;
   final List<Habilidade> habilidades;
-  final String item;
+  final Item? itemEquipado;
 
   const MonstroInimigo({
     required this.tipo,
@@ -27,7 +28,7 @@ class MonstroInimigo {
     required this.ataque,
     required this.defesa,
     required this.habilidades,
-    required this.item,
+    this.itemEquipado,
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -54,7 +55,9 @@ class MonstroInimigo {
       habilidades: (json['habilidades'] as List<dynamic>?)
           ?.map((h) => Habilidade.fromJson(h))
           .toList() ?? [],
-      item: json['item'] ?? '',
+      itemEquipado: json['itemEquipado'] != null 
+          ? Item.fromMap(json['itemEquipado'] as Map<String, dynamic>)
+          : null, // Ignora o campo 'item' antigo (String) se existir
     );
   }
 
@@ -71,7 +74,7 @@ class MonstroInimigo {
       'ataque': ataque,
       'defesa': defesa,
       'habilidades': habilidades.map((h) => h.toJson()).toList(),
-      'item': item,
+      'itemEquipado': itemEquipado?.toMap(),
     };
   }
 
@@ -87,7 +90,7 @@ class MonstroInimigo {
     int? ataque,
     int? defesa,
     List<Habilidade>? habilidades,
-    String? item,
+    Item? itemEquipado,
   }) {
     return MonstroInimigo(
       tipo: tipo ?? this.tipo,
@@ -101,7 +104,14 @@ class MonstroInimigo {
       ataque: ataque ?? this.ataque,
       defesa: defesa ?? this.defesa,
       habilidades: habilidades ?? this.habilidades,
-      item: item ?? this.item,
+      itemEquipado: itemEquipado ?? this.itemEquipado,
     );
   }
+
+  // Getters para atributos totais (base + item equipado)
+  int get vidaTotal => vida + (itemEquipado?.vida ?? 0);
+  int get energiaTotal => energia + (itemEquipado?.energia ?? 0);
+  int get ataqueTotal => ataque + (itemEquipado?.ataque ?? 0);
+  int get defesaTotal => defesa + (itemEquipado?.defesa ?? 0);
+  int get agilidadeTotal => agilidade + (itemEquipado?.agilidade ?? 0);
 }

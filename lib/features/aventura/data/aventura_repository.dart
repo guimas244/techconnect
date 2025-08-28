@@ -7,11 +7,13 @@ import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../utils/gerador_habilidades.dart';
+import '../services/item_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
   final TipagemRepository _tipagemRepository = TipagemRepository();
+  final ItemService _itemService = ItemService();
 
   /// Verifica se o jogador já tem um histórico no Drive
   Future<bool> jogadorTemHistorico(String email) async {
@@ -144,8 +146,8 @@ class AventuraRepository {
     final mapaEscolhido = mapas[random.nextInt(mapas.length)];
     print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
 
-    // Sorteia 5 monstros inimigos para a aventura
-    final monstrosInimigos = await _sortearMonstrosInimigos();
+    // Sorteia 5 monstros inimigos para a aventura (tier 1 - sem itens)
+    final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: 1);
     print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
     
     final historia = HistoriaJogador(
@@ -248,7 +250,7 @@ class AventuraRepository {
       print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
 
       // Sorteia 5 monstros inimigos (apenas 1 tipo cada)
-      final monstrosInimigos = await _sortearMonstrosInimigos();
+      final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: historiaAtual.tier);
       print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
 
       // Atualiza o histórico com a aventura iniciada
@@ -274,7 +276,7 @@ class AventuraRepository {
   }
 
   /// Sorteia 5 monstros inimigos com tipos e habilidades
-  Future<List<MonstroInimigo>> _sortearMonstrosInimigos() async {
+  Future<List<MonstroInimigo>> _sortearMonstrosInimigos({int tierAtual = 1}) async {
     final random = Random();
     final monstrosInimigos = <MonstroInimigo>[];
     
@@ -293,6 +295,15 @@ class AventuraRepository {
       // Gera 4 habilidades para o monstro
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
       
+      // Gera item equipado se tier > 1
+      final itemEquipado = tierAtual > 1 
+          ? _itemService.gerarItemAleatorio(tierAtual: tierAtual)
+          : null;
+      
+      if (itemEquipado != null) {
+        print('🎒 [Repository] Monstro inimigo ${tipo.name} equipado com: ${itemEquipado.nome} (Tier ${itemEquipado.tier})');
+      }
+
       // Cria monstro inimigo com atributos sorteados
       final monstro = MonstroInimigo(
         tipo: tipo,
@@ -304,12 +315,18 @@ class AventuraRepository {
         ataque: AtributoJogo.ataque.sortear(random),
         defesa: AtributoJogo.defesa.sortear(random),
         habilidades: habilidades,
-        item: '',
+        itemEquipado: itemEquipado,
       );
       
       monstrosInimigos.add(monstro);
     }
     
     return monstrosInimigos;
+  }
+
+  /// Gera novos monstros inimigos para um tier específico (método público)
+  Future<List<MonstroInimigo>> gerarMonstrosInimigosPorTier(int tier) async {
+    print('🆕 [Repository] Gerando monstros inimigos para tier $tier via método público');
+    return await _sortearMonstrosInimigos(tierAtual: tier);
   }
 }
