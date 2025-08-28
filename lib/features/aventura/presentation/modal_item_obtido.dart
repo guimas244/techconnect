@@ -21,6 +21,7 @@ class ModalItemObtido extends StatefulWidget {
 
 class _ModalItemObtidoState extends State<ModalItemObtido> {
   MonstroAventura? monstroSelecionado;
+  bool isEquipando = false;
 
   @override
   Widget build(BuildContext context) {
@@ -320,7 +321,7 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: () {
+            onPressed: isEquipando ? null : () {
               Navigator.of(context).pop();
             },
             child: const Text('Descartar'),
@@ -340,11 +341,42 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: monstroSelecionado != null ? () {
-              widget.onEquiparItem(monstroSelecionado!, widget.item);
-              Navigator.of(context).pop();
+            onPressed: (monstroSelecionado != null && !isEquipando) ? () async {
+              setState(() {
+                isEquipando = true;
+              });
+              
+              try {
+                await widget.onEquiparItem(monstroSelecionado!, widget.item);
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+              } catch (e) {
+                print('❌ [ModalItemObtido] Erro ao equipar item: $e');
+                if (mounted) {
+                  setState(() {
+                    isEquipando = false;
+                  });
+                  // Mostra um erro ou tenta novamente
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao equipar item. Tente novamente.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             } : null,
-            child: const Text('Equipar'),
+            child: isEquipando
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text('Equipar'),
           ),
         ),
       ],

@@ -133,6 +133,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
 
     int tierAtual = historiaAtual?.tier ?? 1;
+    int scoreAtual = historiaAtual?.score ?? 0;
     int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
     bool podeAvancarTier = mortosNoTier >= 3;
 
@@ -170,40 +171,81 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 },
               ),
             ),
-            // TIER e botão avançar
+            // TIER, SCORE e botão avançar
             Positioned(
               top: 16,
               left: 16,
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'TIER $tierAtual',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              right: 16,
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    // TIER
+                    Expanded(
+                      flex: 2,
+                      child: Center(
+                        child: Text(
+                          'TIER $tierAtual',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: null, // Etapa 1: desabilitado sempre
-                    icon: const Icon(Icons.arrow_upward),
-                    label: const Text('Avançar Tier'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    
+                    // SCORE
+                    Expanded(
+                      flex: 3,
+                      child: Center(
+                        child: Text(
+                          'SCORE: $scoreAtual',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    
+                    // BOTÃO AVANÇAR
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _mostrarModalAvancarTier(podeAvancarTier, mortosNoTier),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: podeAvancarTier 
+                              ? Colors.green.withOpacity(0.8)
+                              : Colors.grey.withOpacity(0.5),
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.arrow_upward,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             // Pontos interativos do mapa (5 pontos fixos)
@@ -318,6 +360,157 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       MaterialPageRoute(
         builder: (context) => SelecaoMonstroScreen(monstroInimigo: monstroInimigo),
       ),
+    );
+  }
+
+  Future<void> _avancarTier() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      if (historiaAtual == null) return;
+      
+      // Calcula o score dos monstros mortos no tier atual
+      int scoreGanho = 0;
+      for (final monstro in monstrosParaExibir) {
+        if (monstro.vidaAtual <= 0) {
+          scoreGanho += historiaAtual!.tier; // monstro * tier = score
+        }
+      }
+      
+      // Atualiza a história com novo tier e score acumulado
+      final historiaAtualizada = historiaAtual!.copyWith(
+        tier: historiaAtual!.tier + 1,
+        score: historiaAtual!.score + scoreGanho,
+        monstrosInimigos: _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1),
+      );
+      
+      // Salva no repositório
+      await repository.salvarHistoricoJogador(historiaAtualizada);
+      
+      // Atualiza o estado local
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+      
+      print('🎯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+      
+    } catch (e) {
+      print('❌ [MapaAventura] Erro ao avançar tier: $e');
+    }
+  }
+
+  List<MonstroInimigo> _gerarNovosMonstrosParaTier(int novoTier) {
+    // Regenera os monstros para o novo tier mantendo o mesmo padrão
+    final monstrosOriginais = widget.monstrosInimigos;
+    return monstrosOriginais.map((monstro) {
+      // Ajusta os stats dos monstros baseado no tier
+      final multiplicadorTier = 1.0 + (novoTier - 1) * 0.3;
+      
+      return monstro.copyWith(
+        ataque: (monstro.ataque * multiplicadorTier).round(),
+        defesa: (monstro.defesa * multiplicadorTier).round(),
+        vida: (monstro.vida * multiplicadorTier).round(),
+        vidaAtual: (monstro.vida * multiplicadorTier).round(),
+        energia: (monstro.energia * multiplicadorTier).round(),
+        energiaAtual: (monstro.energia * multiplicadorTier).round(),
+        agilidade: (monstro.agilidade * multiplicadorTier).round(),
+      );
+    }).toList();
+  }
+
+  void _mostrarModalAvancarTier(bool podeAvancar, int monstrosMortos) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                podeAvancar ? Icons.arrow_upward : Icons.block,
+                color: podeAvancar ? Colors.green : Colors.red,
+                size: 28,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                podeAvancar ? 'Avançar Tier' : 'Requisitos não atendidos',
+                style: TextStyle(
+                  color: podeAvancar ? Colors.green : Colors.red,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (podeAvancar) ...[
+                const Text(
+                  '⚠️ ATENÇÃO: Ao avançar para o próximo tier:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('• Você não poderá retornar ao tier anterior'),
+                const Text('• Novos monstros mais fortes aparecerão'),
+                const Text('• Seu progresso atual será salvo'),
+                const SizedBox(height: 8),
+                Text(
+                  'Score que você ganhará: ${historiaAtual?.tier ?? 1} pontos',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Você precisa derrotar pelo menos 3 monstros para avançar de tier.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Progresso atual: $monstrosMortos/3 monstros derrotados',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Continue explorando o mapa e derrotando monstros!',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            if (podeAvancar)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _avancarTier();
+                },
+                child: const Text('Confirmar'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

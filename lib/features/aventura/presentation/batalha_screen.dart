@@ -485,9 +485,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       vencedor = vencedorBatalha;
     });
     
-    // Se o jogador venceu, gerar item
+    // Se o jogador venceu, calcular score e gerar item
     if (vencedorBatalha == 'jogador') {
-      _gerarEMostrarItem();
+      _atualizarScoreEGerarItem();
     } else {
       // Se perdeu, apenas salva e volta para aventura com refresh
       _salvarResultadoNoDrive().then((_) {
@@ -500,6 +500,35 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         });
       });
     }
+  }
+
+  Future<void> _atualizarScoreEGerarItem() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      // Carrega história atual para atualizar score
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia != null) {
+        // Calcula score ganho: 1 monstro morto * tier atual = score ganho
+        final scoreGanho = historia.tier;
+        final novoScore = historia.score + scoreGanho;
+        
+        print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        print('🎯 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
+        
+        // Atualiza história com novo score
+        final historiaComScore = historia.copyWith(score: novoScore);
+        await repository.salvarHistoricoJogador(historiaComScore);
+        
+        print('✅ [BatalhaScreen] Score atualizado e salvo!');
+      }
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
+    }
+    
+    // Continua com a geração de item
+    _gerarEMostrarItem();
   }
 
   Future<void> _gerarEMostrarItem() async {
@@ -527,9 +556,6 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             monstrosDisponiveis: historia.monstros,
             onEquiparItem: (monstro, item) async {
               await _equiparItemEMonstro(monstro, item);
-              if (mounted) {
-                Navigator.of(context).pop();
-              }
             },
           ),
         );
