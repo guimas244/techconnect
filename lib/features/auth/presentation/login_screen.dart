@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 )
                               : const Text(
-                                  'Entrar na Aventura',
+                                  'Acessar',
                                   style: TextStyle(
                                     fontSize: 16, 
                                     fontWeight: FontWeight.bold,
