@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 enum RaridadeItem {
-  inferior(1, 'Inferior', Color(0xFF808080)), // Cinza
-  normal(2, 'Normal', Color(0xFFFFFFFF)), // Branco
-  raro(3, 'Raro', Color(0xFF00AA00)), // Verde
-  epico(4, 'Épico', Color(0xFF8B00FF)), // Roxo
-  lendario(5, 'Lendário', Color(0xFFFFD700)); // Dourado
+  inferior(1, 'Inferior', Color(0xFF757575)), // Cinza mais escuro
+  normal(2, 'Normal', Color(0xFF424242)), // Cinza escuro (ao invés de branco)
+  raro(3, 'Raro', Color(0xFF388E3C)), // Verde mais escuro
+  epico(4, 'Épico', Color(0xFF7B1FA2)), // Roxo mais escuro
+  lendario(5, 'Lendário', Color(0xFFF57C00)); // Laranja dourado (mais contrastado)
 
   const RaridadeItem(this.nivel, this.nome, this.cor);
   
