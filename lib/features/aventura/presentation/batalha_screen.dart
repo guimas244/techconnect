@@ -535,14 +535,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (itemGerado) return;
     itemGerado = true;
     try {
-      // Gera um item aleatório
-      final itemService = ItemService();
-      final itemObtido = itemService.gerarItemAleatorio();
-      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name})');
-      // Carrega os monstros do jogador para seleção
+      // Gera um item aleatório baseado no tier atual
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       final historia = await repository.carregarHistoricoJogador(emailJogador);
+      final tierAtual = historia?.tier ?? 1;
+      
+      final itemService = ItemService();
+      final itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
+      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
       if (historia == null || historia.monstros.isEmpty) {
         throw Exception('Nenhum monstro encontrado para equipar item');
       }

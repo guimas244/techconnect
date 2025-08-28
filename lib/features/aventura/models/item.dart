@@ -20,6 +20,7 @@ class Item {
   final RaridadeItem raridade;
   final Map<String, int> atributos; // 'vida': 5, 'ataque': 3, etc.
   final DateTime dataObtencao;
+  final int tier;
 
   const Item({
     required this.id,
@@ -27,6 +28,7 @@ class Item {
     required this.raridade,
     required this.atributos,
     required this.dataObtencao,
+    this.tier = 1,
   });
 
   factory Item.fromMap(Map<String, dynamic> map) {
@@ -38,6 +40,7 @@ class Item {
       ),
       atributos: Map<String, int>.from(map['atributos'] as Map),
       dataObtencao: DateTime.parse(map['dataObtencao'] as String),
+      tier: map['tier'] as int? ?? 1,
     );
   }
 
@@ -48,6 +51,7 @@ class Item {
       'raridade': raridade.nivel,
       'atributos': atributos,
       'dataObtencao': dataObtencao.toIso8601String(),
+      'tier': tier,
     };
   }
 
@@ -57,6 +61,7 @@ class Item {
     RaridadeItem? raridade,
     Map<String, int>? atributos,
     DateTime? dataObtencao,
+    int? tier,
   }) {
     return Item(
       id: id ?? this.id,
@@ -64,6 +69,7 @@ class Item {
       raridade: raridade ?? this.raridade,
       atributos: atributos ?? this.atributos,
       dataObtencao: dataObtencao ?? this.dataObtencao,
+      tier: tier ?? this.tier,
     );
   }
 

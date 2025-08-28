@@ -152,10 +152,35 @@ class ModalMonstroAventura extends StatelessWidget {
                                     );
                                   }
                                 : null,
-                            child: Icon(
-                              Icons.backpack,
-                              color: monstro.itemEquipado != null ? Colors.brown : Colors.grey,
-                              size: 32,
+                            child: Stack(
+                              children: [
+                                Icon(
+                                  Icons.backpack,
+                                  color: monstro.itemEquipado != null ? Colors.brown : Colors.grey,
+                                  size: 32,
+                                ),
+                                if (monstro.itemEquipado != null)
+                                  Positioned(
+                                    right: -2,
+                                    top: -2,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: monstro.itemEquipado!.raridade.cor,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.white, width: 1),
+                                      ),
+                                      child: Text(
+                                        '${monstro.itemEquipado!.tier}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           if (monstro.vidaAtual <= 0) ...[

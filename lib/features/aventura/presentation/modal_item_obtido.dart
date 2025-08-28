@@ -59,13 +59,27 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              'Nível: ${widget.item.raridade.nome}',
-              style: TextStyle(
-                fontSize: 16,
-                color: widget.item.raridade.cor,
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Tier ${widget.item.tier}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF2D3748),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'Nível: ${widget.item.raridade.nome}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: widget.item.raridade.cor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 18),
             

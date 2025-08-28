@@ -6,7 +6,7 @@ class ItemService {
   final Random _random = Random();
 
   /// Gera um item aleatório ao derrotar um monstro
-  Item gerarItemAleatorio() {
+  Item gerarItemAleatorio({int tierAtual = 1}) {
     // Determina a quantidade de atributos (2% de 5, 3% de 4, 10% de 3, 20% de 2, resto de 1)
     int quantidadeAtributos = _determinarQuantidadeAtributos();
     
@@ -25,6 +25,7 @@ class ItemService {
       raridade: raridade,
       atributos: atributos,
       dataObtencao: DateTime.now(),
+      tier: tierAtual,
     );
   }
 

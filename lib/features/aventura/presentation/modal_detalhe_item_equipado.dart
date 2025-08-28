@@ -42,13 +42,33 @@ class ModalDetalheItemEquipado extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              'Nível: ${item.raridade.nome}',
-              style: TextStyle(
-                fontSize: 16,
-                color: item.raridade.cor,
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Tier ${item.tier}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF2D3748),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Nível: ${item.raridade.nome}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: item.raridade.cor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 18),
             Text(
