@@ -58,105 +58,102 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEEEEEE), // Cinza claro metálico
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(color: Colors.blueGrey.shade200, width: 2),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          'TECH',
-                          style: TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                            fontFamily: 'RobotoMono',
-                            foreground: Paint()
-                              ..shader = LinearGradient(
-                                colors: [Colors.blueGrey.shade700, Colors.blueGrey.shade300],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
-                          ),
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/mapas_aventura/floresta_verde.jpg'),
+            fit: BoxFit.cover,
+            opacity: 0.3,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo/Título
+                      const Text(
+                        'TECHTERRA',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3748),
+                          letterSpacing: 2,
                         ),
-                        Text(
-                          'CONNECT',
-                          style: TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                            fontFamily: 'RobotoMono',
-                            foreground: Paint()
-                              ..shader = LinearGradient(
-                                colors: [Colors.blueGrey.shade300, Colors.blueGrey.shade700],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    _CustomTextField(
-                      label: 'Email',
-                      icon: Icons.email_outlined,
-                      obscure: false,
-                      controller: _emailController,
-                    ),
-                    const SizedBox(height: 20),
-                    _CustomTextField(
-                      label: 'Senha',
-                      icon: Icons.lock_outline,
-                      obscure: true,
-                      controller: _passwordController,
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey.shade900,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 4,
-                        ),
-                        onPressed: _loading ? null : _login,
-                        child: _loading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              )
-                            : const Text(
-                                'Entrar',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
                       ),
-                    ),
-                    // ...removido botão Google...
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Entre em sua aventura',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Email field
+                      _CustomTextField(
+                        label: 'Email',
+                        icon: Icons.email_outlined,
+                        obscure: false,
+                        controller: _emailController,
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Password field
+                      _CustomTextField(
+                        label: 'Senha',
+                        icon: Icons.lock_outline,
+                        obscure: true,
+                        controller: _passwordController,
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Login button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3182CE),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: _loading ? null : _login,
+                          child: _loading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white, 
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Entrar na Aventura',
+                                  style: TextStyle(
+                                    fontSize: 16, 
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -188,20 +185,28 @@ class _CustomTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(color: Colors.black, fontSize: 16),
+      style: const TextStyle(color: Color(0xFF2D3748), fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-        prefixIcon: Icon(icon, color: Colors.blueGrey.shade700),
+        labelStyle: TextStyle(color: Colors.grey.shade600),
+        prefixIcon: Icon(icon, color: Colors.grey.shade600),
         filled: true,
-        fillColor: Colors.blueGrey.shade50,
+        fillColor: Colors.grey.shade50,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade400, width: 2),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueAccent.shade200, width: 2),
+          borderSide: const BorderSide(color: Color(0xFF3182CE), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
       ),
       keyboardType: obscure ? TextInputType.visiblePassword : TextInputType.emailAddress,
