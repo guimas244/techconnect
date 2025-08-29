@@ -311,6 +311,8 @@ class GoogleDriveService {
         arquivos = await _driveService!.listInTipagensFolder();
       } else if (pasta == 'historias') {
         arquivos = await _driveService!.listInHistoriasFolder();
+      } else if (pasta == 'drops') {
+        arquivos = await _driveService!.listInDropsFolder();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
@@ -353,6 +355,8 @@ class GoogleDriveService {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         } else if (pasta == 'historias') {
           await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else if (pasta == 'drops') {
+          await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
@@ -365,6 +369,8 @@ class GoogleDriveService {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         } else if (pasta == 'historias') {
           await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else if (pasta == 'drops') {
+          await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../../core/services/google_drive_service.dart';
 import '../models/drop_jogador.dart';
 
@@ -13,10 +14,11 @@ class DropsService {
   Future<bool> jogadorTemDrops(String email) async {
     try {
       final fileName = _getDropsFileName(email);
-      final arquivos = await _driveService.listarArquivosDrive();
-      final fileExists = arquivos.contains(fileName);
-      print('🎁 [DropsService] Jogador $email tem drops: $fileExists');
-      return fileExists;
+      // Tenta baixar o arquivo da pasta 'drops'
+      final jsonString = await _driveService.baixarArquivoDaPasta(fileName, 'drops');
+      final hasData = jsonString.isNotEmpty;
+      print('🎁 [DropsService] Jogador $email tem drops: $hasData');
+      return hasData;
     } catch (e) {
       print('❌ [DropsService] Erro ao verificar drops do jogador $email: $e');
       return false;
@@ -33,11 +35,14 @@ class DropsService {
         return _criarDropsVazio(email);
       }
 
-      final jsonData = await _driveService.baixarJson(fileName);
-      if (jsonData == null) {
+      // Baixa da pasta 'drops' específica
+      final jsonString = await _driveService.baixarArquivoDaPasta(fileName, 'drops');
+      if (jsonString.isEmpty) {
         print('📁 [DropsService] Erro ao baixar arquivo de drops para $email, criando novo...');
         return _criarDropsVazio(email);
       }
+      
+      final jsonData = jsonDecode(jsonString);
       
       final drops = DropJogador.fromJson(jsonData);
       print('✅ [DropsService] Drops carregados para $email: ${drops.itens.length} itens');
@@ -49,18 +54,19 @@ class DropsService {
     }
   }
 
-  /// Salva os drops de um jogador
+  /// Salva os drops de um jogador na pasta 'drops'
   Future<void> salvarDrops(DropJogador drops) async {
     try {
       final fileName = _getDropsFileName(drops.email);
-      final fileNameWithoutJson = fileName.replaceAll('.json', '');
+      final jsonString = jsonEncode(drops.toJson());
       
-      final sucesso = await _driveService.salvarJson(fileNameWithoutJson, drops.toJson());
+      // Salva na pasta 'drops'
+      final sucesso = await _driveService.salvarArquivoEmPasta(fileName, jsonString, 'drops');
       if (!sucesso) {
-        throw Exception('Falha ao salvar no Drive');
+        throw Exception('Falha ao salvar drops na pasta drops do Drive');
       }
       
-      print('✅ [DropsService] Drops salvos para ${drops.email}');
+      print('✅ [DropsService] Drops salvos para ${drops.email} na pasta drops');
       
     } catch (e) {
       print('❌ [DropsService] Erro ao salvar drops de ${drops.email}: $e');

@@ -333,4 +333,91 @@ class DriveService {
 
     return res.files ?? [];
   }
+
+  /// Cria a pasta DROPS se não existir e retorna seu ID
+  Future<String?> criarPastaDrops() async {
+    try {
+      // Primeiro verifica se a pasta já existe
+      final res = await api.files.list(
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = 'DROPS' and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+      );
+
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaDropsId = res.files!.first.id!;
+        print('✅ [DEBUG] Pasta DROPS encontrada: $pastaDropsId');
+        return pastaDropsId;
+      }
+
+      // Se não existe, cria a pasta
+      print('📁 [DEBUG] Criando pasta DROPS...');
+      final folder = drive.File();
+      folder.name = 'DROPS';
+      folder.mimeType = 'application/vnd.google-apps.folder';
+      folder.parents = [folderId];
+
+      final driveFolder = await api.files.create(folder);
+      print('✅ [DEBUG] Pasta DROPS criada com ID: ${driveFolder.id}');
+      return driveFolder.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta DROPS: $e');
+      return null;
+    }
+  }
+
+  /// Lista arquivos na pasta DROPS
+  Future<List<drive.File>> listInDropsFolder() async {
+    final pastaDropsId = await criarPastaDrops();
+    if (pastaDropsId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta DROPS');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaDropsId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta DROPS
+  Future<void> createJsonFileInDrops(String filename, Map<String, dynamic> jsonData) async {
+    final pastaDropsId = await criarPastaDrops();
+    if (pastaDropsId == null) {
+      throw Exception('Não foi possível acessar pasta DROPS');
+    }
+
+    // Verificar se arquivo já existe na pasta DROPS
+    final arquivosDrops = await listInDropsFolder();
+    final arquivoExistente = arquivosDrops.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Atualizar arquivo existente
+      await updateJsonFile(arquivoExistente.id!, jsonData);
+      print('✅ [DriveService] Arquivo atualizado na pasta DROPS: $filename');
+    } else {
+      // Criar novo arquivo na pasta DROPS
+      final file = drive.File();
+      file.name = filename;
+      file.parents = [pastaDropsId];
+
+      final jsonString = json.encode(jsonData);
+      final jsonBytes = utf8.encode(jsonString);
+      final media = drive.Media(
+        Stream.fromIterable([jsonBytes]),
+        jsonBytes.length,
+        contentType: 'application/json',
+      );
+
+      await api.files.create(file, uploadMedia: media);
+      print('✅ [DriveService] Arquivo criado na pasta DROPS: $filename');
+    }
+  }
 }
