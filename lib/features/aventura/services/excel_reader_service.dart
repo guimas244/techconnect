@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:googleapis/drive/v3.dart' as drive;
 import '../../../core/google_drive_client.dart';
+import '../models/drop_jogador.dart';
 
 class ExcelReaderService {
   drive.DriveApi? _driveApi;
@@ -346,6 +348,156 @@ class ExcelReaderService {
       
     } catch (e) {
       print('❌ [ExcelReaderService] Erro na leitura alternativa: $e');
+    }
+  }
+
+  /// Lê e retorna os dados do Excel como lista de itens estruturados
+  Future<List<Map<String, String>>> lerDadosDoExcel() async {
+    final List<Map<String, String>> itens = [];
+    
+    try {
+      print('📊 [ExcelReaderService] Lendo dados estruturados do Excel...');
+      
+      // Inicializa Drive API se necessário
+      if (_driveApi == null) {
+        final inicializado = await _inicializarDriveApi();
+        if (!inicializado) {
+          print('❌ [ExcelReaderService] Falha ao inicializar Drive API');
+          return itens;
+        }
+      }
+      
+      // Busca pasta drops
+      final pastaDropsId = await _buscarPastaDrops();
+      if (pastaDropsId == null) {
+        print('❌ [ExcelReaderService] Pasta drops não encontrada');
+        return itens;
+      }
+      
+      // Busca arquivo drops_techterra
+      final arquivoInfo = await _buscarArquivoDrops(pastaDropsId);
+      if (arquivoInfo == null) {
+        print('❌ [ExcelReaderService] Arquivo drops_techterra não encontrado');
+        return itens;
+      }
+      
+      final arquivoId = arquivoInfo['id']!;
+      final tipoArquivo = arquivoInfo['tipo']!;
+      
+      // Verifica o tipo do arquivo e processa adequadamente
+      if (tipoArquivo.contains('spreadsheet')) {
+        // É um Google Sheets - exporta como CSV e processa
+        itens.addAll(await _lerDadosGoogleSheets(arquivoId));
+      } else {
+        print('⚠️ [ExcelReaderService] Arquivo não é Google Sheets, não é possível processar dados estruturados');
+      }
+      
+    } catch (e) {
+      print('❌ [ExcelReaderService] Erro ao ler dados do Excel: $e');
+    }
+    
+    print('✅ [ExcelReaderService] ${itens.length} itens estruturados lidos do Excel');
+    return itens;
+  }
+
+  /// Lê dados estruturados de um Google Sheets
+  Future<List<Map<String, String>>> _lerDadosGoogleSheets(String spreadsheetId) async {
+    final List<Map<String, String>> itens = [];
+    
+    try {
+      // Exporta o Google Sheets como CSV usando Drive API
+      final media = await _driveApi!.files.export(
+        spreadsheetId,
+        'text/csv',
+        downloadOptions: drive.DownloadOptions.fullMedia,
+      );
+      
+      // Lê os dados CSV
+      final List<int> dataBytes = [];
+      if (media is drive.Media) {
+        await for (List<int> chunk in media.stream) {
+          dataBytes.addAll(chunk);
+        }
+      }
+      
+      if (dataBytes.isNotEmpty) {
+        // Converte bytes para string
+        final String csvContent = utf8.decode(dataBytes);
+        
+        // Processa linha por linha
+        final linhas = csvContent.split('\n');
+        
+        // Primeira linha são os cabeçalhos
+        if (linhas.isNotEmpty) {
+          final cabecalhos = linhas[0].split(',').map((h) => h.trim()).toList();
+          print('📋 [ExcelReaderService] Cabeçalhos encontrados: $cabecalhos');
+          
+          // Processa as linhas de dados (pula a primeira linha dos cabeçalhos)
+          for (int i = 1; i < linhas.length; i++) {
+            final linha = linhas[i].trim();
+            if (linha.isNotEmpty) {
+              final valores = linha.split(',').map((v) => v.trim()).toList();
+              
+              // Cria um mapa com os dados da linha
+              final Map<String, String> item = {};
+              for (int j = 0; j < cabecalhos.length && j < valores.length; j++) {
+                item[cabecalhos[j]] = valores[j];
+              }
+              
+              // Só adiciona se tem nome válido
+              if (item.isNotEmpty && item.values.any((v) => v.isNotEmpty)) {
+                itens.add(item);
+              }
+            }
+          }
+        }
+      }
+      
+    } catch (e) {
+      print('❌ [ExcelReaderService] Erro ao ler dados estruturados do Google Sheets: $e');
+    }
+    
+    return itens;
+  }
+
+  /// Lê e retorna um item aleatório do Excel como DropItem
+  Future<DropItem?> lerItemAleatorioDoExcel() async {
+    try {
+      // Lê todos os dados do Excel
+      final itens = await lerDadosDoExcel();
+      
+      if (itens.isEmpty) {
+        print('⚠️ [ExcelReaderService] Nenhum item encontrado no Excel');
+        return null;
+      }
+      
+      // Seleciona um item aleatório
+      final random = Random();
+      final itemSelecionado = itens[random.nextInt(itens.length)];
+      
+      print('🎲 [ExcelReaderService] Item selecionado aleatoriamente: ${itemSelecionado}');
+      
+      // Converte para DropItem - assumindo as colunas padrão
+      final nome = itemSelecionado['nome'] ?? itemSelecionado['Nome'] ?? 'Item Desconhecido';
+      final descricao = itemSelecionado['descricao'] ?? itemSelecionado['Descrição'] ?? 'Sem descrição';
+      final tipo = itemSelecionado['tipo'] ?? itemSelecionado['Tipo'] ?? 'item';
+      final quantidadeStr = itemSelecionado['quantidade'] ?? itemSelecionado['Quantidade'] ?? '1';
+      final quantidade = int.tryParse(quantidadeStr) ?? 1;
+      
+      final dropItem = DropItem(
+        nome: nome,
+        descricao: descricao,
+        tipo: tipo,
+        quantidade: quantidade,
+        dataObtencao: DateTime.now(),
+      );
+      
+      print('✅ [ExcelReaderService] Item convertido para DropItem: ${dropItem.nome}');
+      return dropItem;
+      
+    } catch (e) {
+      print('❌ [ExcelReaderService] Erro ao ler item aleatório do Excel: $e');
+      return null;
     }
   }
 }

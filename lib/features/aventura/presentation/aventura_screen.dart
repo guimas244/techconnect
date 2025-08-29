@@ -8,7 +8,6 @@ import '../models/drop_jogador.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../services/drops_service.dart';
-import '../services/excel_reader_service.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 
@@ -617,46 +616,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         ],
-        // Botão de teste para ler Excel (sempre visível)
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade400, Colors.blue.shade600],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: () => _testarLeituraExcel(),
-              icon: const Icon(Icons.analytics, size: 24),
-              label: const Text('🧪 TESTE: Ler Excel'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1031,63 +990,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     }
   }
 
-  Future<void> _testarLeituraExcel() async {
-    try {
-      print('🧪 [AventuraScreen] Iniciando teste de leitura do Excel...');
-      
-      // Mostra loading
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Dialog(
-          child: Padding(
-            padding: EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Lendo arquivo Excel...'),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      final excelReader = ExcelReaderService();
-      await excelReader.lerEImprimirExcel();
-
-      // Fecha loading
-      if (!mounted) return;
-      Navigator.of(context).pop();
-
-      // Mostra sucesso
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Arquivo Excel lido com sucesso! Verifique o console.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-
-    } catch (e) {
-      print('❌ [AventuraScreen] Erro no teste do Excel: $e');
-      
-      // Fecha loading se aberto
-      if (mounted) Navigator.of(context).pop();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao ler Excel: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 
   Future<void> _visualizarDrops() async {
     try {

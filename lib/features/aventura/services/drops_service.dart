@@ -1,11 +1,11 @@
 import 'dart:convert';
 import '../../../core/services/google_drive_service.dart';
 import '../models/drop_jogador.dart';
-import 'drops_config_service.dart';
+import 'excel_reader_service.dart';
 
 class DropsService {
   final GoogleDriveService _driveService = GoogleDriveService();
-  final DropsConfigService _configService = DropsConfigService();
+  final ExcelReaderService _excelReader = ExcelReaderService();
 
   /// Nome do arquivo de drops para um jogador específico
   String _getDropsFileName(String email) {
@@ -76,36 +76,56 @@ class DropsService {
     }
   }
 
-  /// Adiciona recompensas baseadas na configuração do Excel
+  /// Adiciona recompensas lendo diretamente do Excel/Google Sheets
   Future<void> adicionarRecompensasMockadas(String email) async {
     try {
+      print('🎁 [DropsService] Iniciando adição de recompensas para $email...');
+      
       final dropsAtual = await carregarDrops(email) ?? _criarDropsVazio(email);
       
-      // Carrega configuração e sorteia itens (sempre do Drive)
-      final itensSorteados = await _configService.sortearDrops(quantidadeItens: 3);
+      // Lê diretamente do Excel usando o mesmo método do botão de teste
+      final itemSorteado = await _lerItemDoExcel();
       
-      // Converte configuração para DropItem
-      final novosItens = itensSorteados.map((config) => DropItem(
-        nome: config.nome,
-        descricao: config.descricao,
-        tipo: config.tipo,
-        quantidade: config.quantidade,
-        dataObtencao: DateTime.now(),
-      )).toList();
-      
-      final dropsAtualizados = dropsAtual.copyWith(
-        itens: [...dropsAtual.itens, ...novosItens],
-        ultimaAtualizacao: DateTime.now(),
-      );
-      
-      await salvarDrops(dropsAtualizados);
-      print('🎁 [DropsService] ${novosItens.length} recompensas adicionadas para $email baseadas na configuração');
+      if (itemSorteado != null) {
+        final dropsAtualizados = dropsAtual.copyWith(
+          itens: [...dropsAtual.itens, itemSorteado],
+          ultimaAtualizacao: DateTime.now(),
+        );
+        
+        await salvarDrops(dropsAtualizados);
+        print('🎁 [DropsService] 1 recompensa adicionada para $email: ${itemSorteado.nome}');
+      } else {
+        print('⚠️ [DropsService] Nenhum item encontrado no Excel, usando fallback...');
+        await _adicionarRecompensasPadrao(email);
+      }
       
     } catch (e) {
       print('❌ [DropsService] Erro ao adicionar recompensas: $e');
       
       // Fallback para itens padrão em caso de erro
       await _adicionarRecompensasPadrao(email);
+    }
+  }
+  
+  /// Lê um item aleatório diretamente do Excel/Google Sheets
+  Future<DropItem?> _lerItemDoExcel() async {
+    try {
+      print('📊 [DropsService] Lendo item aleatório do Excel...');
+      
+      // Usa o novo método que retorna um item estruturado
+      final item = await _excelReader.lerItemAleatorioDoExcel();
+      
+      if (item != null) {
+        print('✅ [DropsService] Item obtido do Excel: ${item.nome} (${item.tipo})');
+      } else {
+        print('⚠️ [DropsService] Nenhum item obtido do Excel');
+      }
+      
+      return item;
+      
+    } catch (e) {
+      print('❌ [DropsService] Erro ao ler item do Excel: $e');
+      return null;
     }
   }
   
