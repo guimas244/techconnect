@@ -99,7 +99,7 @@ class ModalMonstroAventura extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: Image.asset(
                       monstro.imagem,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           color: monstro.tipo.cor.withOpacity(0.3),
