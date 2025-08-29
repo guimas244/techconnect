@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/monstro_inimigo.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import 'package:remixicon/remixicon.dart';
+import 'modal_detalhe_item_equipado.dart';
 
 class ModalMonstroInimigo extends StatelessWidget {
   final MonstroInimigo monstro;
@@ -114,7 +115,7 @@ class ModalMonstroInimigo extends StatelessWidget {
                             ]),
                       child: Image.asset(
                         monstro.imagem,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: estaMorto 
@@ -136,15 +137,6 @@ class ModalMonstroInimigo extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Monstro Inimigo',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: monstro.tipo.cor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Text(
@@ -183,11 +175,53 @@ class ModalMonstroInimigo extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Image.asset(
-                        monstro.tipo.iconAsset,
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.contain,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                          const SizedBox(width: 8),
+                          if (monstro.tipoExtra != null) 
+                            Image.asset(monstro.tipoExtra!.iconAsset, width: 32, height: 32, fit: BoxFit.contain)
+                          else
+                            Container(width: 32, height: 32, color: Colors.transparent),
+                          if (monstro.itemEquipado != null) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                _mostrarDetalheItem(context);
+                              },
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    Icons.backpack,
+                                    color: Colors.brown,
+                                    size: 32,
+                                  ),
+                                  Positioned(
+                                    right: -2,
+                                    top: -2,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: monstro.itemEquipado!.raridade.cor,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.white, width: 1),
+                                      ),
+                                      child: Text(
+                                        '${monstro.itemEquipado!.tier}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -424,6 +458,17 @@ class ModalMonstroInimigo extends StatelessWidget {
       context: context,
       builder: (context) => _HabilidadesInimigoDialog(monstro: monstro),
     );
+  }
+
+  void _mostrarDetalheItem(BuildContext context) {
+    if (monstro.itemEquipado != null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => ModalDetalheItemEquipado(
+          item: monstro.itemEquipado!,
+        ),
+      );
+    }
   }
 }
 

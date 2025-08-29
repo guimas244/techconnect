@@ -285,12 +285,10 @@ class AventuraRepository {
       final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
       final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
       
-      // 50% de chance de ter tipo extra
-      Tipo? tipoExtra;
-      if (random.nextBool()) {
-        final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
-        tipoExtra = outrosTipos[random.nextInt(outrosTipos.length)];
-      }
+      // Sorteia tipo extra diferente do principal (todos os monstros têm 2 tipos)
+      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+      outrosTipos.shuffle(random);
+      final tipoExtra = outrosTipos.first;
       
       // Gera 4 habilidades para o monstro
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
