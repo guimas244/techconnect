@@ -1,9 +1,11 @@
 import 'dart:convert';
 import '../../../core/services/google_drive_service.dart';
 import '../models/drop_jogador.dart';
+import 'drops_config_service.dart';
 
 class DropsService {
   final GoogleDriveService _driveService = GoogleDriveService();
+  final DropsConfigService _configService = DropsConfigService();
 
   /// Nome do arquivo de drops para um jogador específico
   String _getDropsFileName(String email) {
@@ -74,46 +76,71 @@ class DropsService {
     }
   }
 
-  /// Adiciona itens mockados de recompensa
+  /// Adiciona recompensas baseadas na configuração do Excel
   Future<void> adicionarRecompensasMockadas(String email) async {
     try {
       final dropsAtual = await carregarDrops(email) ?? _criarDropsVazio(email);
       
-      // Cria itens mockados
-      final novoItens = [
+      // Carrega configuração e sorteia itens (sempre do Drive)
+      final itensSorteados = await _configService.sortearDrops(quantidadeItens: 3);
+      
+      // Converte configuração para DropItem
+      final novosItens = itensSorteados.map((config) => DropItem(
+        nome: config.nome,
+        descricao: config.descricao,
+        tipo: config.tipo,
+        quantidade: config.quantidade,
+        dataObtencao: DateTime.now(),
+      )).toList();
+      
+      final dropsAtualizados = dropsAtual.copyWith(
+        itens: [...dropsAtual.itens, ...novosItens],
+        ultimaAtualizacao: DateTime.now(),
+      );
+      
+      await salvarDrops(dropsAtualizados);
+      print('🎁 [DropsService] ${novosItens.length} recompensas adicionadas para $email baseadas na configuração');
+      
+    } catch (e) {
+      print('❌ [DropsService] Erro ao adicionar recompensas: $e');
+      
+      // Fallback para itens padrão em caso de erro
+      await _adicionarRecompensasPadrao(email);
+    }
+  }
+  
+  /// Fallback para recompensas padrão em caso de erro
+  Future<void> _adicionarRecompensasPadrao(String email) async {
+    try {
+      final dropsAtual = await carregarDrops(email) ?? _criarDropsVazio(email);
+      
+      final itensPadrao = [
         DropItem(
-          nome: 'Poção de Vida Suprema',
-          descricao: 'Restaura toda a vida do monstro instantaneamente',
-          tipo: 'consumivel',
-          quantidade: 3,
-          dataObtencao: DateTime.now(),
-        ),
-        DropItem(
-          nome: 'Cristal de Poder',
-          descricao: 'Aumenta permanentemente +2 em todos os atributos',
-          tipo: 'upgrade',
-          quantidade: 1,
-          dataObtencao: DateTime.now(),
-        ),
-        DropItem(
-          nome: 'Moedas de Ouro',
-          descricao: 'Moedas preciosas obtidas na aventura',
+          nome: 'Moedas de Prata',
+          descricao: 'Moedas valiosas de aventura',
           tipo: 'moeda',
-          quantidade: 250,
+          quantidade: 100,
+          dataObtencao: DateTime.now(),
+        ),
+        DropItem(
+          nome: 'Poção de Vida Menor',
+          descricao: 'Restaura 50 pontos de vida',
+          tipo: 'consumivel',
+          quantidade: 1,
           dataObtencao: DateTime.now(),
         ),
       ];
       
       final dropsAtualizados = dropsAtual.copyWith(
-        itens: [...dropsAtual.itens, ...novoItens],
+        itens: [...dropsAtual.itens, ...itensPadrao],
         ultimaAtualizacao: DateTime.now(),
       );
       
       await salvarDrops(dropsAtualizados);
-      print('🎁 [DropsService] Recompensas mockadas adicionadas para $email');
+      print('🎁 [DropsService] Recompensas padrão adicionadas para $email');
       
     } catch (e) {
-      print('❌ [DropsService] Erro ao adicionar recompensas mockadas: $e');
+      print('❌ [DropsService] Erro ao adicionar recompensas padrão: $e');
       throw Exception('Falha ao adicionar recompensas: $e');
     }
   }

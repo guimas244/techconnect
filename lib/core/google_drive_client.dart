@@ -81,4 +81,35 @@ class DriveClientFactory {
       rethrow;
     }
   }
+
+  /// Cria um cliente HTTP autenticado para outras APIs (como Sheets)
+  static Future<http.Client> createHttpClient({ProviderContainer? container}) async {
+    print('🔐 [DEBUG] DriveClientFactory: Criando cliente HTTP para Sheets...');
+    
+    try {
+      final gs = GoogleSignIn(
+        scopes: scopes,
+      );
+      
+      GoogleSignInAccount? account = await gs.signInSilently();
+      if (account == null) {
+        print('🔐 [DEBUG] Login necessário para cliente HTTP...');
+        account = await gs.signIn();
+        
+        if (account == null) {
+          print('❌ [DEBUG] Login cancelado pelo usuário');
+          throw Exception("Login cancelado pelo usuário");
+        }
+      }
+      
+      final headers = await account.authHeaders;
+      final client = GoogleAuthClient(headers);
+      
+      print('✅ [DEBUG] Cliente HTTP autenticado criado com sucesso');
+      return client;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar cliente HTTP: $e');
+      rethrow;
+    }
+  }
 }

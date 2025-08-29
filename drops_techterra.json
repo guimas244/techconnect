@@ -1,0 +1,111 @@
+{
+  "timestamp": "2025-08-29T15:00:00.000Z",
+  "versao": "1.0",
+  "itens": [
+    {
+      "nome": "Pocao de Vida Menor",
+      "descricao": "Restaura 50 pontos de vida",
+      "tipo": "consumivel",
+      "quantidade": 1,
+      "raridade": "normal"
+    },
+    {
+      "nome": "Pocao de Vida Suprema",
+      "descricao": "Restaura toda a vida instantaneamente",
+      "tipo": "consumivel",
+      "quantidade": 1,
+      "raridade": "epico"
+    },
+    {
+      "nome": "Elixir da Imortalidade",
+      "descricao": "Concede vida infinita por 30 segundos",
+      "tipo": "consumivel",
+      "quantidade": 1,
+      "raridade": "lendario"
+    },
+    {
+      "nome": "Cristal de Poder Menor",
+      "descricao": "Aumenta +1 em um atributo aleatorio",
+      "tipo": "upgrade",
+      "quantidade": 1,
+      "raridade": "raro"
+    },
+    {
+      "nome": "Cristal de Poder Supremo",
+      "descricao": "Aumenta +2 em todos os atributos",
+      "tipo": "upgrade",
+      "quantidade": 1,
+      "raridade": "epico"
+    },
+    {
+      "nome": "Essencia Divina",
+      "descricao": "Aumenta +5 em todos os atributos permanentemente",
+      "tipo": "upgrade",
+      "quantidade": 1,
+      "raridade": "lendario"
+    },
+    {
+      "nome": "Moedas de Cobre",
+      "descricao": "Moedas basicas de aventura",
+      "tipo": "moeda",
+      "quantidade": 50,
+      "raridade": "inferior"
+    },
+    {
+      "nome": "Moedas de Prata",
+      "descricao": "Moedas valiosas de aventura",
+      "tipo": "moeda",
+      "quantidade": 100,
+      "raridade": "normal"
+    },
+    {
+      "nome": "Moedas de Ouro",
+      "descricao": "Moedas preciosas de aventura",
+      "tipo": "moeda",
+      "quantidade": 250,
+      "raridade": "raro"
+    },
+    {
+      "nome": "Ferro Bruto",
+      "descricao": "Material basico para crafting",
+      "tipo": "material",
+      "quantidade": 5,
+      "raridade": "inferior"
+    },
+    {
+      "nome": "Cristal Magico",
+      "descricao": "Material raro com propriedades magicas",
+      "tipo": "material",
+      "quantidade": 2,
+      "raridade": "raro"
+    },
+    {
+      "nome": "Fragmento Celestial",
+      "descricao": "Material lendario dos deuses",
+      "tipo": "material",
+      "quantidade": 1,
+      "raridade": "lendario"
+    },
+    {
+      "nome": "Chave Misteriosa",
+      "descricao": "Abre portas secretas nas aventuras",
+      "tipo": "especial",
+      "quantidade": 1,
+      "raridade": "raro"
+    },
+    {
+      "nome": "Pergaminho Antigo",
+      "descricao": "Revela segredos do mundo TechTerra",
+      "tipo": "especial",
+      "quantidade": 1,
+      "raridade": "epico"
+    },
+    {
+      "nome": "Reliquia dos Ancestrais",
+      "descricao": "Artefato com poder incalculavel",
+      "tipo": "especial",
+      "quantidade": 1,
+      "raridade": "lendario"
+    }
+  ]
+}
