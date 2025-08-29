@@ -369,21 +369,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       
       if (historiaAtual == null) return;
       
-      // Calcula o score dos monstros mortos no tier atual
-      int scoreGanho = 0;
-      for (final monstro in monstrosParaExibir) {
-        if (monstro.vidaAtual <= 0) {
-          scoreGanho += historiaAtual!.tier; // monstro * tier = score
-        }
-      }
-      
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
       
-      // Atualiza a história com novo tier, score acumulado e novos monstros
+      // Atualiza a história com novo tier e novos monstros (score não muda aqui)
       final historiaAtualizada = historiaAtual!.copyWith(
         tier: historiaAtual!.tier + 1,
-        score: historiaAtual!.score + scoreGanho,
         monstrosInimigos: novosMonstros,
       );
       
@@ -459,9 +450,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 const Text('• Novos monstros mais fortes aparecerão'),
                 const Text('• Seu progresso atual será salvo'),
                 const SizedBox(height: 8),
-                Text(
-                  'Score que você ganhará: ${historiaAtual?.tier ?? 1} pontos',
-                  style: const TextStyle(
+                const Text(
+                  'Seu score atual será mantido.',
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue,
                   ),

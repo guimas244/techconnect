@@ -1,5 +1,6 @@
 import 'monstro_aventura.dart';
 import 'monstro_inimigo.dart';
+import 'batalha.dart';
 
 class HistoriaJogador {
   final String email;
@@ -9,6 +10,7 @@ class HistoriaJogador {
   final List<MonstroInimigo> monstrosInimigos;
   final int tier;
   final int score;
+  final List<RegistroBatalha> historicoBatalhas;
 
   const HistoriaJogador({
     required this.email,
@@ -18,6 +20,7 @@ class HistoriaJogador {
     this.monstrosInimigos = const [],
     this.tier = 1,
     this.score = 0,
+    this.historicoBatalhas = const [],
   });
 
   factory HistoriaJogador.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,9 @@ class HistoriaJogador {
           .toList() ?? [],
       tier: json['tier'] ?? 1,
       score: json['score'] ?? 0,
+      historicoBatalhas: (json['historicoBatalhas'] as List<dynamic>?)
+          ?.map((b) => RegistroBatalha.fromJson(b as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 
@@ -45,6 +51,7 @@ class HistoriaJogador {
       'monstrosInimigos': monstrosInimigos.map((m) => m.toJson()).toList(),
       'tier': tier,
       'score': score,
+      'historicoBatalhas': historicoBatalhas.map((b) => b.toJson()).toList(),
     };
   }
 
@@ -56,6 +63,7 @@ class HistoriaJogador {
     List<MonstroInimigo>? monstrosInimigos,
     int? tier,
     int? score,
+    List<RegistroBatalha>? historicoBatalhas,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -65,6 +73,7 @@ class HistoriaJogador {
       monstrosInimigos: monstrosInimigos ?? this.monstrosInimigos,
       tier: tier ?? this.tier,
       score: score ?? this.score,
+      historicoBatalhas: historicoBatalhas ?? this.historicoBatalhas,
     );
   }
 }

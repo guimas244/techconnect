@@ -11,8 +11,10 @@ class BatalhaService {
   /// Inicia uma batalha entre um monstro do jogador e um monstro inimigo
   Future<RegistroBatalha> executarBatalha(
     MonstroAventura jogador,
-    MonstroInimigo inimigo,
-  ) async {
+    MonstroInimigo inimigo, {
+    int tierAtual = 1,
+    int scoreAtual = 0,
+  }) async {
     print('🗡️ [Batalha] Iniciando batalha: ${jogador.tipo.displayName} vs ${inimigo.tipo.displayName}');
     
     // Estado inicial da batalha
@@ -68,6 +70,14 @@ class BatalhaService {
     
     print('🏆 [Batalha] Vencedor: $vencedor');
     
+    // Calcula score ganho apenas se o jogador venceu
+    int scoreGanho = 0;
+    int scoreDepois = scoreAtual;
+    if (vencedor == 'jogador') {
+      scoreGanho = tierAtual;
+      scoreDepois = scoreAtual + scoreGanho;
+    }
+    
     return RegistroBatalha(
       jogadorNome: jogador.tipo.displayName,
       inimigoNome: inimigo.tipo.displayName,
@@ -78,6 +88,10 @@ class BatalhaService {
       vidaFinalJogador: estado.vidaAtualJogador,
       vidaInicialInimigo: inimigo.vida,
       vidaFinalInimigo: estado.vidaAtualInimigo,
+      tierNaBatalha: tierAtual,
+      scoreAntes: scoreAtual,
+      scoreDepois: scoreDepois,
+      scoreGanho: scoreGanho,
     );
   }
 

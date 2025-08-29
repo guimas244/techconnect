@@ -11,6 +11,10 @@ class RegistroBatalha {
   final int vidaFinalJogador;
   final int vidaInicialInimigo;
   final int vidaFinalInimigo;
+  final int tierNaBatalha;
+  final int scoreAntes;
+  final int scoreDepois;
+  final int scoreGanho;
 
   const RegistroBatalha({
     required this.jogadorNome,
@@ -22,6 +26,10 @@ class RegistroBatalha {
     required this.vidaFinalJogador,
     required this.vidaInicialInimigo,
     required this.vidaFinalInimigo,
+    required this.tierNaBatalha,
+    required this.scoreAntes,
+    required this.scoreDepois,
+    required this.scoreGanho,
   });
 
   Map<String, dynamic> toJson() {
@@ -35,6 +43,10 @@ class RegistroBatalha {
       'vidaFinalJogador': vidaFinalJogador,
       'vidaInicialInimigo': vidaInicialInimigo,
       'vidaFinalInimigo': vidaFinalInimigo,
+      'tierNaBatalha': tierNaBatalha,
+      'scoreAntes': scoreAntes,
+      'scoreDepois': scoreDepois,
+      'scoreGanho': scoreGanho,
     };
   }
 
@@ -51,6 +63,10 @@ class RegistroBatalha {
       vidaFinalJogador: json['vidaFinalJogador'] ?? 0,
       vidaInicialInimigo: json['vidaInicialInimigo'] ?? 0,
       vidaFinalInimigo: json['vidaFinalInimigo'] ?? 0,
+      tierNaBatalha: json['tierNaBatalha'] ?? 1,
+      scoreAntes: json['scoreAntes'] ?? 0,
+      scoreDepois: json['scoreDepois'] ?? 0,
+      scoreGanho: json['scoreGanho'] ?? 0,
     );
   }
 }

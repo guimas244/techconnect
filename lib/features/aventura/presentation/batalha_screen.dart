@@ -489,14 +489,16 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (vencedorBatalha == 'jogador') {
       _atualizarScoreEGerarItem();
     } else {
-      // Se perdeu, apenas salva e volta para aventura com refresh
-      _salvarResultadoNoDrive().then((_) {
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => AventuraScreen()),
-            );
-          }
+      // Se perdeu, salva batalha no histórico sem dar score
+      _salvarBatalhaDerrota().then((_) {
+        _salvarResultadoNoDrive().then((_) {
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => AventuraScreen()),
+              );
+            }
+          });
         });
       });
     }
@@ -517,11 +519,31 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
         print('🎯 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
         
-        // Atualiza história com novo score
-        final historiaComScore = historia.copyWith(score: novoScore);
+        // Cria registro da batalha
+        final registroBatalha = RegistroBatalha(
+          jogadorNome: widget.jogador.tipo.displayName,
+          inimigoNome: widget.inimigo.tipo.displayName,
+          acoes: estadoAtual?.historicoAcoes ?? [],
+          vencedor: 'jogador',
+          dataHora: DateTime.now(),
+          vidaInicialJogador: widget.jogador.vida,
+          vidaFinalJogador: estadoAtual?.vidaAtualJogador ?? 0,
+          vidaInicialInimigo: widget.inimigo.vida,
+          vidaFinalInimigo: estadoAtual?.vidaAtualInimigo ?? 0,
+          tierNaBatalha: historia.tier,
+          scoreAntes: historia.score,
+          scoreDepois: novoScore,
+          scoreGanho: scoreGanho,
+        );
+        
+        // Atualiza história com novo score e histórico da batalha
+        final historiaComScore = historia.copyWith(
+          score: novoScore,
+          historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
+        );
         await repository.salvarHistoricoJogador(historiaComScore);
         
-        print('✅ [BatalhaScreen] Score atualizado e salvo!');
+        print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico!');
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
@@ -529,6 +551,44 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Continua com a geração de item
     _gerarEMostrarItem();
+  }
+
+  Future<void> _salvarBatalhaDerrota() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      // Carrega história atual
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia != null) {
+        // Cria registro da batalha sem dar score
+        final registroBatalha = RegistroBatalha(
+          jogadorNome: widget.jogador.tipo.displayName,
+          inimigoNome: widget.inimigo.tipo.displayName,
+          acoes: estadoAtual?.historicoAcoes ?? [],
+          vencedor: 'inimigo',
+          dataHora: DateTime.now(),
+          vidaInicialJogador: widget.jogador.vida,
+          vidaFinalJogador: estadoAtual?.vidaAtualJogador ?? 0,
+          vidaInicialInimigo: widget.inimigo.vida,
+          vidaFinalInimigo: estadoAtual?.vidaAtualInimigo ?? 0,
+          tierNaBatalha: historia.tier,
+          scoreAntes: historia.score,
+          scoreDepois: historia.score, // Score não muda na derrota
+          scoreGanho: 0, // Sem ganho de score na derrota
+        );
+        
+        // Atualiza história apenas com histórico da batalha
+        final historiaComBatalha = historia.copyWith(
+          historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
+        );
+        await repository.salvarHistoricoJogador(historiaComBatalha);
+        
+        print('✅ [BatalhaScreen] Batalha de derrota salva no histórico!');
+      }
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao salvar batalha de derrota: $e');
+    }
   }
 
   Future<void> _gerarEMostrarItem() async {
@@ -857,9 +917,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // CORRETO: Carrega a tabela de DEFESA do tipo DEFENSOR (quem recebe o ataque)
       final tabelaDefesa = await _tipagemRepository.carregarDadosTipo(tipoDefensor);
       
-      if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante)) {
+      if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante.name)) {
         // O valor na tabela indica quanto de dano o defensor recebe do atacante
-        final multiplicadorDano = tabelaDefesa[tipoAtacante]!;
+        final multiplicadorDano = tabelaDefesa[tipoAtacante.name]!;
         print('🎯 [Efetividade] ${tipoDefensor.name} recebe ${multiplicadorDano}x dano de ${tipoAtacante.name}');
         return multiplicadorDano;
       }
