@@ -503,15 +503,18 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       children: [
         const SizedBox(height: 10),
         // Cards dos monstros em linha, responsivo
-        Row(
-          children: historiaAtual!.monstros.map<Widget>((monstro) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                child: _buildCardMonstroBonito(monstro),
-              ),
-            );
-          }).toList(),
+        SizedBox(
+          height: 160,
+          child: Row(
+            children: historiaAtual!.monstros.map<Widget>((monstro) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                  child: _buildCardMonstroBonito(monstro),
+                ),
+              );
+            }).toList(),
+          ),
         ),
         const SizedBox(height: 30),
         // Botão Iniciar
@@ -549,23 +552,31 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  monstro.imagem,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
+              Expanded(
+                flex: 3,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    monstro.imagem,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
-                  const SizedBox(width: 8),
-                  Image.asset(monstro.tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
-                ],
+              const SizedBox(height: 8),
+              Expanded(
+                flex: 1,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Image.asset(monstro.tipo.iconAsset, fit: BoxFit.contain),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Image.asset(monstro.tipoExtra.iconAsset, fit: BoxFit.contain),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
