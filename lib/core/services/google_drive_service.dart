@@ -297,12 +297,12 @@ class GoogleDriveService {
 
   /// Baixa arquivo de uma pasta específica (para aventura)
   Future<String> baixarArquivoDaPasta(String nomeArquivo, String pasta) async {
-    if (_driveService == null || !_isConnected) {
-      final conectou = await inicializarConexao();
-      if (!conectou) return '';
-    }
+    Future<String> _baixar() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return '';
+      }
 
-    try {
       print('📥 [GoogleDriveService] Baixando arquivo: $nomeArquivo da pasta: $pasta');
       
       List<drive.File> arquivos;
@@ -331,20 +331,43 @@ class GoogleDriveService {
       final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
       print('✅ Arquivo baixado com sucesso da pasta $pasta: $nomeArquivo');
       return conteudo;
+    }
+
+    try {
+      return await _baixar();
     } catch (e) {
-      print('❌ Erro ao baixar arquivo da pasta no Drive ($pasta/$nomeArquivo): $e');
-      return '';
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('🔒 [GoogleDriveService] Token expirado ao baixar $nomeArquivo da pasta $pasta, tentando renovar...');
+        _isConnected = false;
+        _driveService = null;
+        final conectou = await inicializarConexao();
+        if (conectou) {
+          try {
+            print('🔄 [GoogleDriveService] Tentando baixar novamente após renovar token...');
+            return await _baixar();
+          } catch (e2) {
+            print('❌ [GoogleDriveService] Erro ao baixar arquivo após renovar token: $e2');
+            return '';
+          }
+        } else {
+          print('❌ [GoogleDriveService] Falha ao renovar token para baixar $nomeArquivo, reautenticação necessária.');
+          return '';
+        }
+      } else {
+        print('❌ [GoogleDriveService] Erro ao baixar arquivo da pasta no Drive ($pasta/$nomeArquivo): $e');
+        return '';
+      }
     }
   }
 
   /// Salva arquivo JSON em pasta específica (para aventura)
   Future<bool> salvarArquivoEmPasta(String nomeArquivo, String conteudo, String pasta) async {
-    if (_driveService == null || !_isConnected) {
-      final conectou = await inicializarConexao();
-      if (!conectou) return false;
-    }
+    Future<bool> _salvar() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return false;
+      }
 
-    try {
       print('💾 [GoogleDriveService] Salvando arquivo: $nomeArquivo na pasta: $pasta');
       
       if (conteudo.startsWith('{') || conteudo.startsWith('[')) {
@@ -379,9 +402,32 @@ class GoogleDriveService {
       
       print('✅ Arquivo salvo no Drive na pasta $pasta: $nomeArquivo');
       return true;
+    }
+
+    try {
+      return await _salvar();
     } catch (e) {
-      print('❌ Erro ao salvar arquivo em pasta no Drive ($pasta/$nomeArquivo): $e');
-      return false;
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('🔒 [GoogleDriveService] Token expirado ao salvar $nomeArquivo na pasta $pasta, tentando renovar...');
+        _isConnected = false;
+        _driveService = null;
+        final conectou = await inicializarConexao();
+        if (conectou) {
+          try {
+            print('🔄 [GoogleDriveService] Tentando salvar novamente após renovar token...');
+            return await _salvar();
+          } catch (e2) {
+            print('❌ [GoogleDriveService] Erro ao salvar arquivo após renovar token: $e2');
+            return false;
+          }
+        } else {
+          print('❌ [GoogleDriveService] Falha ao renovar token para salvar $nomeArquivo, reautenticação necessária.');
+          return false;
+        }
+      } else {
+        print('❌ [GoogleDriveService] Erro ao salvar arquivo em pasta no Drive ($pasta/$nomeArquivo): $e');
+        return false;
+      }
     }
   }
 }
