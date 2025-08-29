@@ -519,22 +519,51 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           ),
         ),
         const SizedBox(height: 30),
-        // Botão Iniciar
+        // Botão Iniciar/Continuar Aventura
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              _iniciarAventura();
-            },
-            icon: Icon(_getIconeBotaoAventura()),
-            label: Text(_getTextoBotaoAventura()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              textStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _iniciarAventura,
+              splashColor: Colors.green.shade100,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade400, Colors.teal.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.18),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                child: Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 10,
+                    children: [
+                      Icon(_getIconeBotaoAventura(), color: Colors.white, size: 26),
+                      Text(
+                        _getTextoBotaoAventura(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -545,37 +574,47 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           // Botão Receber Recompensas
           SizedBox(
             width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.orange.shade400, Colors.orange.shade600],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _receberRecompensas,
+                splashColor: Colors.orange.shade100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange.shade400, Colors.red.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.18),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () => _receberRecompensas(),
-                icon: const Icon(Icons.card_giftcard, size: 24),
-                label: const Text('Receber Recompensas'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  child: Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      children: [
+                        Icon(Icons.card_giftcard, color: Colors.white, size: 26),
+                        Text(
+                          'RECEBER RECOMPENSAS',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -585,31 +624,47 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           // Botão Ver Prêmios
           SizedBox(
             width: double.infinity,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.orange, width: 2),
-                borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
-                  colors: [Colors.orange.withOpacity(0.1), Colors.orange.withOpacity(0.05)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: OutlinedButton.icon(
-                onPressed: () => _visualizarDrops(),
-                icon: const Icon(Icons.inventory, size: 24),
-                label: const Text('Ver Prêmios'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  backgroundColor: Colors.transparent,
-                  side: BorderSide.none,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _visualizarDrops,
+                splashColor: Colors.purple.shade100,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.purple.shade400, Colors.indigo.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.purple.withOpacity(0.18),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  child: Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      children: [
+                        Icon(Icons.inventory, color: Colors.white, size: 26),
+                        Text(
+                          'VER PRÊMIOS',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
