@@ -13,6 +13,7 @@ import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
+import '../services/evolucao_service.dart';
 import 'modal_monstro_aventura.dart';
 import 'modal_item_obtido.dart';
 
@@ -549,8 +550,438 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
     }
     
-    // Continua com a geração de item
+    // Primeiro processa evolução, depois item
+    _processarEvolucaoEItens();
+  }
+
+  Future<void> _processarEvolucaoEItens() async {
+    // 1️⃣ Primeiro processa e mostra evolução
+    await _processarEvolucaoMonstro();
+    
+    // 2️⃣ Depois processa geração de item
     _gerarEMostrarItem();
+  }
+
+  Future<void> _processarEvolucaoMonstro() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      final evolucaoService = EvolucaoService();
+      
+      // Carrega história atual
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia == null || historia.monstros.isEmpty) {
+        print('❌ [Evolução] Nenhum monstro encontrado para evolução');
+        return;
+      }
+      
+      // Sorteia um monstro aleatório para evoluir
+      final monstroSorteado = evolucaoService.sortearMonstroParaEvoluir(historia.monstros);
+      if (monstroSorteado == null) {
+        print('❌ [Evolução] Falha ao sortear monstro para evolução');
+        return;
+      }
+      
+      print('🎲 [Evolução] Monstro sorteado para evolução: ${monstroSorteado.tipo.displayName}');
+      
+      // Verifica se pode evoluir baseado no level gap
+      final levelInimigoDerrrotado = widget.inimigo.level;
+      final podeEvoluir = evolucaoService.podeEvoluir(monstroSorteado, levelInimigoDerrrotado);
+      
+      if (!podeEvoluir) {
+        // Cria informações de level gap para exibir
+        final infoSemEvolucao = evolucaoService.criarInfoSemEvolucao(monstroSorteado, levelInimigoDerrrotado);
+        
+        // Mostra modal explicando por que não evoluiu
+        if (mounted) {
+          await _mostrarModalSemEvolucao(infoSemEvolucao);
+        }
+        
+        print('🚫 [Evolução] ${monstroSorteado.tipo.displayName} não evoluiu devido ao level gap');
+        return;
+      }
+      
+      // Evolui o monstro
+      final monstroAntes = monstroSorteado;
+      final monstroEvoluido = evolucaoService.evoluirMonstro(monstroSorteado);
+      
+      // Atualiza a lista de monstros com o monstro evoluído
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == monstroSorteado.tipo && 
+            m.tipoExtra == monstroSorteado.tipoExtra && 
+            m.imagem == monstroSorteado.imagem) {
+          return monstroEvoluido;
+        }
+        return m;
+      }).toList();
+      
+      // Salva a história com o monstro evoluído
+      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      await repository.salvarHistoricoJogador(historiaAtualizada);
+      
+      // Cria informações da evolução para exibir
+      final infoEvolucao = evolucaoService.criarInfoEvolucao(monstroAntes, monstroEvoluido);
+      
+      // Mostra modal de evolução
+      if (mounted) {
+        await _mostrarModalEvolucao(infoEvolucao);
+      }
+      
+      print('✅ [Evolução] ${monstroEvoluido.tipo.displayName} evoluiu para level ${monstroEvoluido.level}!');
+      
+    } catch (e) {
+      print('❌ [Evolução] Erro ao processar evolução: $e');
+    }
+  }
+
+  Future<void> _mostrarModalEvolucao(Map<String, dynamic> infoEvolucao) async {
+    final ganhos = infoEvolucao['ganhos'] as Map<String, dynamic>;
+    
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.star,
+              color: Colors.amber,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'EVOLUÇÃO!',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                '${infoEvolucao['monstro']} evoluiu!',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.blue.shade300),
+                ),
+                child: Text(
+                  'Level ${infoEvolucao['levelAntes']} → ${infoEvolucao['levelDepois']}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              '🎁 Ganhos de atributos:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                children: ganhos.entries.where((entry) => entry.value > 0).map((entry) => 
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getIconeAtributo(entry.key),
+                          color: Colors.green.shade600,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_nomeAtributo(entry.key)}: +${entry.value}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Próximo: Escolha de item obtido',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Continuar para Item'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _mostrarModalSemEvolucao(Map<String, dynamic> infoSemEvolucao) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.info,
+              color: Colors.orange,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'SEM EVOLUÇÃO',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                '${infoSemEvolucao['monstro']} não evoluiu',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.trending_up, color: Colors.orange.shade600, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Diferença de Level:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${infoSemEvolucao['monstro']}:',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Level ${infoSemEvolucao['levelMonstro']}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Inimigo derrotado:',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Level ${infoSemEvolucao['levelInimigo']}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb, color: Colors.grey.shade600, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Seu monstro é muito mais poderoso que o inimigo derrotado. Enfrente inimigos mais fortes para evoluir!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Próximo: Escolha de item obtido',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Continuar para Item'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _nomeAtributo(String atributo) {
+    switch (atributo) {
+      case 'vida': return 'Vida';
+      case 'energia': return 'Energia';
+      case 'ataque': return 'Ataque';
+      case 'defesa': return 'Defesa';
+      case 'agilidade': return 'Agilidade';
+      default: return atributo;
+    }
+  }
+
+  IconData _getIconeAtributo(String atributo) {
+    switch (atributo) {
+      case 'vida': return Icons.favorite;
+      case 'energia': return Icons.bolt;
+      case 'ataque': return Icons.flash_on;
+      case 'defesa': return Icons.shield;
+      case 'agilidade': return Icons.speed;
+      default: return Icons.star;
+    }
   }
 
   Future<void> _salvarBatalhaDerrota() async {

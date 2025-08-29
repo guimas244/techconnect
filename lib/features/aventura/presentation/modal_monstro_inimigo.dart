@@ -184,6 +184,36 @@ class ModalMonstroInimigo extends StatelessWidget {
                             Image.asset(monstro.tipoExtra!.iconAsset, width: 32, height: 32, fit: BoxFit.contain)
                           else
                             Container(width: 32, height: 32, color: Colors.transparent),
+                          const SizedBox(width: 8),
+                          Stack(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                color: estaMorto ? Colors.grey : Colors.amber,
+                                size: 32,
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: estaMorto ? Colors.grey : Colors.amber,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.white, width: 1),
+                                  ),
+                                  child: Text(
+                                    '${monstro.level}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           if (monstro.itemEquipado != null) ...[
                             const SizedBox(width: 8),
                             GestureDetector(

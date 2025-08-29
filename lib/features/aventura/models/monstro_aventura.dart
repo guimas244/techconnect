@@ -15,6 +15,7 @@ class MonstroAventura {
   final int defesa;
   final List<Habilidade> habilidades;
   final Item? itemEquipado; // Item equipado (opcional)
+  final int level; // Level do monstro
 
   const MonstroAventura({
     required this.tipo,
@@ -29,6 +30,7 @@ class MonstroAventura {
     required this.defesa,
     required this.habilidades,
     this.itemEquipado, // Item equipado (opcional)
+    this.level = 1, // Level inicial é 1
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -56,6 +58,7 @@ class MonstroAventura {
       itemEquipado: json['itemEquipado'] != null 
           ? Item.fromMap(json['itemEquipado'] as Map<String, dynamic>)
           : null,
+      level: json['level'] ?? 1,
     );
   }
 
@@ -73,6 +76,7 @@ class MonstroAventura {
       'defesa': defesa,
       'habilidades': habilidades.map((h) => h.toJson()).toList(),
       'itemEquipado': itemEquipado?.toMap(),
+      'level': level,
     };
   }
 
@@ -89,6 +93,7 @@ class MonstroAventura {
     int? defesa,
     List<Habilidade>? habilidades,
     Item? itemEquipado,
+    int? level,
   }) {
     return MonstroAventura(
       tipo: tipo ?? this.tipo,
@@ -103,6 +108,7 @@ class MonstroAventura {
       defesa: defesa ?? this.defesa,
       habilidades: habilidades ?? this.habilidades,
       itemEquipado: itemEquipado ?? this.itemEquipado,
+      level: level ?? this.level,
     );
   }
 

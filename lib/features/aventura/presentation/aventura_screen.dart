@@ -571,9 +571,39 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                     Flexible(
                       child: Image.asset(monstro.tipo.iconAsset, fit: BoxFit.contain),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     Flexible(
                       child: Image.asset(monstro.tipoExtra.iconAsset, fit: BoxFit.contain),
+                    ),
+                    const SizedBox(width: 4),
+                    Stack(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.amber,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.white, width: 0.5),
+                            ),
+                            child: Text(
+                              '${monstro.level}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

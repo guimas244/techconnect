@@ -303,6 +303,7 @@ class AventuraRepository {
       }
 
       // Cria monstro inimigo com atributos sorteados
+      // Level do inimigo = tier atual do mapa
       final monstro = MonstroInimigo(
         tipo: tipo,
         tipoExtra: tipoExtra,
@@ -314,6 +315,7 @@ class AventuraRepository {
         defesa: AtributoJogo.defesa.sortear(random),
         habilidades: habilidades,
         itemEquipado: itemEquipado,
+        level: tierAtual, // Level = tier do mapa
       );
       
       monstrosInimigos.add(monstro);

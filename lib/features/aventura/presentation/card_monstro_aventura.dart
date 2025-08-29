@@ -12,6 +12,7 @@ class CardMonstroAventura extends StatelessWidget {
   final int ataque;
   final int defesa;
   final Item? itemEquipado;
+  final int level;
   final VoidCallback? onTap;
 
   const CardMonstroAventura({
@@ -25,6 +26,7 @@ class CardMonstroAventura extends StatelessWidget {
     required this.ataque,
     required this.defesa,
     this.itemEquipado,
+    this.level = 1,
     this.onTap,
   });
 
@@ -93,8 +95,38 @@ class CardMonstroAventura extends StatelessWidget {
             Row(
               children: [
                 Image.asset(tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Image.asset(tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                const SizedBox(width: 8),
+                Stack(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                      size: 28,
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white, width: 1),
+                        ),
+                        child: Text(
+                          '$level',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 Spacer(),
                 GestureDetector(
                   onTap: itemEquipado != null

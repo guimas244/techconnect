@@ -183,6 +183,36 @@ class ModalMonstroAventura extends StatelessWidget {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Stack(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 32,
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.white, width: 1),
+                                  ),
+                                  child: Text(
+                                    '${monstro.level}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           if (monstro.vidaAtual <= 0) ...[
                             const SizedBox(width: 8),
                             Icon(Remix.skull_fill, color: Colors.red, size: 32),

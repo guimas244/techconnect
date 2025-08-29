@@ -214,6 +214,37 @@ class RegrasScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
+            ExpansionTile(
+              title: const Text(
+                'Sistema de Levels e Evolução',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              initiallyExpanded: false,
+              children: [
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    'Monstros possuem levels que podem aumentar através de batalhas vitoriosas:',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildTierELevelRelacao(),
+                const SizedBox(height: 16),
+                _buildLevelBasico(),
+                const SizedBox(height: 16),
+                _buildEvolucaoRegras(),
+                const SizedBox(height: 16),
+                _buildLevelGapRegra(),
+                const SizedBox(height: 16),
+                Text(
+                  'O sistema de levels garante progressão balanceada, onde monstros evoluem apenas contra desafios apropriados.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -705,6 +736,184 @@ class RegrasScreen extends StatelessWidget {
           Text('• "Luvas Mágicas do Trovão": +1 Ataque'),
           Text('• "Orb Supremo do Fogo": +1 Vida, +1 Energia, +1 Ataque'),
           Text('• "Armadura Lendária dos Deuses": +1 em todos os atributos'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTierELevelRelacao() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.layers, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Relação Tier ↔ Level:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Tier 1 = Inimigos Level 1'),
+          Text('• Tier 2 = Inimigos Level 2'),  
+          Text('• Tier 3 = Inimigos Level 3'),
+          Text('• E assim por diante...'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '💡 Conforme você avança de tier, os inimigos ficam automaticamente mais fortes (level mais alto)',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.blue.shade800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelBasico() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.star, color: Colors.amber.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Level dos Monstros:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Todos os monstros do jogador começam no Level 1'),
+          Text('• O level é exibido com um ícone de estrela ⭐ em todas as interfaces'),
+          Text('• Monstros inimigos têm level = tier atual do mapa de aventura'),
+          Text('• Level 1 vs Level 1 = batalha equilibrada'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEvolucaoRegras() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up, color: Colors.green.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Mecânica de Evolução:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Ao vencer uma batalha, 1 monstro aleatório pode evoluir'),
+          Text('• Evolução NÃO é uma escolha do jogador - é automática e aleatória'),
+          Text('• Cada evolução concede: +1 Level'),
+          const SizedBox(height: 8),
+          Text(
+            'Ganhos por Evolução:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 4),
+          Text('• +5 pontos de Vida (sempre)'),
+          Text('• +5 pontos de Energia (sempre)'),
+          Text('• +5 pontos em 1 atributo aleatório (Ataque, Defesa ou Agilidade)'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelGapRegra() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.block, color: Colors.orange.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Regra do Level Gap:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Se o monstro sorteado for 1+ levels acima do inimigo derrotado, NÃO evolui'),
+          Text('• Esta regra evita que monstros muito poderosos "farmen" levels contra inimigos fracos'),
+          Text('• Lembre-se: Inimigos têm level = tier do mapa atual'),
+          Text('• Uma mensagem especial informa quando isso acontece'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Exemplo:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text('• Monstro Lv.3 vs Tier 1 (Inimigo Lv.1) = SEM evolução'),
+                Text('• Monstro Lv.2 vs Tier 2 (Inimigo Lv.2) = PODE evoluir'),
+                Text('• Monstro Lv.1 vs Tier 3 (Inimigo Lv.3) = PODE evoluir'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '💡 Dica: Enfrente inimigos do seu level ou superiores para garantir evolução!',
+            style: TextStyle(
+              fontSize: 14,
+              fontStyle: FontStyle.italic,
+              color: Colors.orange.shade800,
+            ),
+          ),
         ],
       ),
     );
