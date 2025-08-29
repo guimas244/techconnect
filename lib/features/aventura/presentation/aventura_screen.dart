@@ -1223,106 +1223,128 @@ class _ModalVisualizarDrops extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final item = drops!.itens[index];
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.white,
                               border: Border.all(
-                                color: _getCorTipo(item.tipo).withOpacity(0.2),
-                                width: 1,
+                                color: _getCorTipo(item.tipo).withOpacity(0.15),
+                                width: 1.5,
                               ),
-                              gradient: LinearGradient(
-                                colors: [
-                                  _getCorTipo(item.tipo).withOpacity(0.05),
-                                  Colors.white,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _getCorTipo(item.tipo).withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              leading: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _getCorTipo(item.tipo),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _getCorTipo(item.tipo).withOpacity(0.3),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  _getIconeTipo(item.tipo),
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(
-                                item.nome,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.descricao,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Obtido em: ${_formatarData(item.dataObtencao)}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade600,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              trailing: item.quantidade > 1
-                                  ? Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Primeira linha: ícone, nome, quantidade
+                                Row(
+                                  children: [
+                                    // Ícone
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
                                         color: _getCorTipo(item.tipo),
-                                        borderRadius: BorderRadius.circular(15),
+                                        borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: _getCorTipo(item.tipo).withOpacity(0.3),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                            color: _getCorTipo(item.tipo).withOpacity(0.25),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 3),
                                           ),
                                         ],
                                       ),
+                                      child: Icon(
+                                        _getIconeTipo(item.tipo),
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Nome do item
+                                    Expanded(
                                       child: Text(
-                                        '${item.quantidade}x',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
+                                        item.nome,
+                                        style: TextStyle(
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold,
+                                          color: Colors.grey.shade800,
                                         ),
                                       ),
-                                    )
-                                  : null,
+                                    ),
+                                    // Quantidade (se maior que 1)
+                                    if (item.quantidade > 1)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              _getCorTipo(item.tipo),
+                                              _getCorTipo(item.tipo).withOpacity(0.8),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _getCorTipo(item.tipo).withOpacity(0.3),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          '${item.quantidade}x',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // Segunda linha: descrição em box
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    item.descricao,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade700,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                // Terceira linha: data simples
+                                Text(
+                                  _formatarDataSimples(item.dataObtencao),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -1399,7 +1421,7 @@ class _ModalVisualizarDrops extends StatelessWidget {
     }
   }
 
-  String _formatarData(DateTime data) {
+  String _formatarDataSimples(DateTime data) {
     return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year} ${data.hour.toString().padLeft(2, '0')}:${data.minute.toString().padLeft(2, '0')}';
   }
 }
