@@ -7,6 +7,8 @@ class ItemService {
 
   /// Gera um item aleatório ao derrotar um monstro
   Item gerarItemAleatorio({int tierAtual = 1}) {
+    print('🏆 [ItemService] Gerando item para tier $tierAtual');
+    
     // Determina a quantidade de atributos (2% de 5, 3% de 4, 10% de 3, 20% de 2, resto de 1)
     int quantidadeAtributos = _determinarQuantidadeAtributos();
     
@@ -16,8 +18,10 @@ class ItemService {
     // Gera o nome do item baseado na raridade
     String nome = GeradorNomesItens.gerarNomeItem();
     
-    // Gera os atributos do item
-    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos);
+    // Gera os atributos do item (com multiplicação por tier)
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+    
+    print('✅ [ItemService] Item gerado: $nome (${raridade.nome}) | Tier: $tierAtual | Total atributos: ${atributos.values.fold(0, (sum, value) => sum + value)}');
     
     return Item(
       id: _gerarId(),
@@ -56,8 +60,8 @@ class ItemService {
     }
   }
 
-  /// Gera atributos aleatórios para o item
-  Map<String, int> _gerarAtributos(int quantidade) {
+  /// Gera atributos aleatórios para o item (aplicando multiplicação por tier)
+  Map<String, int> _gerarAtributos(int quantidade, int tier) {
     List<String> atributosDisponiveis = ['vida', 'energia', 'ataque', 'defesa', 'agilidade'];
     atributosDisponiveis.shuffle(_random);
     
@@ -65,8 +69,11 @@ class ItemService {
     
     for (int i = 0; i < quantidade; i++) {
       String atributo = atributosDisponiveis[i];
-      int valor = _random.nextInt(10) + 1; // 1-10 pontos por atributo
-      atributos[atributo] = valor;
+      int valorBase = _random.nextInt(10) + 1; // 1-10 pontos base por atributo
+      int valorFinal = valorBase * tier; // Multiplica pelo tier
+      atributos[atributo] = valorFinal;
+      
+      print('🎯 [ItemService] Atributo: $atributo | Base: $valorBase | Tier: $tier | Final: $valorFinal');
     }
     
     return atributos;
