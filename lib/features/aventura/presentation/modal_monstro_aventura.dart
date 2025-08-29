@@ -134,90 +134,134 @@ class ModalMonstroAventura extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
-                          const SizedBox(width: 8),
-                          Image.asset(monstro.tipoExtra.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: monstro.itemEquipado != null
-                                ? () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => ModalDetalheItemEquipado(
-                                        item: monstro.itemEquipado!,
-                                      ),
-                                    );
-                                  }
-                                : null,
-                            child: Stack(
+                      SizedBox(
+                        width: double.infinity,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calcula quantos ícones teremos
+                            int iconCount = 3; // tipo, tipoExtra, level (sempre presentes)
+                            iconCount += monstro.itemEquipado != null ? 1 : 0; // mochila
+                            iconCount += monstro.vidaAtual <= 0 ? 1 : 0; // skull
+                            
+                            // Define tamanhos baseados na largura disponível
+                            final double maxWidth = constraints.maxWidth;
+                            final double availableForIcons = maxWidth - 20; // margem de segurança
+                            final double iconSize = (availableForIcons / iconCount).clamp(16.0, 32.0);
+                            final double spacing = iconSize <= 24 ? 2.0 : (iconSize <= 28 ? 4.0 : 6.0);
+                            
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.backpack,
-                                  color: monstro.itemEquipado != null ? Colors.brown : Colors.grey,
-                                  size: 32,
+                                Flexible(
+                                  child: Image.asset(
+                                    monstro.tipo.iconAsset, 
+                                    width: iconSize, 
+                                    height: iconSize, 
+                                    fit: BoxFit.contain
+                                  ),
                                 ),
-                                if (monstro.itemEquipado != null)
-                                  Positioned(
-                                    right: -2,
-                                    top: -2,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: monstro.itemEquipado!.raridade.cor,
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: Colors.white, width: 1),
+                                SizedBox(width: spacing),
+                                Flexible(
+                                  child: Image.asset(
+                                    monstro.tipoExtra.iconAsset, 
+                                    width: iconSize, 
+                                    height: iconSize, 
+                                    fit: BoxFit.contain
+                                  ),
+                                ),
+                                SizedBox(width: spacing),
+                                Flexible(
+                                  child: GestureDetector(
+                                    onTap: monstro.itemEquipado != null
+                                        ? () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (ctx) => ModalDetalheItemEquipado(
+                                                item: monstro.itemEquipado!,
+                                              ),
+                                            );
+                                          }
+                                        : null,
+                                    child: Stack(
+                                      children: [
+                                        Icon(
+                                          Icons.backpack,
+                                          color: monstro.itemEquipado != null ? Colors.brown : Colors.grey,
+                                          size: iconSize,
+                                        ),
+                                        if (monstro.itemEquipado != null)
+                                          Positioned(
+                                            right: iconSize <= 24 ? 0 : -2,
+                                            top: iconSize <= 24 ? 0 : -2,
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: iconSize <= 24 ? 1 : 3, 
+                                                vertical: iconSize <= 24 ? 0.5 : 1
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: monstro.itemEquipado!.raridade.cor,
+                                                borderRadius: BorderRadius.circular(iconSize <= 24 ? 3 : 5),
+                                                border: Border.all(color: Colors.white, width: 0.5),
+                                              ),
+                                              child: Text(
+                                                '${monstro.itemEquipado!.tier}',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: (iconSize * 0.25).clamp(6.0, 10.0),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: spacing),
+                                Flexible(
+                                  child: Stack(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: iconSize,
                                       ),
-                                      child: Text(
-                                        '${monstro.itemEquipado!.tier}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                      Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: iconSize <= 24 ? 1 : 3, 
+                                            vertical: iconSize <= 24 ? 0.5 : 1
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber,
+                                            borderRadius: BorderRadius.circular(iconSize <= 24 ? 3 : 5),
+                                            border: Border.all(color: Colors.white, width: 0.5),
+                                          ),
+                                          child: Text(
+                                            '${monstro.level}',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: (iconSize * 0.25).clamp(6.0, 10.0),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Stack(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 32,
-                              ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: Colors.white, width: 1),
-                                  ),
-                                  child: Text(
-                                    '${monstro.level}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          if (monstro.vidaAtual <= 0) ...[
-                            const SizedBox(width: 8),
-                            Icon(Remix.skull_fill, color: Colors.red, size: 32),
-                          ],
-                        ],
+                                if (monstro.vidaAtual <= 0) ...[
+                                  SizedBox(width: spacing),
+                                  Flexible(
+                                    child: Icon(Remix.skull_fill, color: Colors.red, size: iconSize),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),

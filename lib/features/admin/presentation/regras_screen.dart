@@ -65,6 +65,7 @@ class RegrasScreen extends StatelessWidget {
                     defesa: 52,
                     habilidades: const [],
                     itemEquipado: null,
+                    level: 2, // Exemplo de monstro com level 2
                   ),
                   onClose: null,
                   showCloseButton: false,
