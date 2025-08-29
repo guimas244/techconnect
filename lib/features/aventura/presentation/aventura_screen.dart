@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
+import '../models/drop_jogador.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../services/drops_service.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 
@@ -537,6 +539,47 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         ),
+        // Botões de recompensas (só aparecem se aventura está iniciada)
+        if (historiaAtual != null && historiaAtual!.aventuraIniciada) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _receberRecompensas(),
+                  icon: const Icon(Icons.card_giftcard),
+                  label: const Text('Receber Recompensas'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _visualizarDrops(),
+                  icon: const Icon(Icons.inventory),
+                  label: const Text('Ver Prêmios'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                    side: const BorderSide(color: Colors.orange, width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -622,4 +665,375 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     );
   }
 
+  Future<void> _receberRecompensas() async {
+    try {
+      // Mostra confirmação antes de finalizar aventura
+      final bool? confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Finalizar Aventura'),
+            ],
+          ),
+          content: const Text(
+            'Ao receber as recompensas, sua aventura atual será finalizada e uma nova será iniciada.\n\nDeseja continuar?',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Receber Recompensas'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar != true) return;
+
+      // Mostra loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final dropsService = DropsService();
+
+      // Adiciona recompensas mockadas
+      await dropsService.adicionarRecompensasMockadas(emailJogador);
+
+      // Finaliza aventura atual e inicia nova
+      await _finalizarEIniciarNovaAventura();
+
+      // Fecha loading
+      if (mounted) Navigator.of(context).pop();
+
+      // Mostra sucesso
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.celebration, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Recompensas Recebidas!'),
+              ],
+            ),
+            content: const Text(
+              'Suas recompensas foram coletadas e uma nova aventura foi iniciada!\n\nVisualize seus prêmios no botão "Ver Prêmios".',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Ótimo!'),
+              ),
+            ],
+          ),
+        );
+      }
+
+    } catch (e) {
+      // Fecha loading se aberto
+      if (mounted) Navigator.of(context).pop();
+
+      // Mostra erro
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Erro'),
+              ],
+            ),
+            content: Text('Erro ao receber recompensas: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _finalizarEIniciarNovaAventura() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Cria nova história do zero (sem aventura iniciada)
+      final novaHistoria = HistoriaJogador(
+        email: emailJogador,
+        monstros: [],
+        aventuraIniciada: false,
+        mapaAventura: null,
+        monstrosInimigos: [],
+        tier: 1,
+        score: 0,
+        historicoBatalhas: [],
+      );
+
+      // Salva nova história
+      await repository.salvarHistoricoJogador(novaHistoria);
+
+      // Atualiza estado local
+      setState(() {
+        historiaAtual = novaHistoria;
+      });
+
+      // Atualiza estado do provider
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+
+      print('✅ [AventuraScreen] Nova aventura iniciada após receber recompensas');
+
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao finalizar e iniciar nova aventura: $e');
+      throw e;
+    }
+  }
+
+  Future<void> _visualizarDrops() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final dropsService = DropsService();
+
+      final drops = await dropsService.carregarDrops(emailJogador);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => _ModalVisualizarDrops(drops: drops),
+      );
+
+    } catch (e) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Erro'),
+              ],
+            ),
+            content: Text('Erro ao carregar prêmios: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+}
+
+class _ModalVisualizarDrops extends StatelessWidget {
+  final DropJogador? drops;
+
+  const _ModalVisualizarDrops({required this.drops});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600, maxWidth: 400),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.inventory, color: Colors.orange, size: 28),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Seus Prêmios',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Flexible(
+              child: drops == null || drops!.itens.isEmpty
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nenhum prêmio coletado ainda',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Complete aventuras e colete recompensas!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: drops!.itens.length,
+                      itemBuilder: (context, index) {
+                        final item = drops!.itens[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: _getCorTipo(item.tipo),
+                              child: Icon(
+                                _getIconeTipo(item.tipo),
+                                color: Colors.white,
+                              ),
+                            ),
+                            title: Text(
+                              item.nome,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.descricao),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Obtido em: ${_formatarData(item.dataObtencao)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: item.quantidade > 1
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${item.quantidade}x',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            if (drops != null && drops!.itens.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Total: ${drops!.itens.length} prêmios coletados',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getCorTipo(String tipo) {
+    switch (tipo) {
+      case 'consumivel': return Colors.green;
+      case 'upgrade': return Colors.purple;
+      case 'moeda': return Colors.amber;
+      default: return Colors.blue;
+    }
+  }
+
+  IconData _getIconeTipo(String tipo) {
+    switch (tipo) {
+      case 'consumivel': return Icons.local_drink;
+      case 'upgrade': return Icons.upgrade;
+      case 'moeda': return Icons.monetization_on;
+      default: return Icons.inventory;
+    }
+  }
+
+  String _formatarData(DateTime data) {
+    return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year} ${data.hour.toString().padLeft(2, '0')}:${data.minute.toString().padLeft(2, '0')}';
+  }
 }
