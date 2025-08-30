@@ -3,6 +3,7 @@ import '../../../shared/models/tipo_enum.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../models/habilidade.dart';
 import 'gerador_nomes_habilidades.dart';
+import '../../../core/models/atributo_jogo_enum.dart';
 
 class GeradorHabilidades {
   static final _random = Random();
@@ -79,17 +80,17 @@ class GeradorHabilidades {
   static int _gerarValor(EfeitoHabilidade efeito) {
     switch (efeito) {
       case EfeitoHabilidade.aumentarVida:
-        return 10 + _random.nextInt(21); // 10-30
+        return AtributoJogo.habilidadeAumentarVida.sortear(_random);
       case EfeitoHabilidade.aumentarEnergia:
-        return 5 + _random.nextInt(11); // 5-15
+        return AtributoJogo.habilidadeAumentarEnergia.sortear(_random);
       case EfeitoHabilidade.aumentarAtaque:
-        return 5 + _random.nextInt(11); // 5-15
+        return AtributoJogo.habilidadeAumentarAtaque.sortear(_random);
       case EfeitoHabilidade.aumentarDefesa:
-        return 8 + _random.nextInt(13); // 8-20
+        return AtributoJogo.habilidadeAumentarDefesa.sortear(_random);
       case EfeitoHabilidade.curarVida:
-        return 15 + _random.nextInt(26); // 15-40
+        return AtributoJogo.habilidadeCura.sortear(_random);
       case EfeitoHabilidade.danoDirecto:
-        return 20 + _random.nextInt(31); // 20-50
+        return AtributoJogo.habilidadeDano.sortear(_random);
       case EfeitoHabilidade.aumentarAgilidade:
         // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
         return 5; // Valor mínimo para não quebrar

@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/magia_drop.dart';
 import '../../../shared/models/habilidade_enum.dart';
+import '../../../core/models/atributo_jogo_enum.dart';
 
 class MagiaService {
   final Random _random = Random();
@@ -54,11 +55,22 @@ class MagiaService {
     );
   }
 
-  /// Gera valor base da magia baseado no tier
+  /// Gera valor base da magia usando os valores centralizados do AtributoJogo
+  /// O valor é sorteado aleatoriamente entre os diferentes tipos de efeito
   int _gerarValorBaseMagia(int tier) {
-    final baseMin = 10 + (tier - 1) * 5;  // Tier 1: 10+, Tier 2: 15+, etc.
-    final baseMax = 20 + (tier - 1) * 10; // Tier 1: 20, Tier 2: 30, etc.
-    return baseMin + _random.nextInt(baseMax - baseMin + 1);
+    // Sorteia um valor entre os ranges das habilidades existentes
+    // Isso garante que as magias tenham valores compatíveis com as habilidades normais
+    final atributosSorteaveis = [
+      AtributoJogo.habilidadeDano,
+      AtributoJogo.habilidadeCura,
+      AtributoJogo.habilidadeAumentarVida,
+      AtributoJogo.habilidadeAumentarEnergia,
+      AtributoJogo.habilidadeAumentarAtaque,
+      AtributoJogo.habilidadeAumentarDefesa,
+    ];
+    
+    final atributoSorteado = atributosSorteaveis[_random.nextInt(atributosSorteaveis.length)];
+    return atributoSorteado.sortear(_random);
   }
 
   /// Gera custo de energia baseado no valor da magia

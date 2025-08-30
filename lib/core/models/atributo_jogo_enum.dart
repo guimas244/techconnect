@@ -1,11 +1,20 @@
 import 'dart:math';
 
 enum AtributoJogo {
+  // Atributos base dos monstros
   vida(min: 50, max: 100),
   energia(min: 20, max: 40),
   agilidade(min: 10, max: 20),
   ataque(min: 10, max: 20),
-  defesa(min: 40, max: 60);
+  defesa(min: 40, max: 60),
+  
+  // Valores das habilidades
+  habilidadeDano(min: 20, max: 50),
+  habilidadeCura(min: 15, max: 40),
+  habilidadeAumentarVida(min: 10, max: 30),
+  habilidadeAumentarEnergia(min: 5, max: 15),
+  habilidadeAumentarAtaque(min: 5, max: 15),
+  habilidadeAumentarDefesa(min: 8, max: 20);
 
   final int min;
   final int max;
