@@ -56,6 +56,7 @@ class DropItem {
   final String tipo;
   final int quantidade;
   final DateTime dataObtencao;
+  final String raridade;
 
   const DropItem({
     required this.nome,
@@ -63,6 +64,7 @@ class DropItem {
     required this.tipo,
     required this.quantidade,
     required this.dataObtencao,
+    this.raridade = 'comum',
   });
 
   factory DropItem.fromJson(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class DropItem {
       tipo: json['tipo'] ?? 'item',
       quantidade: json['quantidade'] ?? 1,
       dataObtencao: DateTime.parse(json['dataObtencao'] ?? DateTime.now().toIso8601String()),
+      raridade: json['raridade'] ?? 'comum',
     );
   }
 
@@ -82,6 +85,7 @@ class DropItem {
       'tipo': tipo,
       'quantidade': quantidade,
       'dataObtencao': dataObtencao.toIso8601String(),
+      'raridade': raridade,
     };
   }
 }

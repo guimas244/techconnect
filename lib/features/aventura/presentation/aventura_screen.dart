@@ -1229,12 +1229,12 @@ class _ModalVisualizarDrops extends StatelessWidget {
                               borderRadius: BorderRadius.circular(16),
                               color: Colors.white,
                               border: Border.all(
-                                color: _getCorTipo(item.tipo).withOpacity(0.15),
+                                color: _getCorRaridade(item.raridade).withOpacity(0.15),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _getCorTipo(item.tipo).withOpacity(0.08),
+                                  color: _getCorRaridade(item.raridade).withOpacity(0.08),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -1250,11 +1250,11 @@ class _ModalVisualizarDrops extends StatelessWidget {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: _getCorTipo(item.tipo),
+                                        color: _getCorRaridade(item.raridade),
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: _getCorTipo(item.tipo).withOpacity(0.25),
+                                            color: _getCorRaridade(item.raridade).withOpacity(0.25),
                                             blurRadius: 6,
                                             offset: const Offset(0, 3),
                                           ),
@@ -1288,14 +1288,14 @@ class _ModalVisualizarDrops extends StatelessWidget {
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
                                             colors: [
-                                              _getCorTipo(item.tipo),
-                                              _getCorTipo(item.tipo).withOpacity(0.8),
+                                              _getCorRaridade(item.raridade),
+                                              _getCorRaridade(item.raridade).withOpacity(0.8),
                                             ],
                                           ),
                                           borderRadius: BorderRadius.circular(20),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: _getCorTipo(item.tipo).withOpacity(0.3),
+                                              color: _getCorRaridade(item.raridade).withOpacity(0.3),
                                               blurRadius: 4,
                                               offset: const Offset(0, 2),
                                             ),
@@ -1402,6 +1402,29 @@ class _ModalVisualizarDrops extends StatelessWidget {
       case 'upgrade': return Colors.purple;
       case 'moeda': return Colors.amber;
       default: return Colors.blue;
+    }
+  }
+
+  Color _getCorRaridade(String raridade) {
+    switch (raridade.toLowerCase()) {
+      case 'lendario':
+      case 'lendária':
+      case 'legendary':
+        return Colors.deepOrange; // Laranja dourado para lendário
+      case 'epico':
+      case 'épico':
+      case 'epic':
+        return Colors.purple; // Roxo para épico
+      case 'raro':
+      case 'rare':
+        return Colors.blue; // Azul para raro
+      case 'incomum':
+      case 'uncommon':
+        return Colors.green; // Verde para incomum
+      case 'comum':
+      case 'common':
+      default:
+        return Colors.grey; // Cinza para comum/padrão
     }
   }
 

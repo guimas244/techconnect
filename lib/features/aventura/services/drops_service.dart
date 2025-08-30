@@ -244,6 +244,7 @@ class DropsService {
           tipo: 'moeda',
           quantidade: 100,
           dataObtencao: DateTime.now(),
+          raridade: 'comum',
         ),
         DropItem(
           nome: 'Poção de Vida Menor',
@@ -251,6 +252,7 @@ class DropsService {
           tipo: 'consumivel',
           quantidade: 1,
           dataObtencao: DateTime.now(),
+          raridade: 'comum',
         ),
       ];
       

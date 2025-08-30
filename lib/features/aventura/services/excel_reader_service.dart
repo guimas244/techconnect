@@ -506,6 +506,7 @@ class ExcelReaderService {
         tipo: tipo,
         quantidade: quantidade,
         dataObtencao: DateTime.now(),
+        raridade: raridade.toLowerCase(),
       );
       
       print('✅ [ExcelReaderService] Item convertido para DropItem: ${dropItem.nome}');
