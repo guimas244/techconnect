@@ -101,11 +101,11 @@ class EvolucaoService {
   Map<String, dynamic> evoluirMonstroCompleto(MonstroAventura monstro, int levelInimigoDerrrotado) {
     print('🌟 [Evolução] ${monstro.tipo.displayName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
     
-    // Primeiro, tenta evoluir uma habilidade
-    final resultadoHabilidade = monstro.evoluir(levelInimigoDerrrotado: levelInimigoDerrrotado);
+    // Primeiro, tenta evoluir uma habilidade (sem evoluir o level do monstro ainda)
+    final resultadoHabilidade = _tentarEvoluirHabilidadeSemLevel(monstro, levelInimigoDerrrotado);
     final monstroComHabilidadeProcessada = resultadoHabilidade['monstro'] as MonstroAventura;
     
-    // Depois, aplica os ganhos de atributos (reutilizando a lógica existente)
+    // Depois, aplica os ganhos de atributos E sobe o level (+1 apenas)
     final monstroComAtributos = evoluirMonstro(monstroComHabilidadeProcessada);
     
     // Retorna o resultado completo
@@ -281,6 +281,50 @@ class EvolucaoService {
         'levelAntes': levelAnteriorHabilidade,
         'levelDepois': levelNovoHabilidade,
       },
+    };
+  }
+
+  /// Tenta evoluir habilidade sem subir level do monstro
+  Map<String, dynamic> _tentarEvoluirHabilidadeSemLevel(MonstroAventura monstro, int levelInimigoDerrrotado) {
+    if (monstro.habilidades.isEmpty) {
+      return {
+        'monstro': monstro, // Sem mudanças no monstro
+        'habilidadeEvoluiu': false,
+        'motivo': 'sem_habilidades',
+      };
+    }
+
+    // Escolhe uma habilidade aleatória para tentar evoluir
+    final random = Random();
+    final indexHabilidade = random.nextInt(monstro.habilidades.length);
+    final habilidadeEscolhida = monstro.habilidades[indexHabilidade];
+    
+    // Verifica level gap da habilidade
+    if (habilidadeEscolhida.level > levelInimigoDerrrotado) {
+      return {
+        'monstro': monstro, // Sem mudanças no monstro
+        'habilidadeEvoluiu': false,
+        'motivo': 'level_gap_habilidade',
+        'habilidadeEscolhida': habilidadeEscolhida,
+        'levelInimigo': levelInimigoDerrrotado,
+      };
+    }
+    
+    // Cria nova lista de habilidades com uma evoluída
+    final novasHabilidades = <Habilidade>[];
+    for (int i = 0; i < monstro.habilidades.length; i++) {
+      if (i == indexHabilidade) {
+        novasHabilidades.add(monstro.habilidades[i].evoluir());
+      } else {
+        novasHabilidades.add(monstro.habilidades[i]);
+      }
+    }
+
+    return {
+      'monstro': monstro.copyWith(habilidades: novasHabilidades), // SEM subir level
+      'habilidadeEvoluiu': true,
+      'habilidadeAntes': habilidadeEscolhida,
+      'habilidadeDepois': monstro.habilidades[indexHabilidade].evoluir(),
     };
   }
 

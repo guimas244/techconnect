@@ -1,11 +1,15 @@
+import 'magia_drop.dart';
+
 class DropJogador {
   final String email;
   final List<DropItem> itens;
+  final List<MagiaDrop> magias;
   final DateTime ultimaAtualizacao;
 
   const DropJogador({
     required this.email,
     required this.itens,
+    required this.magias,
     required this.ultimaAtualizacao,
   });
 
@@ -15,6 +19,9 @@ class DropJogador {
       itens: (json['itens'] as List<dynamic>?)
           ?.map((i) => DropItem.fromJson(i as Map<String, dynamic>))
           .toList() ?? [],
+      magias: (json['magias'] as List<dynamic>?)
+          ?.map((m) => MagiaDrop.fromJson(m as Map<String, dynamic>))
+          .toList() ?? [],
       ultimaAtualizacao: DateTime.parse(json['ultimaAtualizacao'] ?? DateTime.now().toIso8601String()),
     );
   }
@@ -23,6 +30,7 @@ class DropJogador {
     return {
       'email': email,
       'itens': itens.map((i) => i.toJson()).toList(),
+      'magias': magias.map((m) => m.toJson()).toList(),
       'ultimaAtualizacao': ultimaAtualizacao.toIso8601String(),
     };
   }
@@ -30,11 +38,13 @@ class DropJogador {
   DropJogador copyWith({
     String? email,
     List<DropItem>? itens,
+    List<MagiaDrop>? magias,
     DateTime? ultimaAtualizacao,
   }) {
     return DropJogador(
       email: email ?? this.email,
       itens: itens ?? this.itens,
+      magias: magias ?? this.magias,
       ultimaAtualizacao: ultimaAtualizacao ?? this.ultimaAtualizacao,
     );
   }

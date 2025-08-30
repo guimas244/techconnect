@@ -170,6 +170,7 @@ class DropsService {
     return DropJogador(
       email: email,
       itens: [],
+      magias: [],
       ultimaAtualizacao: DateTime.now(),
     );
   }

@@ -7,6 +7,8 @@ import 'aventura_screen.dart';
 import '../models/batalha.dart';
 import '../models/habilidade.dart';
 import '../models/item.dart';
+import '../models/historia_jogador.dart';
+import '../models/magia_drop.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
@@ -14,8 +16,10 @@ import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
+import '../services/magia_service.dart';
 import 'modal_monstro_aventura.dart';
 import 'modal_item_obtido.dart';
+import 'modal_magia_obtida.dart';
 
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
@@ -41,6 +45,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool salvandoResultado = false;
   bool jogadorComeca = true;
   bool itemGerado = false;
+  bool podeVoltarParaAventura = false;
   int turnoAtual = 1;
   bool vezDoJogador = true;
   String? ultimaAcao;
@@ -501,12 +506,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Se perdeu, salva batalha no histórico sem dar score
       _salvarBatalhaDerrota().then((_) {
         _salvarResultadoNoDrive().then((_) {
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => AventuraScreen()),
-              );
-            }
+          setState(() {
+            podeVoltarParaAventura = true;
           });
         });
       });
@@ -566,7 +567,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // 1️⃣ Primeiro processa e mostra evolução
     await _processarEvolucaoMonstro();
     
-    // 2️⃣ Depois processa geração de item
+    // 2️⃣ Depois processa geração de item (o salvamento será feito após o equipamento)
     _gerarEMostrarItem();
   }
 
@@ -1387,55 +1388,145 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _gerarEMostrarItem() async {
     if (itemGerado) return;
     itemGerado = true;
+    print('🎁 [BatalhaScreen] Iniciando geração de drop...');
     try {
-      // Gera um item aleatório baseado no tier atual
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       final tierAtual = historia?.tier ?? 1;
       
-      final itemService = ItemService();
-      final itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
       if (historia == null || historia.monstros.isEmpty) {
-        throw Exception('Nenhum monstro encontrado para equipar item');
+        throw Exception('Nenhum monstro encontrado para equipar item/magia');
       }
-      // Mostra modal de seleção de item
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => ModalItemObtido(
-            item: itemObtido,
-            monstrosDisponiveis: historia.monstros,
-            onEquiparItem: (monstro, item) async {
-              await _equiparItemEMonstro(monstro, item);
-            },
-          ),
-        );
+
+      // 30% chance de drop ser magia, 70% chance de ser item
+      final random = Random();
+      final chanceDrop = random.nextInt(100);
+      print('🎲 [BatalhaScreen] Chance de drop: $chanceDrop/100');
+      
+      if (chanceDrop < 30) {
+        // Drop de magia (30%)
+        print('✨ [BatalhaScreen] Drop será MAGIA (chance: $chanceDrop < 30)');
+        await _gerarEMostrarMagia(historia, tierAtual);
+      } else {
+        // Drop de item (70%)
+        print('🎯 [BatalhaScreen] Drop será ITEM (chance: $chanceDrop >= 30)');
+        await _gerarEMostrarItemTradicional(historia, tierAtual);
       }
-      // Após equipar item, salva tudo e volta para aventura com refresh
-      _salvarResultadoNoDrive().then((_) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => AventuraScreen()),
-            );
-          }
-        });
-      });
     } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao gerar item: $e');
-      // Em caso de erro, apenas salva e volta para aventura com refresh
-      _salvarResultadoNoDrive().then((_) {
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => AventuraScreen()),
-            );
+      print('❌ [BatalhaScreen] Erro ao gerar drop: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao gerar recompensa: $e')),
+      );
+    }
+  }
+
+  Future<void> _gerarEMostrarItemTradicional(HistoriaJogador historia, int tierAtual) async {
+    final itemService = ItemService();
+    final itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
+    print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
+    
+    // Mostra modal de seleção de item
+    if (mounted) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ModalItemObtido(
+          item: itemObtido,
+          monstrosDisponiveis: historia.monstros,
+          onEquiparItem: (monstro, item) async {
+            await _equiparItemEMonstro(monstro, item);
+          },
+        ),
+      );
+      
+      // Se o modal foi fechado sem equipar (descarte), ainda precisa finalizar a batalha
+      if (!podeVoltarParaAventura) {
+        await _finalizarBatalhaComSalvamento();
+      }
+    }
+  }
+
+  Future<void> _gerarEMostrarMagia(HistoriaJogador historia, int tierAtual) async {
+    final magiaService = MagiaService();
+    final magiaObtida = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
+    print('🎁 [BatalhaScreen] Magia gerada: ${magiaObtida.nome} (${magiaObtida.tipo.name}) - Level ${magiaObtida.level}');
+    
+    // Mostra modal de seleção de magia
+    if (mounted) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ModalMagiaObtida(
+          magia: magiaObtida,
+          monstrosDisponiveis: historia.monstros,
+          onEquiparMagia: (monstro, magia, habilidadeSubstituida) async {
+            await _equiparMagiaEMonstro(monstro, magia, habilidadeSubstituida);
+          },
+        ),
+      );
+      
+      // Se o modal foi fechado sem equipar (descarte), ainda precisa finalizar a batalha
+      if (!podeVoltarParaAventura) {
+        await _finalizarBatalhaComSalvamento();
+      }
+    }
+  }
+
+  /// Equipa uma magia no monstro substituindo uma habilidade existente
+  Future<void> _equiparMagiaEMonstro(MonstroAventura monstro, MagiaDrop magia, Habilidade habilidadeSubstituida) async {
+    try {
+      // Converte a magia para habilidade com tipagem do monstro
+      final novaHabilidade = Habilidade(
+        nome: magia.nome,
+        descricao: magia.descricao,
+        tipo: magia.tipo,
+        efeito: magia.efeito,
+        tipoElemental: monstro.tipo, // Usa o tipo principal do monstro
+        valor: magia.valor,
+        custoEnergia: magia.custoEnergia,
+        level: magia.level,
+      );
+
+      // Cria nova lista de habilidades substituindo a selecionada
+      final novasHabilidades = <Habilidade>[];
+      for (final hab in monstro.habilidades) {
+        if (hab == habilidadeSubstituida) {
+          novasHabilidades.add(novaHabilidade);
+        } else {
+          novasHabilidades.add(hab);
+        }
+      }
+
+      // Atualiza o monstro
+      final monstroAtualizado = monstro.copyWith(habilidades: novasHabilidades);
+
+      // Salva no histórico
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      
+      if (historia != null) {
+        final monstrosAtualizados = historia.monstros.map((m) {
+          if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
+            return monstroAtualizado;
           }
-        });
-      });
+          return m;
+        }).toList();
+        
+        final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+        await repository.salvarHistoricoJogador(historiaAtualizada);
+        
+        print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.displayName}, substituindo ${habilidadeSubstituida.nome}');
+      }
+
+      // Após equipar a magia, salva tudo e mostra botão para voltar
+      await _finalizarBatalhaComSalvamento();
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao equipar magia: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao equipar magia: $e')),
+      );
     }
   }
 
@@ -1462,8 +1553,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
       await repository.salvarHistoricoJogador(historiaAtualizada);
       debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
+      
+      // Após equipar o item, salva tudo e mostra botão para voltar
+      await _finalizarBatalhaComSalvamento();
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao equipar item: $e');
+    }
+  }
+
+  /// Finaliza a batalha salvando tudo e mostrando o botão para voltar
+  Future<void> _finalizarBatalhaComSalvamento() async {
+    print('🔄 [BatalhaScreen] Finalizando batalha e salvando resultado final no drive...');
+    await _salvarResultadoNoDrive();
+    print('✅ [BatalhaScreen] Resultado final salvo com sucesso!');
+    
+    // Mostra botão para voltar manualmente
+    print('🔘 [BatalhaScreen] Ativando botão "Voltar para Aventura"');
+    if (mounted) {
+      setState(() {
+        podeVoltarParaAventura = true;
+      });
     }
   }
 
@@ -2023,13 +2132,32 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            'Retornando ao mapa em breve...',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
+          if (podeVoltarParaAventura)
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => AventuraScreen()),
+                );
+              },
+              icon: Icon(Icons.arrow_back),
+              label: Text('Voltar para Aventura'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: venceuBatalha ? Colors.green.shade600 : Colors.red.shade600,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            )
+          else
+            Text(
+              venceuBatalha 
+                ? 'Aguarde finalizar processamento da vitória...'
+                : 'Batalha finalizada!',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
         ],
       ),
     );

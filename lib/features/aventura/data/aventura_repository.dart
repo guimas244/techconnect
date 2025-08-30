@@ -7,6 +7,7 @@ import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../models/item.dart';
+import '../models/habilidade.dart';
 import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
