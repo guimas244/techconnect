@@ -1646,6 +1646,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           SnackBar(content: Text('Erro ao salvar resultado: $e')),
         );
       }
+    } finally {
+      // Sempre reseta o estado de salvamento, independente de sucesso ou erro
+      if (mounted) {
+        setState(() {
+          salvandoResultado = false;
+        });
+      }
     }
   }
 
