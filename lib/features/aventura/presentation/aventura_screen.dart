@@ -1313,7 +1313,7 @@ class _ModalVisualizarDrops extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                // Segunda linha: descrição em box
+                                // Segunda linha: descrição expansível em box
                                 Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
@@ -1325,14 +1325,7 @@ class _ModalVisualizarDrops extends StatelessWidget {
                                       width: 1,
                                     ),
                                   ),
-                                  child: Text(
-                                    item.descricao,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade700,
-                                      height: 1.3,
-                                    ),
-                                  ),
+                                  child: _DescricaoExpansivel(descricao: item.descricao),
                                 ),
                                 const SizedBox(height: 10),
                                 // Terceira linha: data simples
@@ -1423,5 +1416,66 @@ class _ModalVisualizarDrops extends StatelessWidget {
 
   String _formatarDataSimples(DateTime data) {
     return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year} ${data.hour.toString().padLeft(2, '0')}:${data.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Widget para descrição expansível com "mostrar mais/menos"
+class _DescricaoExpansivel extends StatefulWidget {
+  final String descricao;
+
+  const _DescricaoExpansivel({required this.descricao});
+
+  @override
+  State<_DescricaoExpansivel> createState() => _DescricaoExpansivelState();
+}
+
+class _DescricaoExpansivelState extends State<_DescricaoExpansivel> {
+  bool _expandido = false;
+  static const int _limitePalavras = 15; // Limite de palavras antes de truncar
+
+  bool get _precisaTruncar {
+    return widget.descricao.split(' ').length > _limitePalavras;
+  }
+
+  String get _textoTruncado {
+    if (!_precisaTruncar) return widget.descricao;
+    
+    final palavras = widget.descricao.split(' ');
+    return palavras.take(_limitePalavras).join(' ') + '...';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _expandido ? widget.descricao : _textoTruncado,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade700,
+            height: 1.3,
+          ),
+        ),
+        if (_precisaTruncar) ...[
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _expandido = !_expandido;
+              });
+            },
+            child: Text(
+              _expandido ? 'Mostrar menos' : 'Mostrar mais',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.blue.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
