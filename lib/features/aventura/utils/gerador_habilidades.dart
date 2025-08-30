@@ -101,9 +101,9 @@ class GeradorHabilidades {
     return 1 + _random.nextInt(5); // 1-5
   }
 
-  /// Gera level aleatório de 1 a 10
+  /// Gera level inicial sempre 1
   static int _gerarLevel() {
-    return 1 + _random.nextInt(10); // 1-10
+    return 1; // Sempre inicia no level 1
   }
 
   static String _gerarDescricao(EfeitoHabilidade efeito, int valor, Tipo tipo, int custoEnergia) {

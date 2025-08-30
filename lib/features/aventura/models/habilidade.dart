@@ -7,7 +7,7 @@ class Habilidade {
   final TipoHabilidade tipo;
   final EfeitoHabilidade efeito;
   final Tipo tipoElemental;
-  final int valor;
+  final int valor; // Valor base da habilidade
   final int custoEnergia;
   final int level;
 
@@ -21,6 +21,24 @@ class Habilidade {
     required this.custoEnergia,
     required this.level,
   });
+
+  /// Calcula o valor efetivo da habilidade baseado no level
+  /// Valor efetivo = valor base * level
+  int get valorEfetivo => valor * level;
+
+  /// Cria uma cópia da habilidade com o level aumentado em 1
+  Habilidade evoluir() {
+    return Habilidade(
+      nome: nome,
+      descricao: descricao,
+      tipo: tipo,
+      efeito: efeito,
+      tipoElemental: tipoElemental,
+      valor: valor,
+      custoEnergia: custoEnergia,
+      level: level + 1,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {

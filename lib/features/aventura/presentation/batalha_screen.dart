@@ -302,13 +302,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       case EfeitoHabilidade.curarVida:
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valor).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
           descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + habilidade.valor).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
           descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
@@ -318,28 +318,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       case EfeitoHabilidade.aumentarAtaque:
         if (isJogador) {
           int ataqueAntes = estado.ataqueAtualJogador;
-          int novoAtaque = estado.ataqueAtualJogador + habilidade.valor;
+          int novoAtaque = estado.ataqueAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualJogador: novoAtaque);
-          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valor}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
         } else {
           int ataqueAntes = estado.ataqueAtualInimigo;
-          int novoAtaque = estado.ataqueAtualInimigo + habilidade.valor;
+          int novoAtaque = estado.ataqueAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualInimigo: novoAtaque);
-          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valor}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
         }
         break;
         
       case EfeitoHabilidade.aumentarDefesa:
         if (isJogador) {
           int defesaAntes = estado.defesaAtualJogador;
-          int novaDefesa = estado.defesaAtualJogador + habilidade.valor;
+          int novaDefesa = estado.defesaAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualJogador: novaDefesa);
-          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valor}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
         } else {
           int defesaAntes = estado.defesaAtualInimigo;
-          int novaDefesa = estado.defesaAtualInimigo + habilidade.valor;
+          int novaDefesa = estado.defesaAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
-          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valor}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
         }
         break;
         
@@ -348,36 +348,36 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           // Aumenta vida máxima e vida atual proporcionalmente
           int vidaMaximaAntes = estado.vidaMaximaJogador;
           int vidaAtualAntes = estado.vidaAtualJogador;
-          int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
-          int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
+          int novaVidaMaxima = vidaMaximaAntes + habilidade.valorEfetivo;
+          int novaVidaAtual = vidaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
           
           novoEstado = estado.copyWith(
             vidaMaximaJogador: novaVidaMaxima,
             vidaAtualJogador: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
         } else {
           // Aumenta vida máxima e vida atual proporcionalmente
           int vidaMaximaAntes = estado.vidaMaximaInimigo;
           int vidaAtualAntes = estado.vidaAtualInimigo;
-          int novaVidaMaxima = vidaMaximaAntes + habilidade.valor;
-          int novaVidaAtual = vidaAtualAntes + habilidade.valor; // Aumenta a atual também
+          int novaVidaMaxima = vidaMaximaAntes + habilidade.valorEfetivo;
+          int novaVidaAtual = vidaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
           
           novoEstado = estado.copyWith(
             vidaMaximaInimigo: novaVidaMaxima,
             vidaAtualInimigo: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valor}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
         }
         break;
         
       case EfeitoHabilidade.aumentarEnergia:
         // Por enquanto só mostra o uso, energia não é usada em batalha
-        descricao = '$atacante aumentou a energia em ${habilidade.valor} pontos usando ${habilidade.nome}';
+        descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} pontos usando ${habilidade.nome}';
         break;
         
       default:
-        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valor})';
+        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valorEfetivo})';
         break;
     }
     
@@ -396,8 +396,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     AcaoBatalha acao = AcaoBatalha(
       atacante: atacante,
       habilidadeNome: habilidade.nome,
-      danoBase: habilidade.valor,
-      danoTotal: habilidade.valor,
+      danoBase: habilidade.valorEfetivo,
+      danoTotal: habilidade.valorEfetivo,
       defesaAlvo: 0,
       vidaAntes: isJogador ? estado.vidaAtualJogador : estado.vidaAtualInimigo,
       vidaDepois: isJogador ? novoEstado.vidaAtualJogador : novoEstado.vidaAtualInimigo,
@@ -431,7 +431,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
 
-    int danoBase = habilidade.valor;
+    int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
 
     // Calcula efetividade de tipo usando tipo da habilidade
@@ -597,21 +597,43 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final podeEvoluir = evolucaoService.podeEvoluir(monstroSorteado, levelInimigoDerrrotado);
       
       if (!podeEvoluir) {
-        // Cria informações de level gap para exibir
-        final infoSemEvolucao = evolucaoService.criarInfoSemEvolucao(monstroSorteado, levelInimigoDerrrotado);
+        // Monstro não pode evoluir por level gap, mas habilidades podem tentar evoluir
+        print('🚫 [Evolução] ${monstroSorteado.tipo.displayName} não evoluiu devido ao level gap, tentando evoluir habilidade...');
         
-        // Mostra modal explicando por que não evoluiu
-        if (mounted) {
-          await _mostrarModalSemEvolucao(infoSemEvolucao);
+        final resultadoHabilidade = evolucaoService.tentarEvoluirHabilidade(monstroSorteado, levelInimigoDerrrotado);
+        final monstroAtualizado = resultadoHabilidade['monstroAtualizado'] as MonstroAventura;
+        
+        // Atualiza a lista de monstros se uma habilidade evoluiu
+        if (resultadoHabilidade['habilidadeEvoluiu'] == true) {
+          final monstrosAtualizados = historia.monstros.map((m) {
+            if (m.tipo == monstroSorteado.tipo && 
+                m.tipoExtra == monstroSorteado.tipoExtra && 
+                m.imagem == monstroSorteado.imagem) {
+              return monstroAtualizado;
+            }
+            return m;
+          }).toList();
+          
+          // Salva a história com o monstro atualizado
+          final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+          await repository.salvarHistoricoJogador(historiaAtualizada);
         }
         
-        print('🚫 [Evolução] ${monstroSorteado.tipo.displayName} não evoluiu devido ao level gap');
+        // Cria informações para o modal de habilidade
+        final infoEvolucaoHabilidade = evolucaoService.criarInfoEvolucaoHabilidade(monstroSorteado, resultadoHabilidade);
+        
+        // Mostra modal de evolução de habilidade
+        if (mounted) {
+          await _mostrarModalEvolucaoHabilidade(infoEvolucaoHabilidade);
+        }
+        
         return;
       }
       
-      // Evolui o monstro
+      // Evolui o monstro usando o novo sistema com level gap das habilidades
       final monstroAntes = monstroSorteado;
-      final monstroEvoluido = evolucaoService.evoluirMonstro(monstroSorteado);
+      final resultadoEvolucao = evolucaoService.evoluirMonstroCompleto(monstroSorteado, levelInimigoDerrrotado);
+      final monstroEvoluido = resultadoEvolucao['monstroEvoluido'] as MonstroAventura;
       
       // Atualiza a lista de monstros com o monstro evoluído
       final monstrosAtualizados = historia.monstros.map((m) {
@@ -628,7 +650,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await repository.salvarHistoricoJogador(historiaAtualizada);
       
       // Cria informações da evolução para exibir
-      final infoEvolucao = evolucaoService.criarInfoEvolucao(monstroAntes, monstroEvoluido);
+      final infoEvolucao = evolucaoService.criarInfoEvolucaoCompleta(monstroAntes, resultadoEvolucao);
       
       // Mostra modal de evolução
       if (mounted) {
@@ -644,6 +666,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   Future<void> _mostrarModalEvolucao(Map<String, dynamic> infoEvolucao) async {
     final ganhos = infoEvolucao['ganhos'] as Map<String, dynamic>;
+    final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
     
     await showDialog(
       context: context,
@@ -746,6 +769,121 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // Seção de Habilidade (Evoluída ou com Level Gap)
+            if (habilidadeEvoluida['evoluiu'] == true) ...[
+              const Text(
+                '✨ Habilidade evoluída:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      color: Colors.purple.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${habilidadeEvoluida['nome']}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Level ${habilidadeEvoluida['levelAntes']} → ${habilidadeEvoluida['levelDepois']}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.purple.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else if (habilidadeEvoluida['evoluiu'] == false && habilidadeEvoluida['motivo'] == 'level_gap') ...[
+              const Text(
+                '🚫 Habilidade não evoluiu:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.block,
+                      color: Colors.orange.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${habilidadeEvoluida['nome']}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Level ${habilidadeEvoluida['levelAtual']} (inimigo era level ${habilidadeEvoluida['levelInimigo']})',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Muito poderosa para evoluir contra este inimigo',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -960,6 +1098,222 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Continuar para Item'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _mostrarModalEvolucaoHabilidade(Map<String, dynamic> infoEvolucao) async {
+    final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
+    
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              color: Colors.purple,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'HABILIDADE EVOLUIU!',
+              style: TextStyle(
+                color: Colors.purple,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Text(
+                '${infoEvolucao['monstro']}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Text(
+                  'Monstro não evoluiu (level gap)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.orange.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Seção de Habilidade (Evoluída ou com Level Gap)
+            if (habilidadeEvoluida['evoluiu'] == true) ...[
+              const Text(
+                '✨ Habilidade evoluída:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      color: Colors.purple.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${habilidadeEvoluida['nome']}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Level ${habilidadeEvoluida['levelAntes']} → ${habilidadeEvoluida['levelDepois']}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.purple.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (habilidadeEvoluida['evoluiu'] == false && habilidadeEvoluida['motivo'] == 'level_gap') ...[
+              const Text(
+                '🚫 Habilidade não evoluiu:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.block,
+                      color: Colors.orange.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${habilidadeEvoluida['nome']}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Level ${habilidadeEvoluida['levelAtual']} (inimigo era level ${habilidadeEvoluida['levelInimigo']})',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Muito poderosa para evoluir contra este inimigo',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Próximo: Escolha de item obtido',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.of(context).pop(),

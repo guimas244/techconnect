@@ -170,12 +170,12 @@ class BatalhaService {
       case EfeitoHabilidade.curarVida:
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valor).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + habilidade.valor).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
         }
@@ -183,50 +183,50 @@ class BatalhaService {
         
       case EfeitoHabilidade.aumentarAtaque:
         if (isJogador) {
-          int novoAtaque = estado.ataqueAtualJogador + habilidade.valor;
+          int novoAtaque = estado.ataqueAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualJogador: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome})';
         } else {
-          int novoAtaque = estado.ataqueAtualInimigo + habilidade.valor;
+          int novoAtaque = estado.ataqueAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualInimigo: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome})';
         }
         break;
         
       case EfeitoHabilidade.aumentarDefesa:
         if (isJogador) {
-          int novaDefesa = estado.defesaAtualJogador + habilidade.valor;
+          int novaDefesa = estado.defesaAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualJogador: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome})';
         } else {
-          int novaDefesa = estado.defesaAtualInimigo + habilidade.valor;
+          int novaDefesa = estado.defesaAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome})';
         }
         break;
         
       case EfeitoHabilidade.aumentarVida:
         if (isJogador) {
-          int novaVidaMaxima = estado.vidaMaximaJogador + habilidade.valor;
-          int novaVidaAtual = estado.vidaAtualJogador + habilidade.valor; // Também aumenta a vida atual
+          int novaVidaMaxima = estado.vidaMaximaJogador + habilidade.valorEfetivo;
+          int novaVidaAtual = estado.vidaAtualJogador + habilidade.valorEfetivo; // Também aumenta a vida atual
           novoEstado = estado.copyWith(
             vidaMaximaJogador: novaVidaMaxima,
             vidaAtualJogador: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
         } else {
-          int novaVidaMaxima = estado.vidaMaximaInimigo + habilidade.valor;
-          int novaVidaAtual = estado.vidaAtualInimigo + habilidade.valor; // Também aumenta a vida atual
+          int novaVidaMaxima = estado.vidaMaximaInimigo + habilidade.valorEfetivo;
+          int novaVidaAtual = estado.vidaAtualInimigo + habilidade.valorEfetivo; // Também aumenta a vida atual
           novoEstado = estado.copyWith(
             vidaMaximaInimigo: novaVidaMaxima,
             vidaAtualInimigo: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima em ${habilidade.valor} (${habilidade.nome})';
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
         }
         break;
         
       default:
-        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valor})';
+        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valorEfetivo})';
         break;
     }
     
@@ -245,8 +245,8 @@ class BatalhaService {
     AcaoBatalha acao = AcaoBatalha(
       atacante: atacante,
       habilidadeNome: habilidade.nome,
-      danoBase: habilidade.valor,
-      danoTotal: habilidade.valor,
+      danoBase: habilidade.valorEfetivo,
+      danoTotal: habilidade.valorEfetivo,
       defesaAlvo: 0,
       vidaAntes: isJogador ? estado.vidaAtualJogador : estado.vidaAtualInimigo,
       vidaDepois: isJogador ? novoEstado.vidaAtualJogador : novoEstado.vidaAtualInimigo,
@@ -273,7 +273,7 @@ class BatalhaService {
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
     
-    int danoBase = habilidade.valor;
+    int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
     int danoFinal = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque); // Mínimo 1 de dano
     

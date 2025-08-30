@@ -769,7 +769,7 @@ class _HabilidadesDialog extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '${habilidade.valor}',
+                                  '${habilidade.valorEfetivo}',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,

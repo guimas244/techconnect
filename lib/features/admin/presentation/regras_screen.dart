@@ -534,7 +534,7 @@ class RegrasScreen extends StatelessWidget {
                 tipoElemental: Tipo.fogo,
                 valor: 25,
                 custoEnergia: 3,
-                level: 5,
+                level: 1,
               ),
               Habilidade(
                 nome: 'Rajada Devastadora',
@@ -544,7 +544,7 @@ class RegrasScreen extends StatelessWidget {
                 tipoElemental: Tipo.voador,
                 valor: 18,
                 custoEnergia: 2,
-                level: 3,
+                level: 1,
               ),
               Habilidade(
                 nome: 'Força Ardente',
@@ -554,7 +554,7 @@ class RegrasScreen extends StatelessWidget {
                 tipoElemental: Tipo.fogo,
                 valor: 12,
                 custoEnergia: 4,
-                level: 4,
+                level: 1,
               ),
               Habilidade(
                 nome: 'Regeneração',
@@ -564,7 +564,7 @@ class RegrasScreen extends StatelessWidget {
                 tipoElemental: Tipo.fogo,
                 valor: 20,
                 custoEnergia: 5,
-                level: 6,
+                level: 1,
               ),
             ],
             itemEquipado: null,

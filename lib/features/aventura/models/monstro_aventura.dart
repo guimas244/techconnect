@@ -1,3 +1,4 @@
+import 'dart:math';
 import '../../../shared/models/tipo_enum.dart';
 import 'habilidade.dart';
 import 'item.dart';
@@ -118,4 +119,51 @@ class MonstroAventura {
   int get ataqueTotal => ataque + (itemEquipado?.ataque ?? 0);
   int get defesaTotal => defesa + (itemEquipado?.defesa ?? 0);
   int get agilidadeTotal => agilidade + (itemEquipado?.agilidade ?? 0);
+
+  /// Evolui o monstro: aumenta o level em 1 e tenta evoluir uma habilidade aleatória
+  /// Retorna um Map com o monstro evoluído e informações sobre a habilidade
+  Map<String, dynamic> evoluir({required int levelInimigoDerrrotado}) {
+    if (habilidades.isEmpty) {
+      // Se não tem habilidades, apenas aumenta o level
+      return {
+        'monstro': copyWith(level: level + 1),
+        'habilidadeEvoluiu': false,
+        'motivo': 'sem_habilidades',
+      };
+    }
+
+    // Escolhe uma habilidade aleatória para tentar evoluir
+    final random = Random();
+    final indexHabilidade = random.nextInt(habilidades.length);
+    final habilidadeEscolhida = habilidades[indexHabilidade];
+    
+    // Verifica level gap da habilidade: só evolui se habilidade <= level inimigo
+    // Regra: habilidade pode evoluir se for menor ou igual ao level do inimigo
+    if (habilidadeEscolhida.level > levelInimigoDerrrotado) {
+      return {
+        'monstro': copyWith(level: level + 1),
+        'habilidadeEvoluiu': false,
+        'motivo': 'level_gap_habilidade',
+        'habilidadeEscolhida': habilidadeEscolhida,
+        'levelInimigo': levelInimigoDerrrotado,
+      };
+    }
+    
+    // Cria nova lista de habilidades com uma evoluída
+    final novasHabilidades = <Habilidade>[];
+    for (int i = 0; i < habilidades.length; i++) {
+      if (i == indexHabilidade) {
+        novasHabilidades.add(habilidades[i].evoluir());
+      } else {
+        novasHabilidades.add(habilidades[i]);
+      }
+    }
+
+    return {
+      'monstro': copyWith(level: level + 1, habilidades: novasHabilidades),
+      'habilidadeEvoluiu': true,
+      'habilidadeAntes': habilidadeEscolhida,
+      'habilidadeDepois': habilidades[indexHabilidade].evoluir(),
+    };
+  }
 }
