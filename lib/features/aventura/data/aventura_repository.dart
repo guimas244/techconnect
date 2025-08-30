@@ -292,7 +292,10 @@ class AventuraRepository {
       final tipoExtra = outrosTipos.first;
       
       // Gera 4 habilidades para o monstro
-      final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
+      final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
+      
+      // Aplica evolução aleatória nas habilidades baseado no tier (tier 2+)
+      final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
       
       // Gera item equipado baseado nas regras de tier
       Item? itemEquipado;
@@ -335,6 +338,51 @@ class AventuraRepository {
     }
     
     return monstrosInimigos;
+  }
+
+  /// Aplica evolução aleatória nas habilidades dos monstros inimigos baseado no tier
+  /// Tier 2+: Para cada habilidade, 20% chance level = tier, 20% chance level = tier-1
+  List<Habilidade> _aplicarEvolucaoHabilidadesInimigo(List<Habilidade> habilidadesBase, int tierAtual, Random random) {
+    // Tier 1: habilidades permanecem level 1
+    if (tierAtual == 1) {
+      return habilidadesBase;
+    }
+    
+    final habilidadesEvoluidas = <Habilidade>[];
+    
+    for (final habilidade in habilidadesBase) {
+      final chance = random.nextInt(100);
+      int novoLevel = 1; // Level padrão
+      
+      if (chance < 20) {
+        // 20% chance: level = tier do andar
+        novoLevel = tierAtual;
+        print('✨ [Repository] Habilidade ${habilidade.nome} evoluiu para level $novoLevel (tier atual - 20% chance)');
+      } else if (chance < 40) {
+        // 20% chance: level = tier - 1 (nunca abaixo de 1)
+        novoLevel = (tierAtual - 1).clamp(1, tierAtual);
+        print('✨ [Repository] Habilidade ${habilidade.nome} evoluiu para level $novoLevel (tier-1 - 20% chance)');
+      } else {
+        // 60% chance: permanece level 1
+        print('📝 [Repository] Habilidade ${habilidade.nome} permanece level 1 (60% chance)');
+      }
+      
+      // Cria nova habilidade com o level calculado
+      final habilidadeEvoluida = Habilidade(
+        nome: habilidade.nome,
+        descricao: habilidade.descricao,
+        tipo: habilidade.tipo,
+        efeito: habilidade.efeito,
+        tipoElemental: habilidade.tipoElemental,
+        valor: habilidade.valor,
+        custoEnergia: habilidade.custoEnergia,
+        level: novoLevel,
+      );
+      
+      habilidadesEvoluidas.add(habilidadeEvoluida);
+    }
+    
+    return habilidadesEvoluidas;
   }
 
   /// Gera novos monstros inimigos para um tier específico (método público)

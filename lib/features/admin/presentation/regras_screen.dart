@@ -239,6 +239,8 @@ class RegrasScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildEvolucaoHabilidades(),
                 const SizedBox(height: 16),
+                _buildHabilidadesInimigos(),
+                const SizedBox(height: 16),
                 _buildLevelGapRegra(),
                 const SizedBox(height: 16),
                 Text(
@@ -994,6 +996,93 @@ class RegrasScreen extends StatelessWidget {
                 Text('• Modal especial mostra apenas evolução da habilidade'),
                 Text('• Todas as habilidades do monstro são consideradas para evolução'),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHabilidadesInimigos() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.psychology, color: Colors.red.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Habilidades dos Monstros Inimigos:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Tier 1: Todas as habilidades permanecem Level 1'),
+          Text('• Tier 2+: Cada habilidade pode evoluir aleatoriamente'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Chances de Evolução (Tier 2+):',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text('• 20% chance: Level = Tier do andar'),
+                Text('• 20% chance: Level = Tier - 1 (mínimo 1)'),
+                Text('• 60% chance: Permanece Level 1'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Exemplos Práticos:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text('• Tier 3: 20% Level 3, 20% Level 2, 60% Level 1'),
+                Text('• Tier 5: 20% Level 5, 20% Level 4, 60% Level 1'),
+                Text('• Cada habilidade roda sua própria chance individualmente'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '💡 Um monstro inimigo pode ter habilidades com níveis variados (ex: Level 1, Level 3, Level 1, Level 2)',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.green.shade800,
+              ),
             ),
           ),
         ],
