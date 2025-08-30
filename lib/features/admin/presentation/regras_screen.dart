@@ -237,6 +237,8 @@ class RegrasScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildEvolucaoRegras(),
                 const SizedBox(height: 16),
+                _buildEvolucaoHabilidades(),
+                const SizedBox(height: 16),
                 _buildLevelGapRegra(),
                 const SizedBox(height: 16),
                 Text(
@@ -885,10 +887,10 @@ class RegrasScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text('• Se o monstro sorteado for 1+ levels acima do inimigo derrotado, NÃO evolui'),
+          Text('• Se o monstro sorteado for MAIOR que o level do inimigo derrotado, NÃO evolui'),
+          Text('• Pode evoluir se for MENOR OU IGUAL ao level do inimigo'),
           Text('• Esta regra evita que monstros muito poderosos "farmen" levels contra inimigos fracos'),
           Text('• Lembre-se: Inimigos têm level = tier do mapa atual'),
-          Text('• Uma mensagem especial informa quando isso acontece'),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
@@ -904,9 +906,9 @@ class RegrasScreen extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
-                Text('• Monstro Lv.3 vs Tier 1 (Inimigo Lv.1) = SEM evolução'),
-                Text('• Monstro Lv.2 vs Tier 2 (Inimigo Lv.2) = PODE evoluir'),
-                Text('• Monstro Lv.1 vs Tier 3 (Inimigo Lv.3) = PODE evoluir'),
+                Text('• Monstro Lv.2 vs Tier 1 (Inimigo Lv.1) = SEM evolução (maior)'),
+                Text('• Monstro Lv.1 vs Tier 1 (Inimigo Lv.1) = PODE evoluir (igual)'),
+                Text('• Monstro Lv.1 vs Tier 2 (Inimigo Lv.2) = PODE evoluir (menor)'),
               ],
             ),
           ),
@@ -917,6 +919,81 @@ class RegrasScreen extends StatelessWidget {
               fontSize: 14,
               fontStyle: FontStyle.italic,
               color: Colors.orange.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEvolucaoHabilidades() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.purple.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: Colors.purple.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Evolução das Habilidades:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('• Toda habilidade possui um Level (inicia no Level 1)'),
+          Text('• Quando um monstro evolui, 1 habilidade aleatória também pode evoluir'),
+          Text('• Valor efetivo da habilidade = Valor base × Level'),
+          Text('• Exemplo: Habilidade 20 no Level 3 = 60 de poder efetivo'),
+          Text('• Habilidades seguem as mesmas regras de Level Gap dos monstros'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Level Gap das Habilidades:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text('• Habilidade Level 1 vs Inimigo Level 1 = PODE evoluir'),
+                Text('• Habilidade Level 2 vs Inimigo Level 1 = NÃO evolui'),
+                Text('• Habilidade Level 1 vs Inimigo Level 2 = PODE evoluir'),
+                Text('• Habilidade Level 2 vs Inimigo Level 2 = PODE evoluir'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cenários Especiais:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text('• Monstro com Level Gap ainda pode ter habilidades evoluindo'),
+                Text('• Modal especial mostra apenas evolução da habilidade'),
+                Text('• Todas as habilidades do monstro são consideradas para evolução'),
+              ],
             ),
           ),
         ],
