@@ -473,9 +473,14 @@ class ExcelReaderService {
       
       // Seleciona um item aleatório
       final random = Random();
-      final itemSelecionado = itens[random.nextInt(itens.length)];
+      final totalItens = itens.length;
+      final indiceSorteado = random.nextInt(totalItens);
+      final itemSelecionado = itens[indiceSorteado];
       
-      print('🎲 [ExcelReaderService] Item selecionado aleatoriamente: ${itemSelecionado}');
+      print('🎲 [ExcelReaderService] Sorteio de item da planilha:');
+      print('📊 [ExcelReaderService] Total de itens na planilha: $totalItens');
+      print('🎯 [ExcelReaderService] Índice sorteado: $indiceSorteado (de 0 a ${totalItens - 1})');
+      print('📦 [ExcelReaderService] Item selecionado: ${itemSelecionado}');
       
       // Converte para DropItem - assumindo as colunas padrão
       final nome = itemSelecionado['nome'] ?? itemSelecionado['Nome'] ?? 'Item Desconhecido';
@@ -483,6 +488,17 @@ class ExcelReaderService {
       final tipo = itemSelecionado['tipo'] ?? itemSelecionado['Tipo'] ?? 'item';
       final quantidadeStr = itemSelecionado['quantidade'] ?? itemSelecionado['Quantidade'] ?? '1';
       final quantidade = int.tryParse(quantidadeStr) ?? 1;
+      
+      // Identifica raridade/categoria se existir na planilha
+      final raridade = itemSelecionado['raridade'] ?? itemSelecionado['Raridade'] ?? 
+                      itemSelecionado['categoria'] ?? itemSelecionado['Categoria'] ?? 'comum';
+      
+      print('📋 [ExcelReaderService] Dados do item da planilha:');
+      print('   📦 Nome: $nome');
+      print('   🏷️  Tipo: $tipo');
+      print('   ⭐ Raridade/Categoria: $raridade');
+      print('   🔢 Quantidade: $quantidade');
+      print('   📝 Descrição: $descricao');
       
       final dropItem = DropItem(
         nome: nome,

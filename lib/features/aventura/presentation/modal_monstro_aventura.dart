@@ -693,6 +693,22 @@ class _HabilidadesDialog extends StatelessWidget {
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'LV.${habilidade.level}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade700,
+                                  ),
+                                ),
+                              ),
                               const Spacer(),
                               Image.asset(
                                 habilidade.tipoElemental.iconAsset,
@@ -721,28 +737,15 @@ class _HabilidadesDialog extends StatelessWidget {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Text(
-                                habilidade.efeito.nome,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
+                              Expanded(
                                 child: Text(
-                                  'LV.${habilidade.level}',
-                                  style: TextStyle(
-                                    fontSize: 12,
+                                  habilidade.efeito.nome,
+                                  style: const TextStyle(
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.amber.shade700,
+                                    color: Colors.black87,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 4),

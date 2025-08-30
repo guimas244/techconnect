@@ -17,6 +17,7 @@ import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
+// Removendo import não usado
 import 'modal_monstro_aventura.dart';
 import 'modal_item_obtido.dart';
 import 'modal_magia_obtida.dart';
@@ -1399,7 +1400,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         throw Exception('Nenhum monstro encontrado para equipar item/magia');
       }
 
-      // 30% chance de drop ser magia, 70% chance de ser item
+      // 30% chance de drop ser magia, 70% chance de ser item (sistema original)
       final random = Random();
       final chanceDrop = random.nextInt(100);
       print('🎲 [BatalhaScreen] Chance de drop: $chanceDrop/100');
@@ -1420,6 +1421,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
     }
   }
+
 
   Future<void> _gerarEMostrarItemTradicional(HistoriaJogador historia, int tierAtual) async {
     final itemService = ItemService();

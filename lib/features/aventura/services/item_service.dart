@@ -37,10 +37,25 @@ class ItemService {
   int _determinarQuantidadeAtributos() {
     int chance = _random.nextInt(100) + 1; // 1-100
     
-    if (chance <= 2) return 5; // 2%
-    if (chance <= 5) return 4; // 3%
-    if (chance <= 15) return 3; // 10%
-    if (chance <= 35) return 2; // 20%
+    print('🎲 [ItemService] Sorteio quantidade atributos: $chance/100');
+    
+    if (chance <= 2) {
+      print('🎯 [ItemService] = 5 atributos (2% chance - Lendário)');
+      return 5; // 2%
+    }
+    if (chance <= 5) {
+      print('🎯 [ItemService] = 4 atributos (3% chance - Épico)');
+      return 4; // 3%
+    }
+    if (chance <= 15) {
+      print('🎯 [ItemService] = 3 atributos (10% chance - Raro)');
+      return 3; // 10%
+    }
+    if (chance <= 35) {
+      print('🎯 [ItemService] = 2 atributos (20% chance - Normal)');
+      return 2; // 20%
+    }
+    print('🎯 [ItemService] = 1 atributo (65% chance - Inferior)');
     return 1; // 65%
   }
 
@@ -96,5 +111,46 @@ class ItemService {
   bool itemEhMelhor(Item novoItem, Item? itemAtual) {
     if (itemAtual == null) return true;
     return calcularValorItem(novoItem) > calcularValorItem(itemAtual);
+  }
+
+  /// Gera um item com raridade específica
+  Item gerarItemComRaridade(RaridadeItem raridade, {int tierAtual = 1}) {
+    print('🏆 [ItemService] Gerando item com raridade ${raridade.nome} para tier $tierAtual');
+    
+    // Determina quantidade de atributos baseada na raridade
+    int quantidadeAtributos = _quantidadeAtributosPorRaridade(raridade);
+    
+    // Gera o nome do item baseado na raridade
+    String nome = GeradorNomesItens.gerarNomeItem();
+    
+    // Gera os atributos do item (com multiplicação por tier)
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+    
+    print('✅ [ItemService] Item de raridade específica gerado: $nome (${raridade.nome}) | Tier: $tierAtual | Total atributos: ${atributos.values.fold(0, (sum, value) => sum + value)}');
+    
+    return Item(
+      id: _gerarId(),
+      nome: nome,
+      raridade: raridade,
+      atributos: atributos,
+      dataObtencao: DateTime.now(),
+      tier: tierAtual,
+    );
+  }
+
+  /// Retorna quantidade de atributos baseada na raridade
+  int _quantidadeAtributosPorRaridade(RaridadeItem raridade) {
+    switch (raridade) {
+      case RaridadeItem.lendario:
+        return 5;
+      case RaridadeItem.epico:
+        return 4;
+      case RaridadeItem.raro:
+        return 3;
+      case RaridadeItem.normal:
+        return 2;
+      case RaridadeItem.inferior:
+        return 1;
+    }
   }
 }
