@@ -439,7 +439,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
     // Aplica efetividade ao dano
     int danoComTipo = (danoComAtaque * efetividade).round();
-    int danoFinal = (danoComTipo - defesaAlvo).clamp(1, danoComTipo); // Mínimo 1 de dano
+    
+    // Define dano mínimo baseado no tipo de habilidade
+    int danoMinimo = (habilidade.tipo == TipoHabilidade.ofensiva) ? 5 : 1;
+    int danoFinal = (danoComTipo - defesaAlvo).clamp(danoMinimo, danoComTipo);
 
     // Aplica dano
     int vidaAntes, vidaDepois;
@@ -460,6 +463,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Cria descrição detalhada com informações de tipo
     String efetividadeTexto = _obterTextoEfetividade(efetividade);
     String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    
+    // Adiciona mensagem especial se aplicou dano mínimo mágico
+    if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
+      descricao += ' (a habilidade causou 5 de dano penetrante)';
+    }
 
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(

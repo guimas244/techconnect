@@ -6,6 +6,7 @@ import '../../../core/models/atributo_jogo_enum.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
+import '../models/item.dart';
 import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
@@ -293,13 +294,25 @@ class AventuraRepository {
       // Gera 4 habilidades para o monstro
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
       
-      // Gera item equipado se tier > 1
-      final itemEquipado = tierAtual > 1 
-          ? _itemService.gerarItemAleatorio(tierAtual: tierAtual)
-          : null;
-      
-      if (itemEquipado != null) {
-        print('🎒 [Repository] Monstro inimigo ${tipo.name} equipado com: ${itemEquipado.nome} (Tier ${itemEquipado.tier})');
+      // Gera item equipado baseado nas regras de tier
+      Item? itemEquipado;
+      if (tierAtual == 2) {
+        // Tier 2: monstros sempre usam itens de tier 1
+        itemEquipado = _itemService.gerarItemAleatorio(tierAtual: 1);
+        print('🎯 [Repository] Monstro tier 2 recebeu item tier 1: ${itemEquipado.nome}');
+      } else if (tierAtual >= 3) {
+        // Tier 3+: 40% de chance de usar item de 1 tier abaixo, 60% chance de item do mesmo tier
+        final chanceItem = random.nextInt(100);
+        if (chanceItem < 40) {
+          itemEquipado = _itemService.gerarItemAleatorio(tierAtual: tierAtual - 1);
+          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance)');
+        } else {
+          itemEquipado = _itemService.gerarItemAleatorio(tierAtual: tierAtual);
+          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance)');
+        }
+      } else {
+        // Tier 1: sem itens
+        print('🎯 [Repository] Monstro tier 1 não recebe itens');
       }
 
       // Cria monstro inimigo com atributos sorteados

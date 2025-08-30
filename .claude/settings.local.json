@@ -4,7 +4,8 @@
       "Bash(dart analyze:*)",
       "Bash(python:*)",
       "Bash(pip install:*)",
-      "Bash(flutter run:*)"
+      "Bash(flutter run:*)",
+      "Bash(flutter build:*)"
     ],
     "deny": [],
     "ask": []
