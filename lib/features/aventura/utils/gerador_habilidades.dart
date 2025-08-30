@@ -49,6 +49,7 @@ class GeradorHabilidades {
       tipoElemental: tipoElemental,
       valor: valor,
       custoEnergia: custoEnergia,
+      level: _gerarLevel(),
     );
   }
 
@@ -98,6 +99,11 @@ class GeradorHabilidades {
   /// Gera custo de energia aleatório de 1 a 5
   static int _gerarCustoEnergia() {
     return 1 + _random.nextInt(5); // 1-5
+  }
+
+  /// Gera level aleatório de 1 a 10
+  static int _gerarLevel() {
+    return 1 + _random.nextInt(10); // 1-10
   }
 
   static String _gerarDescricao(EfeitoHabilidade efeito, int valor, Tipo tipo, int custoEnergia) {
