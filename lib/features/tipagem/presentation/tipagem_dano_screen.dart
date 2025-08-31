@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../providers/tipagem_provider.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../../core/config/developer_config.dart';
 
 class TipagemDanoScreen extends ConsumerWidget {
   final Tipo tipoSelecionado;
@@ -23,7 +24,12 @@ class TipagemDanoScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: Colors.blueGrey.shade900,
-        title: Text('Editar Tipo ${tipoSelecionado.displayName}'),
+        title: Text(
+          DeveloperConfig.ENABLE_TYPE_EDITING
+              ? 'Editar Tipo ${tipoSelecionado.displayName}'
+              : 'Visualizar Tipo ${tipoSelecionado.displayName}',
+          style: const TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
         elevation: 2,
         leading: IconButton(
@@ -31,39 +37,48 @@ class TipagemDanoScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         actions: [
-          if (editState.isSaving)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+          // Só mostra botão salvar se edição estiver habilitada
+          if (DeveloperConfig.ENABLE_TYPE_EDITING) ...[
+            if (editState.isSaving)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-            )
-          else ...[
-            // Botão salvar
-            IconButton(
-              icon: const Icon(Icons.save, color: Colors.white),
-              tooltip: 'Salvar alterações',
-              onPressed: () async {
-                // Salvar alterações locais
-                await editNotifier.salvarAlteracoes();
-                
-                // Salvar no Google Drive também
-                if (!editState.isSaving && editState.errorMessage == null) {
-                  await _salvarNoGoogleDrive(context, editNotifier);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Alterações salvas localmente e no Google Drive!')),
-                    );
+              )
+            else ...[
+              // Botão salvar
+              IconButton(
+                icon: const Icon(Icons.save, color: Colors.white),
+                tooltip: 'Salvar alterações',
+                onPressed: () async {
+                  // Salvar alterações locais
+                  await editNotifier.salvarAlteracoes();
+                  
+                  // Salvar no Google Drive também
+                  if (!editState.isSaving && editState.errorMessage == null) {
+                    await _salvarNoGoogleDrive(context, editNotifier);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Alterações salvas localmente e no Google Drive!')),
+                      );
+                    }
                   }
-                }
-              },
+                },
+              ),
+            ]
+          ] else ...[
+            // Ícone de visualização quando edição está desabilitada
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Icon(Icons.visibility, color: Colors.white70),
             ),
           ]
         ],
@@ -105,24 +120,35 @@ class TipagemDanoScreen extends ConsumerWidget {
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tipoSelecionado.displayName,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tipoSelecionado.displayName,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const Text(
-                        'Configurar dano recebido',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
+                        Text(
+                          DeveloperConfig.ENABLE_TYPE_EDITING
+                              ? 'Configurar dano recebido'
+                              : 'Visualizar dano recebido (somente leitura)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: DeveloperConfig.ENABLE_TYPE_EDITING
+                                ? Colors.grey
+                                : Colors.orange.shade700,
+                            fontWeight: DeveloperConfig.ENABLE_TYPE_EDITING
+                                ? FontWeight.normal
+                                : FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -281,9 +307,12 @@ class TipagemDanoScreen extends ConsumerWidget {
                           min: 0.0,
                           max: 2.0,
                           divisions: 20,
-                          onChanged: (novoValor) {
-                            notifier.atualizarDano(tipo, novoValor);
-                          },
+                          // Desabilita o slider se edição estiver desabilitada
+                          onChanged: DeveloperConfig.ENABLE_TYPE_EDITING 
+                              ? (novoValor) {
+                                  notifier.atualizarDano(tipo, novoValor);
+                                }
+                              : null, // null desabilita o slider
                         ),
                       ),
                       Row(
