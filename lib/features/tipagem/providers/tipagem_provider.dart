@@ -65,8 +65,7 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
   TipagemEditNotifier(this._repository, this._tipoSelecionado)
       : super(TipagemEditState(
           danoRecebido: {
-            for (final tipo in Tipo.values)
-              if (tipo != _tipoSelecionado) tipo: 1.0,
+            for (final tipo in Tipo.values) tipo: 1.0,
           },
         )) {
     _carregarDados();
@@ -84,17 +83,17 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
           print('  ${key.name}: $value');
         });
         
-        // Remove o próprio tipo selecionado dos dados (não faz sentido editar dano de si mesmo)
-        final dadosFiltrados = Map<Tipo, double>.from(dados);
-        dadosFiltrados.remove(_tipoSelecionado);
+        // Verifica se o próprio tipo está nos dados
+        final temProprioTipo = dados.containsKey(_tipoSelecionado);
+        print('Provider - próprio tipo ${_tipoSelecionado.name} está nos dados: $temProprioTipo');
+        if (temProprioTipo) {
+          print('Provider - valor do próprio tipo: ${dados[_tipoSelecionado]}');
+        }
         
-        print('Provider - dados filtrados (sem ${_tipoSelecionado.name}):');
-        dadosFiltrados.forEach((key, value) {
-          print('  ${key.name}: $value');
-        });
+        print('Provider - total de tipos nos dados: ${dados.length}');
         
         state = state.copyWith(
-          danoRecebido: dadosFiltrados,
+          danoRecebido: dados,
           isLoading: false,
         );
       } else {
@@ -112,8 +111,6 @@ class TipagemEditNotifier extends StateNotifier<TipagemEditState> {
   }
 
   void atualizarDano(Tipo tipo, double valor) {
-    if (tipo == _tipoSelecionado) return;
-    
     final novoMap = Map<Tipo, double>.from(state.danoRecebido);
     novoMap[tipo] = valor;
     

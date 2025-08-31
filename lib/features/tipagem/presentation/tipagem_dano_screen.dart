@@ -57,9 +57,11 @@ class TipagemDanoScreen extends ConsumerWidget {
                 // Salvar no Google Drive também
                 if (!editState.isSaving && editState.errorMessage == null) {
                   await _salvarNoGoogleDrive(context, editNotifier);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Alterações salvas localmente e no Google Drive!')),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Alterações salvas localmente e no Google Drive!')),
+                    );
+                  }
                 }
               },
             ),
