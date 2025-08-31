@@ -216,15 +216,15 @@ enum Tipo {
       case Tipo.docrates:
         return 'assets/tipagens/icon_tipo_docrates.png';
       case Tipo.fantasma:
-        return 'assets/tipagens/icon_tipo_desconhecido.png'; // Usando desconhecido como fallback
+        return 'assets/tipagens/icon_tipo_fantasma.png';
       case Tipo.psiquico:
-        return 'assets/tipagens/icon_tipo_desconhecido.png'; // Usando desconhecido como fallback
+        return 'assets/tipagens/icon_tipo_psiquico.png';
       case Tipo.magico:
         return 'assets/tipagens/icon_tipo_magico.png';
       case Tipo.tecnologia:
-        return 'assets/tipagens/icon_tipo_desconhecido.png'; // Usando desconhecido como fallback
+        return 'assets/tipagens/icon_tipo_tecnologia.png';
       case Tipo.tempo:
-        return 'assets/tipagens/icon_tipo_desconhecido.png'; // Usando desconhecido como fallback
+        return 'assets/tipagens/icon_tipo_tempo.png';
       case Tipo.desconhecido:
         return 'assets/tipagens/icon_tipo_desconhecido.png';
       case Tipo.deus:
