@@ -4,6 +4,8 @@ import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../models/habilidade.dart';
 import '../../../shared/models/habilidade_enum.dart';
+import '../../../shared/models/tipo_enum.dart';
+import '../../tipagem/data/tipagem_repository.dart';
 
 class BatalhaService {
   final Random _random = Random();
@@ -269,13 +271,53 @@ class BatalhaService {
   ) async {
     String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
     
+    // 🎯 LÓGICA CORRETA: Busca dados de defesa do DEFENSOR
+    final tipoHabilidadeAtacante = habilidade.tipoElemental;
+    final tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo;
+    
+    print('⚔️ [COMBATE] ${tipoHabilidadeAtacante.displayName} (${habilidade.nome}) atacando ${tipoDefensor.displayName} (${isJogador ? "Inimigo" : "Jogador"})');
+    
+    // Busca multiplicador de efetividade
+    double multiplicadorEfetividade = 1.0;
+    String efetividadeTexto = 'NORMAL';
+    
+    try {
+      final tipagemRepository = TipagemRepository();
+      // BUSCA DADOS DE DEFESA DO DEFENSOR (quem vai receber o dano)
+      final dadosDefesaDefensor = await tipagemRepository.carregarDadosTipo(tipoDefensor);
+      
+      if (dadosDefesaDefensor != null) {
+        // PROCURA O MULTIPLICADOR PARA O TIPO DA HABILIDADE ATACANTE
+        multiplicadorEfetividade = dadosDefesaDefensor[tipoHabilidadeAtacante] ?? 1.0;
+        
+        // Determina texto da efetividade
+        if (multiplicadorEfetividade > 1.0) {
+          efetividadeTexto = 'SUPER EFETIVO';
+        } else if (multiplicadorEfetividade < 1.0 && multiplicadorEfetividade > 0.0) {
+          efetividadeTexto = 'POUCO EFETIVO';
+        } else if (multiplicadorEfetividade == 0.0) {
+          efetividadeTexto = 'NÃO AFETA';
+        }
+        
+        print('🎯 [EFETIVIDADE] ${tipoDefensor.displayName} recebe ${(multiplicadorEfetividade * 100).toInt()}% de dano de ${tipoHabilidadeAtacante.displayName} ($efetividadeTexto)');
+      } else {
+        print('⚠️ [AVISO] Não foi possível carregar dados de defesa de ${tipoDefensor.displayName}, usando multiplicador padrão (1.0)');
+      }
+    } catch (e) {
+      print('❌ [ERRO] Erro ao buscar efetividade: $e');
+    }
+    
     // Calcula dano
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
     
     int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
-    int danoFinal = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque); // Mínimo 1 de dano
+    int danoAntesEfetividade = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
+    
+    // APLICA MULTIPLICADOR DE EFETIVIDADE
+    double danoComEfetividade = danoAntesEfetividade * multiplicadorEfetividade;
+    int danoFinal = danoComEfetividade.round().clamp(0, danoAntesEfetividade * 3); // Máximo 3x o dano base
     
     // Aplica dano
     int vidaAntes, vidaDepois;
@@ -293,7 +335,7 @@ class BatalhaService {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
-    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes/$vidaDepois';
+    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(

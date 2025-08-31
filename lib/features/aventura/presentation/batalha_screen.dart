@@ -1828,10 +1828,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // CORRETO: Carrega a tabela de DEFESA do tipo DEFENSOR (quem recebe o ataque)
       final tabelaDefesa = await _tipagemRepository.carregarDadosTipo(tipoDefensor);
       
-      if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante.name)) {
+      if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante)) {
         // O valor na tabela indica quanto de dano o defensor recebe do atacante
-        final multiplicadorDano = tabelaDefesa[tipoAtacante.name]!;
-        print('🎯 [Efetividade] ${tipoDefensor.name} recebe ${multiplicadorDano}x dano de ${tipoAtacante.name}');
+        final multiplicadorDano = tabelaDefesa[tipoAtacante]!;
+        print('🎯 [Efetividade] ${tipoDefensor.displayName} recebe ${multiplicadorDano}x dano de ${tipoAtacante.displayName}');
         return multiplicadorDano;
       }
       
