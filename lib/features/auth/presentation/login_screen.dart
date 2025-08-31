@@ -1,14 +1,16 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
@@ -32,24 +34,30 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    
     if (email.isEmpty || password.isEmpty) {
       _showError('Email e senha são obrigatórios.');
       return;
     }
+    
     setState(() => _loading = true);
+    
     try {
-      // Login simplificado sem Firebase - apenas para acesso ao app
-      await Future.delayed(const Duration(seconds: 1));
+      // Usa o AuthProvider para fazer login via Firebase
+      await ref.read(authProvider.notifier).signInWithEmail(email, password);
       
-      if (email.isNotEmpty && password.length >= 6) {
+      // Verifica o estado após a tentativa de login
+      final authState = ref.read(authProvider);
+      
+      if (authState.status == AuthStatus.authenticated) {
         if (mounted) {
           context.go('/home');
         }
-      } else {
-        _showError('Email ou senha inválidos');
+      } else if (authState.status == AuthStatus.error) {
+        _showError(authState.errorMessage ?? 'Erro ao fazer login');
       }
     } catch (e) {
-      _showError(e.toString());
+      _showError('Erro inesperado: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
