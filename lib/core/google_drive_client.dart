@@ -30,7 +30,7 @@ class DriveClientFactory {
     throw Exception('Modo DEBUG: Configure o SHA-1 no Google Cloud Console primeiro');
   }
 
-  static Future<drive.DriveApi> create({ProviderContainer? container}) async {
+  static Future<drive.DriveApi> create({ProviderContainer? container, bool forceReauth = false}) async {
     print('🔐 [DEBUG] DriveClientFactory: Iniciando GoogleSignIn...');
     
     try {
@@ -45,8 +45,14 @@ class DriveClientFactory {
       print('🔐 [DEBUG] DriveClientFactory: Verificando usuário atual...');
       var account = await gs.signInSilently();
       
-      if (account == null) {
-        print('🔐 [DEBUG] DriveClientFactory: Nenhum usuário logado, iniciando login interativo...');
+      // Se forçar reautenticação ou se não há conta logada
+      if (forceReauth || account == null) {
+        if (forceReauth && account != null) {
+          print('🔐 [DEBUG] DriveClientFactory: Forçando logout antes da reautenticação...');
+          await gs.signOut();
+        }
+        
+        print('🔐 [DEBUG] DriveClientFactory: ${forceReauth ? 'Reautenticação forçada' : 'Nenhum usuário logado'}, iniciando login interativo...');
         account = await gs.signIn();
         
         if (account == null) {

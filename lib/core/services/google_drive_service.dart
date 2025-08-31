@@ -20,12 +20,12 @@ class GoogleDriveService {
   }
 
   /// Inicializa conexão com Google Drive usando o padrão TECH CONNECT
-  Future<bool> inicializarConexao() async {
+  Future<bool> inicializarConexao({bool forceReauth = false}) async {
     try {
       print('🔐 [DEBUG] Iniciando conexão com Google Drive - TECH CONNECT...');
       print('🔐 [DEBUG] Chamando DriveClientFactory.create()...');
       
-      final api = await DriveClientFactory.create(container: _container);
+      final api = await DriveClientFactory.create(container: _container, forceReauth: forceReauth);
       print('✅ [DEBUG] DriveClientFactory.create() bem-sucedido');
       
       _driveService = DriveService(api);
@@ -94,11 +94,12 @@ class GoogleDriveService {
     try {
       return await _salvar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado durante salvamento, tentando renovar...');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+        final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
+        print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) durante salvamento, tentando renovar...');
         _isConnected = false;
         _driveService = null;
-        final conectou = await inicializarConexao();
+        final conectou = await inicializarConexao(forceReauth: is403);
         if (conectou) {
           try {
             return await _salvar();
@@ -169,11 +170,12 @@ class GoogleDriveService {
     try {
       return await _listar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado durante listagem, tentando renovar...');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+        final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
+        print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) durante listagem, tentando renovar...');
         _isConnected = false;
         _driveService = null;
-        final conectou = await inicializarConexao();
+        final conectou = await inicializarConexao(forceReauth: is403);
         if (conectou) {
           try {
             return await _listar();
@@ -227,11 +229,12 @@ class GoogleDriveService {
     try {
       return await _baixar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 Token expirado para $nomeArquivo, tentando renovar...');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+        final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
+        print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) para $nomeArquivo, tentando renovar...');
         _isConnected = false;
         _driveService = null;
-        final conectou = await inicializarConexao();
+        final conectou = await inicializarConexao(forceReauth: is403);
         if (conectou) {
           try {
             return await _baixar();
@@ -349,11 +352,12 @@ class GoogleDriveService {
     try {
       return await _baixar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 [GoogleDriveService] Token expirado ao baixar $nomeArquivo da pasta $pasta, tentando renovar...');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+        final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
+        print('🔒 [GoogleDriveService] Erro de autenticação/permissão (${is403 ? '403' : '401'}) ao baixar $nomeArquivo da pasta $pasta, tentando renovar...');
         _isConnected = false;
         _driveService = null;
-        final conectou = await inicializarConexao();
+        final conectou = await inicializarConexao(forceReauth: is403);
         if (conectou) {
           try {
             print('🔄 [GoogleDriveService] Tentando baixar novamente após renovar token...');
@@ -420,11 +424,12 @@ class GoogleDriveService {
     try {
       return await _salvar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
-        print('🔒 [GoogleDriveService] Token expirado ao salvar $nomeArquivo na pasta $pasta, tentando renovar...');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+        final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
+        print('🔒 [GoogleDriveService] Erro de autenticação/permissão (${is403 ? '403' : '401'}) ao salvar $nomeArquivo na pasta $pasta, tentando renovar...');
         _isConnected = false;
         _driveService = null;
-        final conectou = await inicializarConexao();
+        final conectou = await inicializarConexao(forceReauth: is403);
         if (conectou) {
           try {
             print('🔄 [GoogleDriveService] Tentando salvar novamente após renovar token...');
