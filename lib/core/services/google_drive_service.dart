@@ -199,14 +199,27 @@ class GoogleDriveService {
         final conectou = await inicializarConexao();
         if (!conectou) return null;
       }
+      print('🔍 [DRIVE DEBUG] Listando arquivos na pasta TECH CONNECT...');
       final arquivos = await _driveService!.listInRootFolder();
+      print('📁 [DRIVE DEBUG] ${arquivos.length} arquivos encontrados na pasta');
+      
+      // Debug: listar alguns arquivos para verificar
+      for (int i = 0; i < arquivos.length && i < 10; i++) {
+        print('📄 [DRIVE DEBUG] Arquivo $i: ${arquivos[i].name}');
+      }
+      
+      print('🔍 [DRIVE DEBUG] Procurando arquivo específico: $nomeArquivo');
       final arquivo = arquivos.firstWhere(
         (file) => file.name == nomeArquivo,
         orElse: () => drive.File(),
       );
+      
       if (arquivo.id == null) {
-        print('! Arquivo não encontrado: $nomeArquivo');
+        print('❌ [DRIVE DEBUG] Arquivo não encontrado: $nomeArquivo');
+        print('📋 [DRIVE DEBUG] Arquivos disponíveis: ${arquivos.map((f) => f.name).join(', ')}');
         return null;
+      } else {
+        print('✅ [DRIVE DEBUG] Arquivo encontrado: $nomeArquivo (ID: ${arquivo.id})');
       }
       final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
       return json.decode(conteudo) as Map<String, dynamic>;

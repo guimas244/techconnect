@@ -114,43 +114,53 @@ class TipagemRepository {
 
   /// CARREGA DADOS DE UM TIPO (só funciona após inicializar)
   Future<Map<Tipo, double>?> carregarDadosTipo(Tipo tipo) async {
+    print('🔄 [DEBUG] Iniciando carregamento do tipo: ${tipo.displayName} (${tipo.name})');
+    
     if (isBloqueado) {
-      print('🚫 App bloqueado! Chame inicializarComDrive() primeiro');
+      print('🚫 [DEBUG] App bloqueado para tipo ${tipo.displayName}! Chame inicializarComDrive() primeiro');
       return null;
     }
     
     try {
       // 1. Verifica se tem nos dados locais em memória
       if (_dadosLocais.containsKey(tipo)) {
+        print('💾 [DEBUG] Dados encontrados em memória para tipo ${tipo.displayName}');
         return Map.from(_dadosLocais[tipo]!);
       }
       
       // 2. Tenta carregar dos dados salvos localmente
+      print('📁 [DEBUG] Tentando carregar dados locais para tipo ${tipo.displayName}');
       final dadosLocais = await _carregarDadosLocalmente(tipo);
       if (dadosLocais != null) {
+        print('✅ [DEBUG] Dados locais encontrados para tipo ${tipo.displayName}');
         _dadosLocais[tipo] = dadosLocais;
         return Map.from(dadosLocais);
       }
       
       // 3. Tenta baixar do Google Drive se não tem dados locais
       if (_driveService.isConectado) {
-        print('📥 Tentando baixar tipo ${tipo.name} do Google Drive...');
+        print('☁️ [DEBUG] Tentando baixar tipo ${tipo.displayName} (${tipo.name}) do Google Drive...');
         final dadosDrive = await _baixarTipoDoGoogleDrive(tipo);
         if (dadosDrive != null) {
           _dadosLocais[tipo] = dadosDrive;
           await _salvarDadosLocalmente(tipo, dadosDrive);
-          print('✅ Tipo ${tipo.name} baixado e salvo do Google Drive');
+          print('✅ [DEBUG] Tipo ${tipo.displayName} baixado e salvo do Google Drive');
           return Map.from(dadosDrive);
+        } else {
+          print('❌ [DEBUG] Não foi possível baixar tipo ${tipo.displayName} do Drive');
         }
+      } else {
+        print('❌ [DEBUG] Drive não conectado para baixar tipo ${tipo.displayName}');
       }
       
       // 4. Se não tem nada, gera valores padrão
+      print('⚠️ [DEBUG] Usando valores padrão para tipo ${tipo.displayName}');
       final valoresPadrao = _gerarValoresPadrao();
       _dadosLocais[tipo] = valoresPadrao;
       return Map.from(valoresPadrao);
       
     } catch (e) {
-      print('❌ Erro ao carregar dados do tipo ${tipo.name}: $e');
+      print('❌ [DEBUG] Erro ao carregar dados do tipo ${tipo.displayName} (${tipo.name}): $e');
       return null;
     }
   }
@@ -349,13 +359,20 @@ class TipagemRepository {
     try {
       if (!_driveService.isConectado) return null;
       
-      final jsonData = await _driveService.baixarJson('tb_${tipo.name.toLowerCase()}_defesa.json');
+      final nomeArquivo = 'tb_${tipo.name.toLowerCase()}_defesa.json';
+      print('🔍 [DEBUG] Tentando baixar arquivo: $nomeArquivo para tipo: ${tipo.displayName} (${tipo.name})');
+      
+      final jsonData = await _driveService.baixarJson(nomeArquivo);
+      
       if (jsonData != null) {
+        print('✅ [DEBUG] Arquivo $nomeArquivo baixado com sucesso');
         return _converterJsonParaTipos(jsonData);
+      } else {
+        print('❌ [DEBUG] Arquivo $nomeArquivo não encontrado no Drive');
+        return null;
       }
-      return null;
     } catch (e) {
-      print('❌ Erro ao baixar do Google Drive: $e');
+      print('❌ [DEBUG] Erro ao baixar tipo ${tipo.displayName} (${tipo.name}) do Google Drive: $e');
       return null;
     }
   }

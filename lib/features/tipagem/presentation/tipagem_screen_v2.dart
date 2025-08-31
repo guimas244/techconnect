@@ -171,6 +171,9 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
   Widget _buildTipoCard(BuildContext context, Tipo tipo) {
     return GestureDetector(
       onTap: () {
+        // Log do tipo clicado
+        print('🎯 [TIPO CLICADO] ${tipo.displayName} (${tipo.name})');
+        
         // Navega para a tela de edição do tipo
         context.go('/admin/tipagem/dano/${tipo.name}');
       },

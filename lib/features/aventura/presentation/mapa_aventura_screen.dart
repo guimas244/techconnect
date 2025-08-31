@@ -6,6 +6,7 @@ import '../models/monstro_inimigo.dart';
 import '../models/historia_jogador.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../tipagem/data/tipagem_repository.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
 
@@ -338,7 +339,46 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-  void _mostrarModalMonstroInimigo(MonstroInimigo monstro) {
+  void _mostrarModalMonstroInimigo(MonstroInimigo monstro) async {
+    // 🎯 PRINT DOS DADOS DE DEFESA DO MONSTRO INIMIGO
+    print('🐉 [MONSTRO INIMIGO CLICADO] Tipo: ${monstro.tipo.displayName} (${monstro.tipo.name})');
+    
+    try {
+      // Busca os dados de defesa do tipo do monstro
+      final tipagemRepository = TipagemRepository();
+      final dadosDefesa = await tipagemRepository.carregarDadosTipo(monstro.tipo);
+      
+      if (dadosDefesa != null) {
+        print('💥 [DADOS DE DEFESA] Lista de dano recebido por ${monstro.tipo.displayName}:');
+        print('─' * 60);
+        
+        // Imprime cada tipo e o valor de dano recebido
+        for (final entry in dadosDefesa.entries) {
+          final atacante = entry.key;
+          final multiplicador = entry.value;
+          
+          // Determina a efetividade
+          String efetividade;
+          if (multiplicador > 1.0) {
+            efetividade = 'SUPER EFETIVO';
+          } else if (multiplicador < 1.0 && multiplicador > 0.0) {
+            efetividade = 'POUCO EFETIVO';
+          } else if (multiplicador == 0.0) {
+            efetividade = 'NÃO AFETA';
+          } else {
+            efetividade = 'NORMAL';
+          }
+          
+          print('${atacante.displayName.padRight(15)} -> ${multiplicador.toString().padLeft(4)} (${efetividade})');
+        }
+        print('─' * 60);
+      } else {
+        print('❌ [ERRO] Não foi possível carregar dados de defesa para ${monstro.tipo.displayName}');
+      }
+    } catch (e) {
+      print('❌ [ERRO] Erro ao buscar dados de defesa: $e');
+    }
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {

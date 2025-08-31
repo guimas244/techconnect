@@ -267,6 +267,9 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
       ),
       child: InkWell(
         onTap: () {
+          // Log do tipo clicado
+          print('🎯 [TIPO CLICADO] ${tipo.displayName} (${tipo.name})');
+          
           // Navega para a tela de edição do tipo
           context.go('/admin/tipagem/dano/${tipo.name}');
         },

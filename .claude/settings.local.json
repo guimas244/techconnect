@@ -7,7 +7,8 @@
       "Bash(flutter run:*)",
       "Bash(flutter build:*)",
       "Bash(find:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(dart run:*)"
     ],
     "deny": [],
     "ask": []
