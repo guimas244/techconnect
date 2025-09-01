@@ -234,7 +234,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       resumoRodada = 'Rodada $turnoAtual concluída!\n\n';
       resumoRodada += '1º: ${_resumirAcao(primeiroAtaque)}\n';
       resumoRodada += '2º: ${_resumirAcao(segundoAtaque)}\n\n';
-      resumoRodada += 'Vida atual: Jogador ${estadoFinal.vidaAtualJogador}/${widget.jogador.vida} | Inimigo ${estadoFinal.vidaAtualInimigo}/${widget.inimigo.vida}\n';
+      // Mostra 0 se vida negativa nos logs
+      int vidaJogadorDisplay = estadoFinal.vidaAtualJogador < 0 ? 0 : estadoFinal.vidaAtualJogador;
+      int vidaInimigoDisplay = estadoFinal.vidaAtualInimigo < 0 ? 0 : estadoFinal.vidaAtualInimigo;
+      resumoRodada += 'Vida atual: Jogador $vidaJogadorDisplay/${widget.jogador.vida} | Inimigo $vidaInimigoDisplay/${widget.inimigo.vida}\n';
       resumoRodada += 'Energia atual: Jogador ${estadoFinal.energiaAtualJogador}/${widget.jogador.energia} | Inimigo ${estadoFinal.energiaAtualInimigo}/${widget.inimigo.energia}';
     } else if (estadoFinal.historicoAcoes.isNotEmpty) {
       final ultimaAcao = estadoFinal.historicoAcoes.last;
@@ -457,12 +460,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (isJogador) {
       // Jogador ataca inimigo
       vidaAntes = estado.vidaAtualInimigo;
-      vidaDepois = (estado.vidaAtualInimigo - danoFinal).clamp(0, estado.inimigo.vida);
+      vidaDepois = estado.vidaAtualInimigo - danoFinal; // Permite vida negativa
       novoEstado = estado.copyWith(vidaAtualInimigo: vidaDepois);
     } else {
       // Inimigo ataca jogador
       vidaAntes = estado.vidaAtualJogador;
-      vidaDepois = (estado.vidaAtualJogador - danoFinal).clamp(0, estado.jogador.vida);
+      vidaDepois = estado.vidaAtualJogador - danoFinal; // Permite vida negativa
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
 
@@ -1666,7 +1669,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     String atacanteNome = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
 
     final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
-    final vidaDepois = (vidaAntes - danoCalculado).clamp(0, vidaMaximaDefensor);
+    final vidaDepois = vidaAntes - danoCalculado; // Permite vida negativa
 
     // Cria ação no histórico
     final energiaRestaurada = isJogador
@@ -1982,7 +1985,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     required Color cor,
     required bool isJogador,
   }) {
-    double percentualVida = vidaAtual / vidaMaxima;
+    // Se vida negativa, mostra 0 visualmente
+    double percentualVida = vidaAtual <= 0 ? 0.0 : (vidaAtual / vidaMaxima);
     double percentualEnergia = energiaAtual / energiaMaxima;
     
     return GestureDetector(
@@ -2061,12 +2065,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           
           const SizedBox(height: 2),
           
-          // Vida numérica
+          // Vida numérica - mostra 0 se negativo, ou "MORTO" se completamente morto
           Text(
-            '$vidaAtual/$vidaMaxima',
-            style: const TextStyle(
+            vidaAtual <= 0 ? '0/$vidaMaxima' : '$vidaAtual/$vidaMaxima',
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
+              color: vidaAtual <= 0 ? Colors.red : null,
             ),
           ),
           

@@ -326,12 +326,12 @@ class BatalhaService {
     if (isJogador) {
       // Jogador ataca inimigo
       vidaAntes = estado.vidaAtualInimigo;
-      vidaDepois = (estado.vidaAtualInimigo - danoFinal).clamp(0, estado.inimigo.vida);
+      vidaDepois = estado.vidaAtualInimigo - danoFinal; // Permite vida negativa
       novoEstado = estado.copyWith(vidaAtualInimigo: vidaDepois);
     } else {
       // Inimigo ataca jogador
       vidaAntes = estado.vidaAtualJogador;
-      vidaDepois = (estado.vidaAtualJogador - danoFinal).clamp(0, estado.jogador.vida);
+      vidaDepois = estado.vidaAtualJogador - danoFinal; // Permite vida negativa
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
