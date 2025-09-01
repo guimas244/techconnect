@@ -436,8 +436,8 @@ class ModalMonstroAventura extends StatelessWidget {
     // Usa vida máxima com buffs se estiver em batalha
     final vidaMaxima = isBatalha && vidaMaximaAtual != null ? vidaMaximaAtual! : monstro.vida;
     
-    // Calcula a cor da vida baseada na porcentagem
-    double percentualVida = monstro.vidaAtual / vidaMaxima;
+    // Calcula a cor da vida baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
+    double percentualVida = (monstro.vidaAtual / vidaMaxima).clamp(0.0, 1.0);
     Color corVida = percentualVida > 0.5 
         ? Colors.green 
         : percentualVida > 0.25 
@@ -512,8 +512,8 @@ class ModalMonstroAventura extends StatelessWidget {
     // Usa energiaAtual se estiver em batalha, senão usa energia padrão
     final energiaAtualValue = isBatalha && energiaAtual != null ? energiaAtual! : monstro.energiaAtual;
     
-    // Calcula a cor da energia baseada na porcentagem
-    double percentualEnergia = energiaAtualValue / monstro.energia;
+    // Calcula a cor da energia baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
+    double percentualEnergia = (energiaAtualValue / monstro.energia).clamp(0.0, 1.0);
     Color corEnergia = percentualEnergia > 0.5 
         ? Colors.blue 
         : percentualEnergia > 0.25 

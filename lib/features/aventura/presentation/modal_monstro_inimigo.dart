@@ -426,8 +426,8 @@ class ModalMonstroInimigo extends StatelessWidget {
   }
 
   Widget _buildVidaInfo() {
-    // Calcula a cor da vida baseada na porcentagem
-    double percentualVida = monstro.vidaAtual / monstro.vida;
+    // Calcula a cor da vida baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
+    double percentualVida = (monstro.vidaAtual / monstro.vida).clamp(0.0, 1.0);
     Color corVida = percentualVida > 0.5 
         ? Colors.green 
         : percentualVida > 0.25 
