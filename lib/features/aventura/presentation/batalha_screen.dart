@@ -552,7 +552,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
         );
-        await repository.salvarHistoricoJogador(historiaComScore);
+        await repository.salvarHistoricoEAtualizarRanking(historiaComScore);
         
         print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico!');
       }

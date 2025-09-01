@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/drop_jogador.dart';
+import '../models/historia_jogador.dart';
 import '../../../core/providers/user_provider.dart';
 import '../services/drops_service.dart';
+import '../data/aventura_repository.dart';
+import '../providers/aventura_provider.dart';
 
 class ConquistasScreen extends ConsumerStatefulWidget {
   const ConquistasScreen({super.key});
@@ -364,6 +367,9 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
       // Adiciona recompensas mockadas
       await dropsService.adicionarRecompensasMockadas(emailJogador);
 
+      // Finaliza aventura atual e inicia nova
+      await _finalizarEIniciarNovaAventura();
+
       // Fecha loading
       if (mounted) Navigator.of(context).pop();
 
@@ -413,7 +419,7 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Suas recompensas foram coletadas!',
+                    'Suas recompensas foram coletadas e uma nova aventura foi iniciada!',
                     style: TextStyle(fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
@@ -538,6 +544,42 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _finalizarEIniciarNovaAventura() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = AventuraRepository();
+
+      // Carrega o histórico atual para obter o runId
+      print('🔍 [ConquistasScreen] Carregando histórico para arquivar...');
+      final historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+      
+      if (historiaAtual != null && historiaAtual.runId.isNotEmpty) {
+        print('📦 [ConquistasScreen] RunID encontrado: ${historiaAtual.runId}, iniciando arquivamento...');
+        // Arquiva o histórico atual renomeando com o runId
+        final sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+        if (sucessoArquivamento) {
+          print('✅ [ConquistasScreen] Histórico arquivado com sucesso com RunID: ${historiaAtual.runId}');
+        } else {
+          print('❌ [ConquistasScreen] FALHA ao arquivar histórico com RunID: ${historiaAtual.runId}');
+        }
+      } else {
+        print('⚠️ [ConquistasScreen] História nula ou sem RunID (${historiaAtual?.runId}), removendo histórico...');
+        // Se não tem runId, remove o histórico (fallback)
+        await repository.removerHistoricoJogador(emailJogador);
+        print('✅ [ConquistasScreen] Histórico removido (sem RunID)');
+      }
+
+      // Atualiza estado do provider
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+
+      print('✅ [ConquistasScreen] Primeira aventura disponível');
+
+    } catch (e) {
+      print('❌ [ConquistasScreen] Erro ao finalizar e iniciar nova aventura: $e');
+      throw e;
     }
   }
 }

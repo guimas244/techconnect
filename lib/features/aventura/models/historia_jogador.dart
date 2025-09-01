@@ -11,6 +11,7 @@ class HistoriaJogador {
   final int tier;
   final int score;
   final List<RegistroBatalha> historicoBatalhas;
+  final String runId; // ID único para cada run/aventura
 
   const HistoriaJogador({
     required this.email,
@@ -21,7 +22,8 @@ class HistoriaJogador {
     this.tier = 1,
     this.score = 0,
     this.historicoBatalhas = const [],
-  });
+    String? runId,
+  }) : runId = runId ?? '';
 
   factory HistoriaJogador.fromJson(Map<String, dynamic> json) {
     return HistoriaJogador(
@@ -39,6 +41,7 @@ class HistoriaJogador {
       historicoBatalhas: (json['historicoBatalhas'] as List<dynamic>?)
           ?.map((b) => RegistroBatalha.fromJson(b as Map<String, dynamic>))
           .toList() ?? [],
+      runId: json['runId'] ?? '',
     );
   }
 
@@ -52,6 +55,7 @@ class HistoriaJogador {
       'tier': tier,
       'score': score,
       'historicoBatalhas': historicoBatalhas.map((b) => b.toJson()).toList(),
+      'runId': runId,
     };
   }
 
@@ -64,6 +68,7 @@ class HistoriaJogador {
     int? tier,
     int? score,
     List<RegistroBatalha>? historicoBatalhas,
+    String? runId,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -74,6 +79,7 @@ class HistoriaJogador {
       tier: tier ?? this.tier,
       score: score ?? this.score,
       historicoBatalhas: historicoBatalhas ?? this.historicoBatalhas,
+      runId: runId ?? this.runId,
     );
   }
 }

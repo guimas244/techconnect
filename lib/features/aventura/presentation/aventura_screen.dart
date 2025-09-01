@@ -30,12 +30,18 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
       return 'CONTINUAR AVENTURA';
     }
+    if (historiaAtual != null && historiaAtual!.monstros.isEmpty) {
+      return 'SORTEAR MONSTROS';
+    }
     return 'INICIAR AVENTURA';
   }
 
   IconData _getIconeBotaoAventura() {
     if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
       return Icons.play_circle_filled;
+    }
+    if (historiaAtual != null && historiaAtual!.monstros.isEmpty) {
+      return Icons.casino;
     }
     return Icons.play_arrow;
   }
@@ -104,8 +110,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             debugPrint('✅ [AventuraScreen] Estado: PODE INICIAR');
           }
         } else {
-          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
-          debugPrint('❌ [AventuraScreen] Estado: ERRO (história nula)');
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+          debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO (história nula após remoção)');
         }
       } else {
         ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
@@ -133,8 +139,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         historiaAtual = historia;
       });
       
-      // Como o sorteio já cria a aventura completa, definimos estado como aventura iniciada
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+      // Como o sorteio criou os monstros, definimos estado como pode iniciar para mostrar os monstros
+      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -526,18 +532,18 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: _iniciarAventura,
-              splashColor: Colors.green.shade100,
+              splashColor: Colors.deepPurple.shade100,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.green.shade400, Colors.teal.shade400],
+                    colors: [Colors.orange.shade400, Colors.deepPurple.shade400],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.green.withOpacity(0.18),
+                      color: Colors.orange.withOpacity(0.18),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),

@@ -10,12 +10,14 @@ import '../models/item.dart';
 import '../models/habilidade.dart';
 import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
+import '../services/ranking_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
   final TipagemRepository _tipagemRepository = TipagemRepository();
   final ItemService _itemService = ItemService();
+  final RankingService _rankingService = RankingService();
 
   /// Verifica se o jogador já tem um histórico no Drive
   Future<bool> jogadorTemHistorico(String email) async {
@@ -152,12 +154,17 @@ class AventuraRepository {
     final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: 1);
     print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
     
+    // Gera um ID único para esta run/aventura
+    final runId = _rankingService.gerarRunId();
+    print('🆔 [Repository] RunId gerado para nova aventura: $runId');
+    
     final historia = HistoriaJogador(
       email: email,
       monstros: monstrosSorteados,
       aventuraIniciada: true,
       mapaAventura: mapaEscolhido,
       monstrosInimigos: monstrosInimigos,
+      runId: runId,
     );
     
     // Salva automaticamente no Drive
@@ -255,11 +262,21 @@ class AventuraRepository {
       final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: historiaAtual.tier);
       print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
 
+      // Gera um novo runId se não existir ou se estiver vazio
+      String runId = historiaAtual.runId;
+      if (runId.isEmpty) {
+        runId = _rankingService.gerarRunId();
+        print('🆔 [Repository] RunId gerado para aventura atualizada: $runId');
+      } else {
+        print('🆔 [Repository] Usando runId existente: $runId');
+      }
+
       // Atualiza o histórico com a aventura iniciada
       final historiaAtualizada = historiaAtual.copyWith(
         aventuraIniciada: true,
         mapaAventura: mapaEscolhido,
         monstrosInimigos: monstrosInimigos,
+        runId: runId,
       );
 
       // Salva no Drive
@@ -390,5 +407,90 @@ class AventuraRepository {
   Future<List<MonstroInimigo>> gerarMonstrosInimigosPorTier(int tier) async {
     print('🆕 [Repository] Gerando monstros inimigos para tier $tier via método público');
     return await _sortearMonstrosInimigos(tierAtual: tier);
+  }
+
+  /// Atualiza o ranking quando o score de uma aventura for alterado
+  Future<void> atualizarRankingPorScore(HistoriaJogador historia) async {
+    try {
+      print('🏆 [Repository] Atualizando ranking para: ${historia.email} - Score: ${historia.score} - RunId: ${historia.runId}');
+      
+      // Só atualiza o ranking se tiver runId e score > 0
+      if (historia.runId.isNotEmpty && historia.score > 0) {
+        await _rankingService.atualizarRanking(
+          runId: historia.runId,
+          email: historia.email,
+          score: historia.score,
+        );
+        print('✅ [Repository] Ranking atualizado com sucesso');
+      } else {
+        print('⚠️ [Repository] Ranking não atualizado: runId=${historia.runId}, score=${historia.score}');
+      }
+    } catch (e) {
+      print('❌ [Repository] Erro ao atualizar ranking: $e');
+      // Não falha o salvamento por causa do ranking
+    }
+  }
+
+  /// Salva histórico e atualiza ranking automaticamente
+  Future<bool> salvarHistoricoEAtualizarRanking(HistoriaJogador historia) async {
+    try {
+      // Salva o histórico primeiro
+      final sucessoSalvamento = await salvarHistoricoJogador(historia);
+      
+      if (sucessoSalvamento) {
+        // Atualiza o ranking se o salvamento foi bem-sucedido
+        await atualizarRankingPorScore(historia);
+      }
+      
+      return sucessoSalvamento;
+    } catch (e) {
+      print('❌ [Repository] Erro ao salvar histórico e atualizar ranking: $e');
+      return false;
+    }
+  }
+
+  /// Remove completamente o histórico do jogador do Drive
+  Future<bool> removerHistoricoJogador(String email) async {
+    try {
+      print('🗑️ [Repository] Removendo histórico para: $email');
+      final nomeArquivo = 'historico_$email.json';
+      
+      // Remove o arquivo do Drive
+      await _driveService.excluirArquivoDaPasta(nomeArquivo, 'historias');
+      
+      print('✅ [Repository] Histórico removido com sucesso');
+      return true;
+    } catch (e) {
+      print('❌ [Repository] Erro ao remover histórico: $e');
+      return false;
+    }
+  }
+  
+  /// Arquiva o histórico atual renomeando com o runId da aventura
+  Future<bool> arquivarHistoricoJogador(String email, String runId) async {
+    try {
+      print('📦 [Repository] INICIANDO arquivamento para: $email (RunID: $runId)');
+      final nomeAtual = 'historico_$email.json';
+      final novoNome = 'historico_${email}_$runId.json';
+      
+      print('📦 [Repository] Arquivo atual: $nomeAtual');
+      print('📦 [Repository] Novo nome: $novoNome');
+      print('📦 [Repository] Chamando DriveService.renomearArquivoDaPasta...');
+      
+      // Renomeia o arquivo no Drive
+      final sucesso = await _driveService.renomearArquivoDaPasta(nomeAtual, novoNome, 'historias');
+      
+      if (sucesso) {
+        print('✅ [Repository] Histórico arquivado com SUCESSO: $nomeAtual → $novoNome');
+      } else {
+        print('❌ [Repository] FALHA ao arquivar histórico: $nomeAtual → $novoNome');
+      }
+      
+      return sucesso;
+    } catch (e, stackTrace) {
+      print('❌ [Repository] EXCEÇÃO ao arquivar histórico: $e');
+      print('❌ [Repository] Stack trace: $stackTrace');
+      return false;
+    }
   }
 }

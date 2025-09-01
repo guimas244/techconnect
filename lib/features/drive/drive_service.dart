@@ -420,4 +420,160 @@ class DriveService {
       print('✅ [DriveService] Arquivo criado na pasta DROPS: $filename');
     }
   }
+
+  /// Cria a pasta RANKING se não existir e retorna seu ID
+  Future<String?> criarPastaRanking() async {
+    try {
+      // Primeiro verifica se a pasta já existe
+      final res = await api.files.list(
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = 'rankings' and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+      );
+
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaRankingId = res.files!.first.id!;
+        print('✅ [DEBUG] Pasta RANKING encontrada: $pastaRankingId');
+        return pastaRankingId;
+      }
+
+      // Se não existe, cria a pasta
+      print('📁 [DEBUG] Criando pasta RANKING...');
+      final folder = drive.File();
+      folder.name = 'rankings';
+      folder.mimeType = 'application/vnd.google-apps.folder';
+      folder.parents = [folderId];
+
+      final driveFolder = await api.files.create(folder);
+      print('✅ [DEBUG] Pasta RANKING criada com ID: ${driveFolder.id}');
+      return driveFolder.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta RANKING: $e');
+      return null;
+    }
+  }
+
+  /// Lista arquivos na pasta RANKING
+  Future<List<drive.File>> listInRankingFolder() async {
+    final pastaRankingId = await criarPastaRanking();
+    if (pastaRankingId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta RANKING');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaRankingId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta RANKING
+  Future<void> createJsonFileInRanking(String filename, Map<String, dynamic> jsonData) async {
+    final pastaRankingId = await criarPastaRanking();
+    if (pastaRankingId == null) {
+      throw Exception('Não foi possível acessar pasta RANKING');
+    }
+
+    // Verificar se arquivo já existe na pasta RANKING
+    final arquivosRanking = await listInRankingFolder();
+    final arquivoExistente = arquivosRanking.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Atualizar arquivo existente
+      await updateJsonFileInRanking(arquivoExistente.id!, jsonData);
+      print('✅ [DriveService] Arquivo atualizado na pasta RANKING: $filename');
+    } else {
+      // Criar novo arquivo na pasta RANKING
+      final file = drive.File();
+      file.name = filename;
+      file.parents = [pastaRankingId];
+
+      final jsonString = json.encode(jsonData);
+      final jsonBytes = utf8.encode(jsonString);
+      final media = drive.Media(
+        Stream.fromIterable([jsonBytes]),
+        jsonBytes.length,
+        contentType: 'application/json',
+      );
+
+      await api.files.create(file, uploadMedia: media);
+      print('✅ [DriveService] Arquivo criado na pasta RANKING: $filename');
+    }
+  }
+
+  /// Atualiza arquivo JSON na pasta RANKING
+  Future<drive.File> updateJsonFileInRanking(String fileId, Map<String, dynamic> jsonData) async {
+    print('🔄 [DEBUG] Atualizando arquivo JSON na pasta RANKING (ID: $fileId)');
+    
+    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
+    final media = drive.Media(
+      http.ByteStream.fromBytes(contentBytes),
+      contentBytes.length,
+    );
+    final meta = drive.File();
+    return await api.files.update(meta, fileId, uploadMedia: media);
+  }
+
+  /// Baixa um arquivo específico da pasta RANKING
+  Future<String> downloadFileFromRanking(String filename) async {
+    try {
+      final pastaRankingId = await criarPastaRanking();
+      if (pastaRankingId == null) {
+        print('❌ [DEBUG] Não foi possível acessar pasta RANKING');
+        return '';
+      }
+
+      // Procura o arquivo na pasta RANKING
+      final arquivosRanking = await listInRankingFolder();
+      final arquivoDesejado = arquivosRanking.firstWhere(
+        (file) => file.name == filename,
+        orElse: () => drive.File(),
+      );
+
+      if (arquivoDesejado.id == null) {
+        print('📊 [DEBUG] Arquivo $filename não encontrado na pasta RANKING');
+        return '';
+      }
+
+      print('📥 [DEBUG] Baixando arquivo $filename da pasta RANKING');
+      return await downloadFileContent(arquivoDesejado.id!);
+      
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao baixar arquivo da pasta RANKING: $e');
+      return '';
+    }
+  }
+  
+  /// Exclui um arquivo do Drive pelo ID
+  Future<void> deleteFile(String fileId) async {
+    try {
+      print('🗑️ [DEBUG] Excluindo arquivo com ID: $fileId');
+      await api.files.delete(fileId);
+      print('✅ [DEBUG] Arquivo excluído com sucesso');
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao excluir arquivo: $e');
+      throw e;
+    }
+  }
+  
+  /// Renomeia um arquivo do Drive pelo ID
+  Future<void> renameFile(String fileId, String novoNome) async {
+    try {
+      print('✏️ [DEBUG] Renomeando arquivo com ID: $fileId → $novoNome');
+      final fileMetadata = drive.File()..name = novoNome;
+      await api.files.update(fileMetadata, fileId);
+      print('✅ [DEBUG] Arquivo renomeado com sucesso');
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao renomear arquivo: $e');
+      throw e;
+    }
+  }
 }

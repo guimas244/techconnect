@@ -329,6 +329,8 @@ class GoogleDriveService {
         arquivos = await _driveService!.listInHistoriasFolder();
       } else if (pasta == 'drops') {
         arquivos = await _driveService!.listInDropsFolder();
+      } else if (pasta == 'rankings') {
+        arquivos = await _driveService!.listInRankingFolder();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
@@ -397,6 +399,8 @@ class GoogleDriveService {
           await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
+        } else if (pasta == 'rankings') {
+          await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
@@ -411,6 +415,8 @@ class GoogleDriveService {
           await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
+        } else if (pasta == 'rankings') {
+          await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
@@ -447,5 +453,110 @@ class GoogleDriveService {
         return false;
       }
     }
+  }
+
+  /// Exclui um arquivo de uma pasta específica
+  Future<bool> excluirArquivoDaPasta(String nomeArquivo, String pasta) async {
+    Future<bool> _excluir() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return false;
+      }
+
+      print('🗑️ [GoogleDriveService] Excluindo arquivo: $nomeArquivo da pasta: $pasta');
+      
+      try {
+        // Busca arquivos na pasta específica
+        List<drive.File> arquivos;
+        if (pasta == 'historias') {
+          arquivos = await _driveService!.listInHistoriasFolder();
+        } else {
+          // Para outras pastas, pode adicionar mais cases aqui
+          print('❌ [GoogleDriveService] Pasta não suportada: $pasta');
+          return false;
+        }
+
+        // Encontra o arquivo pelo nome
+        final arquivo = arquivos.where((f) => f.name == nomeArquivo).firstOrNull;
+        
+        if (arquivo != null && arquivo.id != null) {
+          // Exclui o arquivo usando o DriveService
+          await _driveService!.deleteFile(arquivo.id!);
+          print('✅ [GoogleDriveService] Arquivo excluído: $pasta/$nomeArquivo');
+          return true;
+        } else {
+          print('ℹ️ [GoogleDriveService] Arquivo não encontrado: $pasta/$nomeArquivo');
+          return true; // Considerar sucesso se arquivo não existe
+        }
+      } catch (e) {
+        print('❌ [GoogleDriveService] Erro ao excluir arquivo: $e');
+        return false;
+      }
+    }
+
+    // Tenta 3 vezes como outros métodos
+    for (int tentativa = 1; tentativa <= 3; tentativa++) {
+      try {
+        final resultado = await _excluir();
+        if (resultado) return true;
+      } catch (e) {
+        print('❌ [GoogleDriveService] Tentativa $tentativa falhou: $e');
+        if (tentativa == 3) rethrow;
+        await Future.delayed(Duration(seconds: tentativa));
+      }
+    }
+    return false;
+  }
+  
+  /// Renomeia um arquivo de uma pasta específica
+  Future<bool> renomearArquivoDaPasta(String nomeAtual, String novoNome, String pasta) async {
+    Future<bool> _renomear() async {
+      if (_driveService == null || !_isConnected) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return false;
+      }
+
+      print('✏️ [GoogleDriveService] Renomeando arquivo: $nomeAtual → $novoNome na pasta: $pasta');
+      
+      try {
+        // Busca arquivos na pasta específica
+        List<drive.File> arquivos;
+        if (pasta == 'historias') {
+          arquivos = await _driveService!.listInHistoriasFolder();
+        } else {
+          print('❌ [GoogleDriveService] Pasta não suportada: $pasta');
+          return false;
+        }
+
+        // Encontra o arquivo pelo nome atual
+        final arquivo = arquivos.where((f) => f.name == nomeAtual).firstOrNull;
+        
+        if (arquivo != null && arquivo.id != null) {
+          // Renomeia o arquivo usando o DriveService
+          await _driveService!.renameFile(arquivo.id!, novoNome);
+          print('✅ [GoogleDriveService] Arquivo renomeado: $pasta/$nomeAtual → $novoNome');
+          return true;
+        } else {
+          print('❌ [GoogleDriveService] Arquivo não encontrado: $pasta/$nomeAtual');
+          return false;
+        }
+      } catch (e) {
+        print('❌ [GoogleDriveService] Erro ao renomear arquivo: $e');
+        return false;
+      }
+    }
+
+    // Tenta 3 vezes como outros métodos
+    for (int tentativa = 1; tentativa <= 3; tentativa++) {
+      try {
+        final resultado = await _renomear();
+        if (resultado) return true;
+      } catch (e) {
+        print('❌ [GoogleDriveService] Tentativa $tentativa falhou: $e');
+        if (tentativa == 3) rethrow;
+        await Future.delayed(Duration(seconds: tentativa));
+      }
+    }
+    return false;
   }
 }

@@ -415,6 +415,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         } : null,
                       ),
                       _buildMenuCard(
+                        icon: Icons.leaderboard,
+                        label: 'Ranking',
+                        color: _isDriveConnected ? const Color(0xFFE53E3E) : Colors.grey,
+                        onTap: _isDriveConnected ? () => context.go('/ranking') : null,
+                      ),
+                      _buildMenuCard(
                         icon: Icons.admin_panel_settings,
                         label: 'Admin',
                         color: _isDriveConnected ? const Color(0xFF3182CE) : Colors.grey,
