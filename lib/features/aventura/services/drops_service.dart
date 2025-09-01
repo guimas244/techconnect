@@ -77,21 +77,25 @@ class DropsService {
     }
   }
 
-  /// Adiciona recompensas usando o sistema baseado no score
+  /// Adiciona recompensas mockadas (compatibilidade)
+  @Deprecated('Use adicionarRecompensasBaseadasNoScore com score real')
   Future<void> adicionarRecompensasMockadas(String email) async {
+    print('⚠️ [DropsService] Método adicionarRecompensasMockadas está deprecated, não gerando itens');
+    print('💡 [DropsService] Use adicionarRecompensasBaseadasNoScore(email, scoreReal, tierReal)');
+    // Não gera nenhum item para evitar duplicação
+  }
+
+  /// Adiciona recompensas usando o sistema baseado no score real
+  Future<void> adicionarRecompensasBaseadasNoScore(String email, int scoreReal, int tierReal) async {
     try {
       print('🎁 [DropsService] Iniciando sistema de recompensas baseado no score para $email...');
       
       final dropsAtual = await carregarDrops(email) ?? _criarDropsVazio(email);
       
-      // TODO: Obter score real do jogador. Por enquanto, usando score mockado
-      final scoreMockado = 25; // Exemplo: 25 de score
-      final tierMockado = 2;   // Exemplo: Tier 2
-      
-      print('🎯 [DropsService] Score do jogador: $scoreMockado, Tier: $tierMockado');
+      print('🎯 [DropsService] Score do jogador: $scoreReal, Tier: $tierReal');
       
       // Gera múltiplos itens baseado no score usando excel/planilha
-      final itensGerados = await _gerarItensBaseadosNoScore(scoreMockado, tierMockado);
+      final itensGerados = await _gerarItensBaseadosNoScore(scoreReal, tierReal);
       
       if (itensGerados.isNotEmpty) {
         final dropsAtualizados = dropsAtual.copyWith(

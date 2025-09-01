@@ -17,6 +17,8 @@ import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
+import '../services/drops_service.dart';
+import '../models/drop_jogador.dart';
 // Removendo import não usado
 import 'modal_monstro_aventura.dart';
 import 'modal_item_obtido.dart';
@@ -46,6 +48,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool salvandoResultado = false;
   bool jogadorComeca = true;
   bool itemGerado = false;
+  bool evolucaoProcessada = false;
+  bool scoreAtualizado = false;
   bool podeVoltarParaAventura = false;
   int turnoAtual = 1;
   bool vezDoJogador = true;
@@ -397,8 +401,29 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         break;
         
       case EfeitoHabilidade.aumentarEnergia:
-        // Por enquanto só mostra o uso, energia não é usada em batalha
-        descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} pontos usando ${habilidade.nome}';
+        if (isJogador) {
+          // Aumenta energia máxima e energia atual proporcionalmente
+          int energiaMaximaAntes = widget.jogador.energia;
+          int energiaAtualAntes = estado.energiaAtualJogador;
+          int novaEnergiaMaxima = energiaMaximaAntes + habilidade.valorEfetivo;
+          int novaEnergiaAtual = energiaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
+          
+          novoEstado = estado.copyWith(
+            energiaAtualJogador: novaEnergiaAtual,
+          );
+          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
+        } else {
+          // Aumenta energia máxima e energia atual proporcionalmente
+          int energiaMaximaAntes = widget.inimigo.energia;
+          int energiaAtualAntes = estado.energiaAtualInimigo;
+          int novaEnergiaMaxima = energiaMaximaAntes + habilidade.valorEfetivo;
+          int novaEnergiaAtual = energiaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
+          
+          novoEstado = estado.copyWith(
+            energiaAtualInimigo: novaEnergiaAtual,
+          );
+          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
+        }
         break;
         
       default:
@@ -533,6 +558,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   void _finalizarBatalha(String vencedorBatalha) {
+    print('🏁 [BatalhaScreen] Finalizando batalha com vencedor: $vencedorBatalha');
     setState(() {
       batalhaConcluida = true;
       vencedor = vencedorBatalha;
@@ -540,6 +566,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Se o jogador venceu, calcular score e gerar item
     if (vencedorBatalha == 'jogador') {
+      print('🎉 [BatalhaScreen] Jogador venceu, processando score e recompensas...');
       _atualizarScoreEGerarItem();
     } else {
       // Se perdeu, salva batalha no histórico sem dar score
@@ -554,6 +581,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<void> _atualizarScoreEGerarItem() async {
+    if (scoreAtualizado) {
+      print('⚠️ [BatalhaScreen] Score já atualizado, ignorando chamada duplicada');
+      return;
+    }
+    scoreAtualizado = true;
+    
     try {
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
@@ -603,6 +636,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<void> _processarEvolucaoEItens() async {
+    if (evolucaoProcessada) {
+      print('⚠️ [BatalhaScreen] Evolução e itens já processados, ignorando chamada duplicada');
+      return;
+    }
+    evolucaoProcessada = true;
+    
     // 1️⃣ Primeiro processa e mostra evolução
     await _processarEvolucaoMonstro();
     
@@ -708,8 +747,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final ganhos = infoEvolucao['ganhos'] as Map<String, dynamic>;
     final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
     
-    await showDialog(
-      context: context,
+    if (mounted) {
+      await showDialog(
+        context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -962,11 +1002,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ],
       ),
     );
+    }
   }
 
   Future<void> _mostrarModalSemEvolucao(Map<String, dynamic> infoSemEvolucao) async {
-    await showDialog(
-      context: context,
+    if (mounted) {
+      await showDialog(
+        context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -1146,13 +1188,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ],
       ),
     );
+    }
   }
 
   Future<void> _mostrarModalEvolucaoHabilidade(Map<String, dynamic> infoEvolucao) async {
     final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
     
-    await showDialog(
-      context: context,
+    if (mounted) {
+      await showDialog(
+        context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -1362,6 +1406,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ],
       ),
     );
+    }
   }
 
   String _nomeAtributo(String atributo) {
@@ -1425,7 +1470,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<void> _gerarEMostrarItem() async {
-    if (itemGerado) return;
+    if (itemGerado) {
+      print('⚠️ [BatalhaScreen] Item já gerado, ignorando chamada duplicada');
+      return;
+    }
     itemGerado = true;
     print('🎁 [BatalhaScreen] Iniciando geração de drop...');
     try {
@@ -1454,9 +1502,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao gerar drop: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao gerar recompensa: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao gerar recompensa: $e')),
+        );
+      }
     }
   }
 
@@ -1557,6 +1607,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
         await repository.salvarHistoricoJogador(historiaAtualizada);
         
+        // Salva a magia também na pasta drops para registro
+        print('🎯 [BatalhaScreen] CHAMANDO _salvarMagiaNaPastaDrops para ${magia.nome} e email $emailJogador');
+        await _salvarMagiaNaPastaDrops(magia, emailJogador);
+        
         print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.displayName}, substituindo ${habilidadeSubstituida.nome}');
       }
 
@@ -1564,9 +1618,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await _finalizarBatalhaComSalvamento();
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao equipar magia: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao equipar magia: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao equipar magia: $e')),
+        );
+      }
     }
   }
 
@@ -1593,6 +1649,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
       await repository.salvarHistoricoJogador(historiaAtualizada);
       debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
+      
+      // Salva o item também na pasta drops para registro
+      print('🎯 [BatalhaScreen] CHAMANDO _salvarItemNaPastaDrops para ${item.nome} e email $emailJogador');
+      await _salvarItemNaPastaDrops(item, emailJogador);
       
       // Após equipar o item, salva tudo e mostra botão para voltar
       await _finalizarBatalhaComSalvamento();
@@ -2447,6 +2507,88 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ],
       ),
     );
+  }
+
+  /// Salva item na pasta drops usando DropsService
+  Future<void> _salvarItemNaPastaDrops(Item item, String email) async {
+    try {
+      print('🔍 [BatalhaScreen] INÍCIO - Salvando item ${item.nome} na pasta drops para $email');
+      
+      final dropsService = DropsService();
+      final dropsAtual = await dropsService.carregarDrops(email) ?? DropJogador(
+        email: email,
+        itens: [],
+        magias: [],
+        ultimaAtualizacao: DateTime.now(),
+      );
+      
+      // Cria descrição baseada nos atributos do item
+      final atributosList = <String>[];
+      if (item.vida > 0) atributosList.add('+${item.vida} Vida');
+      if (item.ataque > 0) atributosList.add('+${item.ataque} Ataque');
+      if (item.defesa > 0) atributosList.add('+${item.defesa} Defesa');
+      if (item.energia > 0) atributosList.add('+${item.energia} Energia');
+      if (item.agilidade > 0) atributosList.add('+${item.agilidade} Agilidade');
+      
+      final descricao = atributosList.isEmpty 
+          ? 'Item de aventura (Tier ${item.tier})' 
+          : '${atributosList.join(', ')} (Tier ${item.tier})';
+      
+      // Cria DropItem a partir do Item
+      final dropItem = DropItem(
+        nome: item.nome,
+        descricao: descricao,
+        tipo: 'equipamento',
+        quantidade: 1,
+        dataObtencao: DateTime.now(),
+        raridade: item.raridade.nome.toLowerCase(),
+      );
+      
+      // Adiciona o item aos drops existentes
+      final dropsAtualizados = dropsAtual.copyWith(
+        itens: [...dropsAtual.itens, dropItem],
+        ultimaAtualizacao: DateTime.now(),
+      );
+      
+      print('📤 [BatalhaScreen] Chamando dropsService.salvarDrops...');
+      await dropsService.salvarDrops(dropsAtualizados);
+      print('✅ [BatalhaScreen] Item ${item.nome} SALVO COM SUCESSO na pasta drops!');
+      
+    } catch (e) {
+      print('❌ [BatalhaScreen] ERRO CAPTURADO ao salvar item na pasta drops: $e');
+      print('📊 [BatalhaScreen] Stack trace: ${StackTrace.current}');
+      // Não propaga o erro para não quebrar o fluxo principal
+    }
+  }
+
+  /// Salva magia na pasta drops usando DropsService
+  Future<void> _salvarMagiaNaPastaDrops(MagiaDrop magia, String email) async {
+    try {
+      print('🔍 [BatalhaScreen] INÍCIO - Salvando magia ${magia.nome} na pasta drops para $email');
+      
+      final dropsService = DropsService();
+      final dropsAtual = await dropsService.carregarDrops(email) ?? DropJogador(
+        email: email,
+        itens: [],
+        magias: [],
+        ultimaAtualizacao: DateTime.now(),
+      );
+      
+      // Adiciona a magia aos drops existentes
+      final dropsAtualizados = dropsAtual.copyWith(
+        magias: [...dropsAtual.magias, magia],
+        ultimaAtualizacao: DateTime.now(),
+      );
+      
+      print('📤 [BatalhaScreen] Chamando dropsService.salvarDrops para magia...');
+      await dropsService.salvarDrops(dropsAtualizados);
+      print('✅ [BatalhaScreen] Magia ${magia.nome} SALVA COM SUCESSO na pasta drops!');
+      
+    } catch (e) {
+      print('❌ [BatalhaScreen] ERRO CAPTURADO ao salvar magia na pasta drops: $e');
+      print('📊 [BatalhaScreen] Stack trace: ${StackTrace.current}');
+      // Não propaga o erro para não quebrar o fluxo principal
+    }
   }
 
 }

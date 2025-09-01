@@ -363,9 +363,25 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
 
       final emailJogador = ref.read(validUserEmailProvider);
       final dropsService = DropsService();
+      final repository = ref.read(aventuraRepositoryProvider);
 
-      // Adiciona recompensas mockadas
-      await dropsService.adicionarRecompensasMockadas(emailJogador);
+      // Carrega histórico atual para calcular score e tier
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      
+      if (historia != null) {
+        // Calcula score baseado no progresso da aventura
+        int scoreReal = _calcularScoreReal(historia);
+        int tierReal = historia.tier;
+        
+        print('🎁 [ConquistasScreen] Gerando prêmios/conquistas do Drive');
+        print('🎯 [ConquistasScreen] Score calculado: $scoreReal, Tier: $tierReal');
+        
+        // Gera prêmios/conquistas baseadas no score real usando planilha do Drive
+        await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, scoreReal, tierReal);
+      } else {
+        print('⚠️ [ConquistasScreen] Histórico não encontrado, usando score padrão');
+        await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, 5, 1);
+      }
 
       // Finaliza aventura atual e inicia nova
       await _finalizarEIniciarNovaAventura();
@@ -581,6 +597,52 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
       print('❌ [ConquistasScreen] Erro ao finalizar e iniciar nova aventura: $e');
       throw e;
     }
+  }
+
+  /// Calcula score real baseado no progresso da aventura
+  int _calcularScoreReal(HistoriaJogador historia) {
+    int score = 0;
+    
+    // Score base por tier (cada tier vale 10 pontos)
+    score += historia.tier * 10;
+    
+    // Score por monstros (cada monstro vale 5 pontos)
+    score += historia.monstros.length * 5;
+    
+    // Score por melhorias dos monstros (só conta se realmente melhoraram)
+    for (var monstro in historia.monstros) {
+      // Score baseado no level do monstro (só se > 1)
+      if (monstro.level > 1) {
+        score += (monstro.level - 1) * 3;
+      }
+      
+      // Score por item equipado (se tiver)
+      if (monstro.itemEquipado != null) {
+        score += 5;
+      }
+      
+      // Score por habilidades melhoradas (só se level > 1)
+      for (var habilidade in monstro.habilidades) {
+        if (habilidade.level > 1) {
+          score += (habilidade.level - 1) * 2;
+        }
+      }
+    }
+    
+    // Score por batalhas realizadas (cada batalha ganha vale 15 pontos)
+    // Só conta se realmente teve batalhas, não inimigos disponíveis
+    score += historia.historicoBatalhas.length * 15;
+    
+    // Score mínimo de 1, máximo de 100 para balanceamento
+    score = score.clamp(1, 100);
+    
+    print('📊 [ConquistasScreen] Score calculado: $score');
+    print('   - Tier: ${historia.tier} × 10 = ${historia.tier * 10}');
+    print('   - Monstros: ${historia.monstros.length} × 5 = ${historia.monstros.length * 5}');
+    print('   - Batalhas ganhas: ${historia.historicoBatalhas.length} × 15 = ${historia.historicoBatalhas.length * 15}');
+    print('   - Levels/itens dos monstros: pontos variáveis');
+    
+    return score;
   }
 }
 

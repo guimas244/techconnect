@@ -244,6 +244,18 @@ class BatalhaService {
         }
         break;
         
+      case EfeitoHabilidade.aumentarEnergia:
+        if (isJogador) {
+          int novaEnergiaAtual = estado.energiaAtualJogador + habilidade.valorEfetivo;
+          novoEstado = estado.copyWith(energiaAtualJogador: novaEnergiaAtual);
+          descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} (${habilidade.nome})';
+        } else {
+          int novaEnergiaAtual = estado.energiaAtualInimigo + habilidade.valorEfetivo;
+          novoEstado = estado.copyWith(energiaAtualInimigo: novaEnergiaAtual);
+          descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} (${habilidade.nome})';
+        }
+        break;
+        
       default:
         descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valorEfetivo})';
         break;
