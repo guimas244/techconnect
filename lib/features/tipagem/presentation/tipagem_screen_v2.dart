@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../data/tipagem_repository.dart';
+import '../providers/tipagem_provider.dart';
 import 'tipagem_inicializacao_screen.dart';
 
 class TipagemScreen extends ConsumerStatefulWidget {
@@ -75,6 +76,12 @@ class _TipagemScreenState extends ConsumerState<TipagemScreen> {
               );
               
               await _repository.atualizarTodosDoDrive();
+              
+              // Invalida todos os providers de tipagem para forçar reload
+              for (final tipo in Tipo.values) {
+                ref.invalidate(tipagemDataProvider(tipo));
+                ref.invalidate(tipagemEditProvider(tipo));
+              }
               
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
