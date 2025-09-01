@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/ranking_entry.dart';
 import '../services/ranking_service.dart';
 import '../../../core/providers/user_provider.dart';
+import '../../../shared/models/tipo_enum.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -164,6 +165,26 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       default:
         return Icons.person;
     }
+  }
+
+  /// Gera uma imagem de monstro aleatória baseada no runId
+  String _obterImagemMonstroAleatoria(String runId) {
+    // Lista dos 30 tipos disponíveis (excluindo desconhecido)
+    final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
+    
+    // Gera um índice baseado no runId para sempre dar o mesmo resultado
+    final hash = runId.hashCode.abs();
+    final indice = hash % tiposDisponiveis.length;
+    final tipoEscolhido = tiposDisponiveis[indice];
+    
+    return 'assets/monstros_aventura/${tipoEscolhido.name}.png';
+  }
+
+  /// Formata o horário da pontuação
+  String _formatarHorario(DateTime dataHora) {
+    final hora = dataHora.hour.toString().padLeft(2, '0');
+    final minuto = dataHora.minute.toString().padLeft(2, '0');
+    return '$hora:$minuto';
   }
 
   @override
@@ -396,33 +417,52 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                             ),
                                             const SizedBox(width: 16),
                                             
-                                            // Avatar com iniciais
+                                            // Avatar com imagem de monstro
                                             Container(
                                               width: 36,
                                               height: 36,
                                               decoration: BoxDecoration(
                                                 color: isUsuarioAtual 
-                                                    ? Colors.blue.shade600 
-                                                    : Colors.grey.shade600,
+                                                    ? Colors.blue.shade100 
+                                                    : Colors.grey.shade100,
                                                 borderRadius: BorderRadius.circular(18),
+                                                border: Border.all(
+                                                  color: isUsuarioAtual 
+                                                      ? Colors.blue.shade300 
+                                                      : Colors.grey.shade300,
+                                                  width: 1,
+                                                ),
                                               ),
-                                              child: Center(
-                                                child: Text(
-                                                  _obterIniciais(jogador.email),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 12,
-                                                  ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(17),
+                                                child: Image.asset(
+                                                  _obterImagemMonstroAleatoria(jogador.runId),
+                                                  width: 34,
+                                                  height: 34,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    // Fallback para iniciais se a imagem falhar
+                                                    return Center(
+                                                      child: Text(
+                                                        _obterIniciais(jogador.email),
+                                                        style: const TextStyle(
+                                                          color: Colors.grey,
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 10,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
                                                 ),
                                               ),
                                             ),
                                             const SizedBox(width: 12),
                                             
-                                            // Nome do jogador
+                                            // Nome do jogador e horário
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
                                                     jogador.email.split('@')[0],
@@ -433,16 +473,41 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                                           ? Colors.blue.shade800 
                                                           : Colors.black,
                                                     ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
                                                   ),
-                                                  if (isUsuarioAtual)
-                                                    Text(
-                                                      'Você',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.blue.shade600,
-                                                        fontWeight: FontWeight.w500,
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        _formatarHorario(jogador.dataHora),
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.grey.shade600,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
                                                       ),
-                                                    ),
+                                                      if (isUsuarioAtual) ...[
+                                                        Text(
+                                                          ' • ',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors.grey.shade600,
+                                                          ),
+                                                        ),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Você',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors.blue.shade600,
+                                                              fontWeight: FontWeight.w500,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
                                                 ],
                                               ),
                                             ),

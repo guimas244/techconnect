@@ -137,20 +137,8 @@ class RankingService {
       final ranking = await carregarRankingDia(data);
       final ordenadas = ranking.entradasOrdenadas;
       
-      // Retorna apenas o melhor score de cada jogador
-      final Map<String, RankingEntry> melhoresScores = {};
-      
-      for (final entrada in ordenadas) {
-        if (!melhoresScores.containsKey(entrada.email) || 
-            melhoresScores[entrada.email]!.score < entrada.score) {
-          melhoresScores[entrada.email] = entrada;
-        }
-      }
-      
-      final resultado = melhoresScores.values.toList();
-      resultado.sort((a, b) => b.score.compareTo(a.score));
-      
-      return resultado.take(limite).toList();
+      // Retorna todas as entradas (cada runId é uma entrada separada)
+      return ordenadas.take(limite).toList();
       
     } catch (e) {
       print('❌ [RankingService] Erro ao obter top jogadores: $e');
