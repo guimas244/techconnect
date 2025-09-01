@@ -76,10 +76,6 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   void _inicializarBatalha() {
     print('🗡️ [BatalhaScreen] Inicializando batalha...');
     
-    // Determina quem começa baseado na agilidade
-    jogadorComeca = widget.jogador.agilidade >= widget.inimigo.agilidade;
-    vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
-    
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
@@ -89,19 +85,39 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final energiaComItem = widget.jogador.energia + (item?.atributos['energia'] ?? 0);
     final agilidadeComItem = widget.jogador.agilidade + (item?.atributos['agilidade'] ?? 0);
 
+    // Aplica bônus do item equipado e level do inimigo
+    final itemInimigo = widget.inimigo.itemEquipado;
+    final levelMultiplier = 1.0 + (widget.inimigo.level - 1) * 0.1; // 10% por level acima de 1
+    final ataqueInimigoTotal = (widget.inimigo.ataqueTotal * levelMultiplier).round();
+    final defesaInimigoTotal = (widget.inimigo.defesaTotal * levelMultiplier).round();
+    final vidaInimigoTotal = (widget.inimigo.vidaTotal * levelMultiplier).round();
+    final energiaInimigoTotal = (widget.inimigo.energiaTotal * levelMultiplier).round();
+    final agilidadeInimigoTotal = (widget.inimigo.agilidadeTotal * levelMultiplier).round();
+    
+    // Determina quem começa baseado na agilidade
+    jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
+    vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
+    
+    print('📊 [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaComItem AGI=$agilidadeComItem');
+    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
+    print('📊 [Stats] Multiplier level: ${levelMultiplier}x');
+    if (itemInimigo != null) {
+      print('📊 [Item] Inimigo equipado: ${itemInimigo.nome}');
+    }
+
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
       inimigo: widget.inimigo,
       vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
       vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
       vidaMaximaJogador: vidaComItem, // Vida máxima inicial + item
-      vidaMaximaInimigo: widget.inimigo.vida, // Vida máxima inicial
+      vidaMaximaInimigo: vidaInimigoTotal, // Vida máxima + item + level
       energiaAtualJogador: widget.jogador.energiaAtual, // Energia atual do jogador
       energiaAtualInimigo: widget.inimigo.energiaAtual, // Energia atual do inimigo
       ataqueAtualJogador: ataqueComItem,
       defesaAtualJogador: defesaComItem,
-      ataqueAtualInimigo: widget.inimigo.ataque,
-      defesaAtualInimigo: widget.inimigo.defesa,
+      ataqueAtualInimigo: ataqueInimigoTotal, // Ataque + item + level
+      defesaAtualInimigo: defesaInimigoTotal, // Defesa + item + level
       habilidadesUsadasJogador: [],
       habilidadesUsadasInimigo: [],
       historicoAcoes: [],
@@ -125,8 +141,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _executarRodadaCompletatAsync() async {
     if (estadoAtual == null || batalhaConcluida) return;
     
-    // Determina ordem dos ataques baseada na agilidade
-    bool jogadorPrimeiro = widget.jogador.agilidade >= widget.inimigo.agilidade;
+    // Determina ordem dos ataques baseada na agilidade (usa a mesma lógica da inicialização)
+    bool jogadorPrimeiro = jogadorComeca;
     
     print('🎯 [Rodada] Iniciando rodada completa - ${jogadorPrimeiro ? "Jogador" : "Inimigo"} ataca primeiro');
     
@@ -469,9 +485,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
 
-    // Cria descrição detalhada com informações de tipo
+    // Cria descrição detalhada com informações de tipo e stats
     String efetividadeTexto = _obterTextoEfetividade(efetividade);
-    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    
+    // Monta info de ataque mostrando bônus
+    String ataqueInfo = ataqueAtacante.toString();
+    if (isJogador && widget.jogador.itemEquipado != null) {
+      final bonusAtaque = widget.jogador.itemEquipado!.ataque ?? 0;
+      if (bonusAtaque > 0) {
+        ataqueInfo = '${widget.jogador.ataque}+$bonusAtaque=$ataqueAtacante';
+      }
+    } else if (!isJogador && (widget.inimigo.itemEquipado != null || widget.inimigo.level > 1)) {
+      final baseAtaque = widget.inimigo.ataque;
+      final bonusItem = widget.inimigo.itemEquipado?.ataque ?? 0;
+      final levelMult = 1.0 + (widget.inimigo.level - 1) * 0.1;
+      if (widget.inimigo.level > 1) {
+        ataqueInfo = '$baseAtaque${bonusItem > 0 ? '+$bonusItem' : ''}×${levelMult.toStringAsFixed(1)}=$ataqueAtacante';
+      } else if (bonusItem > 0) {
+        ataqueInfo = '$baseAtaque+$bonusItem=$ataqueAtacante';
+      }
+    }
+    
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona mensagem especial se aplicou dano mínimo mágico
     if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
@@ -1966,7 +2001,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             vidaAtual: estadoAtual!.vidaAtualInimigo,
             vidaMaxima: estadoAtual!.vidaMaximaInimigo, // Usa vida máxima com buffs
             energiaAtual: estadoAtual!.energiaAtualInimigo,
-            energiaMaxima: widget.inimigo.energia, // Energia real do inimigo
+            energiaMaxima: estadoAtual!.inimigo.energia, // Energia do inimigo (pode usar base ou calculada)
             cor: Colors.red,
             isJogador: false,
           ),

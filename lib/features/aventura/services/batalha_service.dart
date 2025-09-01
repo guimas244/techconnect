@@ -19,18 +19,35 @@ class BatalhaService {
   }) async {
     print('🗡️ [Batalha] Iniciando batalha: ${jogador.tipo.displayName} vs ${inimigo.tipo.displayName}');
     
+    // Calcula stats com itens e level
+    final itemJogador = jogador.itemEquipado;
+    final ataqueJogadorTotal = jogador.ataque + (itemJogador?.ataque ?? 0);
+    final defesaJogadorTotal = jogador.defesa + (itemJogador?.defesa ?? 0);
+    final vidaJogadorTotal = jogador.vida + (itemJogador?.vida ?? 0);
+    final agilidadeJogadorTotal = jogador.agilidade + (itemJogador?.agilidade ?? 0);
+    
+    // Aplica level e item do inimigo
+    final levelMultiplier = 1.0 + (inimigo.level - 1) * 0.1; // 10% por level acima de 1
+    final ataqueInimigoTotal = (inimigo.ataqueTotal * levelMultiplier).round();
+    final defesaInimigoTotal = (inimigo.defesaTotal * levelMultiplier).round();
+    final vidaInimigoTotal = (inimigo.vidaTotal * levelMultiplier).round();
+    final agilidadeInimigoTotal = (inimigo.agilidadeTotal * levelMultiplier).round();
+    
+    print('📊 [BatalhaService] Jogador: ATK=$ataqueJogadorTotal DEF=$defesaJogadorTotal HP=$vidaJogadorTotal AGI=$agilidadeJogadorTotal');
+    print('📊 [BatalhaService] Inimigo Lv${inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
+    
     // Estado inicial da batalha
     EstadoBatalha estado = EstadoBatalha(
       jogador: jogador,
       inimigo: inimigo,
-      vidaAtualJogador: jogador.vida,
-      vidaAtualInimigo: inimigo.vida,
-      vidaMaximaJogador: jogador.vida, // Vida máxima inicial igual à vida base
-      vidaMaximaInimigo: inimigo.vida, // Vida máxima inicial igual à vida base
-      ataqueAtualJogador: jogador.ataque,
-      defesaAtualJogador: jogador.defesa,
-      ataqueAtualInimigo: inimigo.ataque,
-      defesaAtualInimigo: inimigo.defesa,
+      vidaAtualJogador: jogador.vidaAtual, // Usa vida atual
+      vidaAtualInimigo: inimigo.vidaAtual, // Usa vida atual
+      vidaMaximaJogador: vidaJogadorTotal, // Vida + item
+      vidaMaximaInimigo: vidaInimigoTotal, // Vida + item + level
+      ataqueAtualJogador: ataqueJogadorTotal, // Ataque + item
+      defesaAtualJogador: defesaJogadorTotal, // Defesa + item
+      ataqueAtualInimigo: ataqueInimigoTotal, // Ataque + item + level
+      defesaAtualInimigo: defesaInimigoTotal, // Defesa + item + level
       energiaAtualJogador: jogador.energiaAtual, // Energia atual do jogador
       energiaAtualInimigo: inimigo.energiaAtual, // Energia atual do inimigo
       habilidadesUsadasJogador: [],
@@ -41,8 +58,8 @@ class BatalhaService {
     String vencedor = '';
     
     // Determina quem começa baseado na agilidade
-    bool jogadorComeca = jogador.agilidade >= inimigo.agilidade;
-    print('🏃 [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa (agilidade: ${jogadorComeca ? jogador.agilidade : inimigo.agilidade})');
+    bool jogadorComeca = agilidadeJogadorTotal >= agilidadeInimigoTotal;
+    print('🏃 [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa (agilidade: ${jogadorComeca ? agilidadeJogadorTotal : agilidadeInimigoTotal})');
     
     int turno = 1;
     
@@ -335,7 +352,31 @@ class BatalhaService {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
-    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueAtacante ataque) - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    // Monta descrição mais detalhada mostrando stats totais
+    String ataqueInfo = ataqueAtacante.toString();
+    String defesaInfo = defesaAlvo.toString();
+    
+    // Se é jogador, mostra se tem bônus de item
+    if (isJogador && estado.jogador.itemEquipado != null) {
+      final bonusAtaque = estado.jogador.itemEquipado!.ataque ?? 0;
+      if (bonusAtaque > 0) {
+        ataqueInfo = '${estado.jogador.ataque}+$bonusAtaque=$ataqueAtacante';
+      }
+    }
+    
+    // Se é inimigo, mostra se tem bônus de item/level
+    if (!isJogador && (estado.inimigo.itemEquipado != null || estado.inimigo.level > 1)) {
+      final baseAtaque = estado.inimigo.ataque;
+      final bonusItem = estado.inimigo.itemEquipado?.ataque ?? 0;
+      final levelMult = 1.0 + (estado.inimigo.level - 1) * 0.1;
+      if (estado.inimigo.level > 1) {
+        ataqueInfo = '$baseAtaque${bonusItem > 0 ? '+$bonusItem' : ''}×${levelMult.toStringAsFixed(1)}=$ataqueAtacante';
+      } else if (bonusItem > 0) {
+        ataqueInfo = '$baseAtaque+$bonusItem=$ataqueAtacante';
+      }
+    }
+    
+    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueInfo ataque) - $defesaInfo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(
