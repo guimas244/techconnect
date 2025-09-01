@@ -172,6 +172,20 @@ class AventuraRepository {
     final sucessoSalvamento = await salvarHistoricoJogador(historia);
     if (sucessoSalvamento) {
       print('✅ [Repository] Aventura completa criada e salva com ${monstrosSorteados.length} monstros do jogador e ${monstrosInimigos.length} inimigos');
+      
+      // Registra a nova aventura no ranking com score inicial 0
+      print('🏆 [Repository] Registrando nova aventura no ranking...');
+      try {
+        await _rankingService.atualizarRanking(
+          runId: runId,
+          email: email,
+          score: 0, // Score inicial é 0 quando cria a aventura
+        );
+        print('✅ [Repository] Aventura registrada no ranking com sucesso');
+      } catch (e) {
+        print('⚠️ [Repository] Erro ao registrar no ranking: $e (continuando normalmente)');
+        // Não interrompe o fluxo se falhar o registro no ranking
+      }
     } else {
       print('❌ [Repository] ERRO: Falha ao salvar aventura no Drive!');
       throw Exception('Falha ao salvar aventura no Drive');
@@ -414,8 +428,8 @@ class AventuraRepository {
     try {
       print('🏆 [Repository] Atualizando ranking para: ${historia.email} - Score: ${historia.score} - RunId: ${historia.runId}');
       
-      // Só atualiza o ranking se tiver runId e score > 0
-      if (historia.runId.isNotEmpty && historia.score > 0) {
+      // Só atualiza o ranking se tiver runId (score pode ser 0)
+      if (historia.runId.isNotEmpty) {
         await _rankingService.atualizarRanking(
           runId: historia.runId,
           email: historia.email,
@@ -423,7 +437,7 @@ class AventuraRepository {
         );
         print('✅ [Repository] Ranking atualizado com sucesso');
       } else {
-        print('⚠️ [Repository] Ranking não atualizado: runId=${historia.runId}, score=${historia.score}');
+        print('⚠️ [Repository] Ranking não atualizado: runId está vazio (${historia.runId})');
       }
     } catch (e) {
       print('❌ [Repository] Erro ao atualizar ranking: $e');

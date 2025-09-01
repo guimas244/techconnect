@@ -31,6 +31,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
   }
 
   Future<void> _carregarRanking() async {
+    if (!mounted) return;
+    
     setState(() {
       _carregando = true;
       _erro = null;
@@ -40,12 +42,16 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       final topJogadores = await _rankingService.getTopJogadores(_dataAtual, limite: 50);
       final estatisticas = await _rankingService.getEstatisticasDia(_dataAtual);
 
+      if (!mounted) return;
+      
       setState(() {
         _topJogadores = topJogadores;
         _estatisticas = estatisticas;
         _carregando = false;
       });
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _erro = 'Erro ao carregar ranking: $e';
         _carregando = false;
@@ -54,6 +60,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
   }
 
   void _voltarDia() {
+    if (!mounted) return;
+    
     setState(() {
       _dataAtual = _dataAtual.subtract(const Duration(days: 1));
     });
@@ -61,6 +69,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
   }
 
   void _avancarDia() {
+    if (!mounted) return;
+    
     final hoje = DateTime.now();
     final hojeSemHora = DateTime(hoje.year, hoje.month, hoje.day);
     
@@ -73,6 +83,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
   }
 
   void _irParaHoje() {
+    if (!mounted) return;
+    
     final agora = _rankingService.agora;
     setState(() {
       _dataAtual = DateTime(agora.year, agora.month, agora.day);
