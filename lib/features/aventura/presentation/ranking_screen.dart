@@ -5,6 +5,7 @@ import '../models/ranking_entry.dart';
 import '../services/ranking_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../../../core/config/version_config.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -465,7 +466,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
-                                                    jogador.email.split('@')[0],
+                                                    _formatarNomeJogador(jogador.email),
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: 16,
@@ -474,7 +475,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                                           : Colors.black,
                                                     ),
                                                     overflow: TextOverflow.ellipsis,
-                                                    maxLines: 1,
+                                                    maxLines: 2,
                                                   ),
                                                   Row(
                                                     children: [
@@ -566,5 +567,27 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
         ),
       ],
     );
+  }
+
+  String _formatarNomeJogador(String emailCompleto) {
+    // Extrai o nome antes do @ e remove números/caracteres especiais
+    String nomeBase = emailCompleto.split('@')[0];
+    
+    // Verifica se tem versão no formato "nome - versão"
+    if (emailCompleto.contains(' - ')) {
+      String versaoInfo = emailCompleto.split(' - ').sublist(1).join(' - ');
+      String nomeJogador = VersionConfig.extractPlayerNameOnly(emailCompleto).split('@')[0];
+      
+      // Verifica se é downgrade
+      if (versaoInfo.contains('downgrade')) {
+        String versao = versaoInfo.replaceAll(' downgrade', '');
+        return '$nomeJogador\nv$versao downgrade';
+      } else {
+        return '$nomeJogador\nv$versaoInfo';
+      }
+    }
+    
+    // Se não tem versão, consideramos 1.0
+    return '$nomeBase\nv1.0';
   }
 }

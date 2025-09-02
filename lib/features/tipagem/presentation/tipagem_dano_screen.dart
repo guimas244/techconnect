@@ -305,8 +305,8 @@ class TipagemDanoScreen extends ConsumerWidget {
                         child: Slider(
                           value: valor,
                           min: 0.0,
-                          max: 2.0,
-                          divisions: 20,
+                          max: 5.0,
+                          divisions: 50,
                           // Desabilita o slider se edição estiver desabilitada
                           onChanged: DeveloperConfig.ENABLE_TYPE_EDITING 
                               ? (novoValor) {
@@ -333,7 +333,7 @@ class TipagemDanoScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            '2.0x',
+                            '5.0x',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -357,7 +357,10 @@ class TipagemDanoScreen extends ConsumerWidget {
     if (value < 1.0) return Colors.orange;
     if (value == 1.0) return Colors.grey;
     if (value < 1.5) return Colors.red;
-    return Colors.red.shade800;
+    if (value < 2.5) return Colors.red.shade800;
+    if (value < 3.5) return Colors.purple;
+    if (value < 4.5) return Colors.purple.shade800;
+    return Colors.black;
   }
 
   String _getEffectText(double value) {
@@ -366,7 +369,14 @@ class TipagemDanoScreen extends ConsumerWidget {
     if (value < 1.0) return 'Resistente';
     if (value == 1.0) return 'Normal';
     if (value < 1.5) return 'Fraco';
-    return 'Muito Fraco';
+    if (value < 2.0) return 'Muito Fraco';
+    if (value < 2.5) return 'Extremamente Fraco';
+    if (value < 3.0) return 'Devastador';
+    if (value < 3.5) return 'Fraqueza Extrema';
+    if (value < 4.0) return 'Vulnerabilidade Total';
+    if (value < 4.5) return 'Resistência Nula';
+    if (value < 5.0) return 'Defesa de Papel';
+    return 'Insignificante';
   }
 
   // Método para salvar no Google Drive

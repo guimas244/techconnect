@@ -217,6 +217,33 @@ class RegrasScreen extends StatelessWidget {
             const SizedBox(height: 24),
             ExpansionTile(
               title: const Text(
+                'Sistema de Efetividade de Tipos',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              initiallyExpanded: false,
+              children: [
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    'O sistema de efetividade determina o dano causado entre diferentes tipos de monstros:',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildEfetividadeMultiplicadores(),
+                const SizedBox(height: 16),
+                _buildEfetividadeExemplos(),
+                const SizedBox(height: 16),
+                Text(
+                  'A efetividade varia de 0.0x (Imune) até 5.0x (Insignificante), criando estratégias baseadas em tipos.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ExpansionTile(
+              title: const Text(
                 'Sistema de Levels e Evolução',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
@@ -1163,6 +1190,104 @@ class RegrasScreen extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEfetividadeMultiplicadores() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.indigo.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.indigo.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Multiplicadores de Efetividade:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          _buildEfetividadeItem('0.0x', 'Imune', Colors.green.shade700),
+          _buildEfetividadeItem('< 0.5x', 'Muito Resistente', Colors.green),
+          _buildEfetividadeItem('< 1.0x', 'Resistente', Colors.orange),
+          _buildEfetividadeItem('1.0x', 'Normal', Colors.grey),
+          _buildEfetividadeItem('< 1.5x', 'Fraco', Colors.red),
+          _buildEfetividadeItem('< 2.0x', 'Muito Fraco', Colors.red.shade800),
+          _buildEfetividadeItem('< 2.5x', 'Extremamente Fraco', Colors.red.shade800),
+          _buildEfetividadeItem('< 3.0x', 'Devastador', Colors.red.shade800),
+          _buildEfetividadeItem('< 3.5x', 'Fraqueza Extrema', Colors.purple),
+          _buildEfetividadeItem('< 4.0x', 'Vulnerabilidade Total', Colors.purple),
+          _buildEfetividadeItem('< 4.5x', 'Resistência Nula', Colors.purple.shade800),
+          _buildEfetividadeItem('< 5.0x', 'Defesa de Papel', Colors.purple.shade800),
+          _buildEfetividadeItem('≥ 5.0x', 'Insignificante', Colors.black),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEfetividadeItem(String multiplicador, String descricao, Color cor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            child: Text(
+              multiplicador,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: cor,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              descricao,
+              style: TextStyle(fontSize: 14, color: cor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEfetividadeExemplos() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.cyan.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.cyan.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Como Funciona:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text('• O dano base é multiplicado pela efetividade'),
+          Text('• Exemplo: 30 de dano × 2.5x = 75 de dano final'),
+          Text('• Imunidade (0.0x) bloqueia completamente o dano'),
+          Text('• Habilidades ofensivas têm dano mínimo de 5 (exceto imunes)'),
+          Text('• Resistência alta pode reduzir drasticamente o dano'),
+          const SizedBox(height: 12),
+          Text(
+            'Estratégia:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text('• Use tipos vantajosos para maximizar dano'),
+          Text('• Evite ataques contra tipos resistentes'),
+          Text('• Monstros com duplo tipo têm defesas complexas'),
+          Text('• Planeje suas equipes considerando as efetividades'),
         ],
       ),
     );

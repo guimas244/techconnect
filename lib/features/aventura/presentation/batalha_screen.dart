@@ -490,8 +490,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Aplica efetividade ao dano
     int danoComTipo = (danoComAtaque * efetividade).round();
     
-    // Define dano mínimo baseado no tipo de habilidade
-    int danoMinimo = (habilidade.tipo == TipoHabilidade.ofensiva) ? 5 : 1;
+    // Verifica imunidade primeiro (efetividade = 0.0)
+    if (efetividade == 0.0) {
+      danoComTipo = 0;
+    }
+    
+    // Define dano mínimo baseado no tipo de habilidade (só se não for imune)
+    int danoMinimo = (efetividade == 0.0) ? 0 : (habilidade.tipo == TipoHabilidade.ofensiva) ? 5 : 1;
     int danoFinal = (danoComTipo - defesaAlvo).clamp(danoMinimo, danoComTipo);
 
     // Aplica dano
@@ -533,8 +538,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
-    // Adiciona mensagem especial se aplicou dano mínimo mágico
-    if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
+    // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
+    if (efetividade == 0.0) {
+      descricao += ' (imune - nenhum dano foi causado)';
+    } else if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
       descricao += ' (a habilidade causou 5 de dano penetrante)';
     }
 
@@ -1955,12 +1962,19 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   
   /// Obtém o texto descritivo da efetividade
   String _obterTextoEfetividade(double efetividade) {
-    if (efetividade >= 2.0) return '(Super Efetivo!)';
-    if (efetividade > 1.0) return '(Efetivo)';
+    if (efetividade == 0.0) return '(Imune)';
+    if (efetividade < 0.5) return '(Muito Resistente)';
+    if (efetividade < 1.0) return '(Resistente)';
     if (efetividade == 1.0) return '(Normal)';
-    if (efetividade > 0.5) return '(Pouco Efetivo)';
-    if (efetividade > 0.0) return '(Não Muito Efetivo)';
-    return '(Não Afeta)';
+    if (efetividade < 1.5) return '(Fraco)';
+    if (efetividade < 2.0) return '(Muito Fraco)';
+    if (efetividade < 2.5) return '(Extremamente Fraco)';
+    if (efetividade < 3.0) return '(Devastador)';
+    if (efetividade < 3.5) return '(Fraqueza Extrema)';
+    if (efetividade < 4.0) return '(Vulnerabilidade Total)';
+    if (efetividade < 4.5) return '(Resistência Nula)';
+    if (efetividade < 5.0) return '(Defesa de Papel)';
+    return '(Insignificante)';
   }
 
   @override

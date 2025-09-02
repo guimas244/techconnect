@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import '../models/ranking_entry.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../../core/config/version_config.dart';
 
 class RankingService {
   static final RankingService _instance = RankingService._internal();
@@ -51,16 +52,42 @@ class RankingService {
       
       print('🏆 [RankingService] Atualizando ranking para $email - Score: $score - RunId: $runId');
       
+      // Verifica se já existe uma entrada para este email no ranking do dia
+      final rankingDiario = await carregarRankingDia(dataSemHora);
+      final entradaExistente = rankingDiario.entradas.where((e) => VersionConfig.extractPlayerNameOnly(e.email) == VersionConfig.extractPlayerNameOnly(email)).firstOrNull;
+      
+      String emailComVersao = email;
+      String versaoParaSalvar = VersionConfig.currentVersion;
+      
+      if (entradaExistente != null) {
+        // Já existe entrada, verifica versionamento
+        final versaoExistente = entradaExistente.version;
+        final nomeJogador = VersionConfig.extractPlayerNameOnly(email);
+        
+        if (VersionConfig.compareVersions(VersionConfig.currentVersion, versaoExistente) < 0) {
+          // Downgrade detectado
+          emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, VersionConfig.currentVersion, isDowngrade: true);
+          versaoParaSalvar = VersionConfig.currentVersion;
+        } else if (VersionConfig.compareVersions(VersionConfig.currentVersion, versaoExistente) >= 0) {
+          // Versão igual ou superior, mantém a versão mais alta já salva
+          emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, versaoExistente);
+          versaoParaSalvar = versaoExistente;
+        }
+      } else {
+        // Primeira entrada, salva com versão atual
+        final nomeJogador = VersionConfig.extractPlayerNameOnly(email);
+        emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, VersionConfig.currentVersion);
+        versaoParaSalvar = VersionConfig.currentVersion;
+      }
+
       // Cria nova entrada de ranking
       final novaEntrada = RankingEntry(
         runId: runId,
-        email: email,
+        email: emailComVersao,
         score: score,
         dataHora: dataHoraFinal,
+        version: versaoParaSalvar,
       );
-
-      // Carrega ranking do dia (se existir)
-      final rankingDiario = await carregarRankingDia(dataSemHora);
 
       // Adiciona ou atualiza a entrada
       final rankingAtualizado = rankingDiario.adicionarOuAtualizar(novaEntrada);

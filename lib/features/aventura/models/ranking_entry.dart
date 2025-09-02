@@ -3,12 +3,14 @@ class RankingEntry {
   final String email; // Email do jogador
   final int score; // Score obtido
   final DateTime dataHora; // Data e hora em horário de Brasília
+  final String version; // Versão do jogo quando foi salvo
 
   const RankingEntry({
     required this.runId,
     required this.email,
     required this.score,
     required this.dataHora,
+    required this.version,
   });
 
   factory RankingEntry.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class RankingEntry {
       email: json['email'] ?? '',
       score: json['score'] ?? 0,
       dataHora: DateTime.parse(json['dataHora']),
+      version: json['version'] ?? '1.0', // Versão padrão para entradas antigas
     );
   }
 
@@ -26,6 +29,7 @@ class RankingEntry {
       'email': email,
       'score': score,
       'dataHora': dataHora.toIso8601String(),
+      'version': version,
     };
   }
 
@@ -34,12 +38,14 @@ class RankingEntry {
     String? email,
     int? score,
     DateTime? dataHora,
+    String? version,
   }) {
     return RankingEntry(
       runId: runId ?? this.runId,
       email: email ?? this.email,
       score: score ?? this.score,
       dataHora: dataHora ?? this.dataHora,
+      version: version ?? this.version,
     );
   }
 
@@ -55,7 +61,7 @@ class RankingEntry {
 
   @override
   String toString() {
-    return 'RankingEntry{runId: $runId, email: $email, score: $score, dataHora: $dataHora}';
+    return 'RankingEntry{runId: $runId, email: $email, score: $score, dataHora: $dataHora, version: $version}';
   }
 }
 
