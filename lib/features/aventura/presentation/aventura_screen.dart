@@ -101,26 +101,36 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             debugPrint('⚠️ [AventuraScreen] Widget não está montado ao tentar atualizar estado');
           }
 
-          // Verifica se a aventura já foi iniciada
-          if (historia.aventuraIniciada) {
-            ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
-            debugPrint('✅ [AventuraScreen] Estado: AVENTURA INICIADA');
+          // Verifica se a aventura já foi iniciada (só se widget ainda estiver montado)
+          if (mounted) {
+            if (historia.aventuraIniciada) {
+              ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+              debugPrint('✅ [AventuraScreen] Estado: AVENTURA INICIADA');
+            } else {
+              ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+              debugPrint('✅ [AventuraScreen] Estado: PODE INICIAR');
+            }
           } else {
-            ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
-            debugPrint('✅ [AventuraScreen] Estado: PODE INICIAR');
+            debugPrint('⚠️ [AventuraScreen] Widget foi descartado, não atualizando estado do provider');
           }
         } else {
-          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
-          debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO (história nula após remoção)');
+          if (mounted) {
+            ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+            debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO (história nula após remoção)');
+          }
         }
       } else {
-        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
-        debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO');
+        if (mounted) {
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+          debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO');
+        }
       }
     } catch (e, stack) {
       debugPrint('❌ [AventuraScreen] Erro na verificação: $e');
       debugPrint('❌ [AventuraScreen] Stacktrace: $stack');
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
+      if (mounted) {
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
+      }
     }
   }
 
