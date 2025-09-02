@@ -559,10 +559,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   void _finalizarBatalha(String vencedorBatalha) {
     print('🏁 [BatalhaScreen] Finalizando batalha com vencedor: $vencedorBatalha');
-    setState(() {
-      batalhaConcluida = true;
-      vencedor = vencedorBatalha;
-    });
+    if (mounted) {
+      setState(() {
+        batalhaConcluida = true;
+        vencedor = vencedorBatalha;
+      });
+    }
     
     // Se o jogador venceu, calcular score e gerar item
     if (vencedorBatalha == 'jogador') {
@@ -572,9 +574,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Se perdeu, salva batalha no histórico sem dar score
       _salvarBatalhaDerrota().then((_) {
         _salvarResultadoNoDrive().then((_) {
-          setState(() {
-            podeVoltarParaAventura = true;
-          });
+          if (mounted) {
+            setState(() {
+              podeVoltarParaAventura = true;
+            });
+          }
         });
       });
     }
@@ -1679,9 +1683,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _salvarResultadoNoDrive() async {
     if (salvandoResultado || estadoAtual == null) return;
     
-    setState(() {
-      salvandoResultado = true;
-    });
+    if (mounted) {
+      setState(() {
+        salvandoResultado = true;
+      });
+    }
     
     try {
       print('💾 [BatalhaScreen] SAVE FIRST: Salvando resultado no Drive...');
