@@ -7,6 +7,7 @@ import '../../../core/providers/user_provider.dart';
 import '../services/drops_service.dart';
 import '../data/aventura_repository.dart';
 import '../providers/aventura_provider.dart';
+import '../../../core/services/google_drive_service.dart';
 
 class ConquistasScreen extends ConsumerStatefulWidget {
   const ConquistasScreen({super.key});
@@ -16,6 +17,16 @@ class ConquistasScreen extends ConsumerStatefulWidget {
 }
 
 class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
+  bool _receberRecompensasProcessando = false;
+  bool _podeReceberRecompensas = false;
+  int _scoreAtual = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _verificarSePoDeReceberRecompensas();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,19 +137,21 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                         color: Colors.transparent,
                                         child: InkWell(
                                           borderRadius: BorderRadius.circular(16),
-                                          onTap: _receberRecompensas,
-                                          splashColor: Colors.orange.shade100,
+                                          onTap: (_podeReceberRecompensas && !_receberRecompensasProcessando) ? _receberRecompensas : null,
+                                          splashColor: _podeReceberRecompensas ? Colors.orange.shade100 : null,
                                           child: Container(
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
-                                                colors: [Colors.orange.shade400, Colors.red.shade400],
+                                                colors: _podeReceberRecompensas 
+                                                    ? [Colors.orange.shade400, Colors.red.shade400]
+                                                    : [Colors.grey.shade400, Colors.grey.shade500],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
                                               borderRadius: BorderRadius.circular(16),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.orange.withOpacity(0.18),
+                                                  color: (_podeReceberRecompensas ? Colors.orange : Colors.grey).withOpacity(0.18),
                                                   blurRadius: 12,
                                                   offset: const Offset(0, 6),
                                                 ),
@@ -151,11 +164,29 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                                 crossAxisAlignment: WrapCrossAlignment.center,
                                                 spacing: 10,
                                                 children: [
-                                                  Icon(Icons.card_giftcard, color: Colors.white, size: 26),
+                                                  if (_receberRecompensasProcessando)
+                                                    SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child: CircularProgressIndicator(
+                                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                        strokeWidth: 2.5,
+                                                      ),
+                                                    )
+                                                  else
+                                                    Icon(
+                                                      _podeReceberRecompensas ? Icons.card_giftcard : Icons.block,
+                                                      color: Colors.white,
+                                                      size: 26,
+                                                    ),
                                                   Text(
-                                                    'RECEBER RECOMPENSAS',
+                                                    _receberRecompensasProcessando 
+                                                        ? 'PROCESSANDO...'
+                                                        : (_podeReceberRecompensas 
+                                                            ? 'RECEBER RECOMPENSAS'
+                                                            : 'SEM PROGRESSO (Score: $_scoreAtual)'),
                                                     style: const TextStyle(
-                                                      fontSize: 18,
+                                                      fontSize: 16,
                                                       fontWeight: FontWeight.bold,
                                                       color: Colors.white,
                                                       letterSpacing: 1.1,
@@ -238,7 +269,48 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
     );
   }
 
+  Future<void> _verificarSePoDeReceberRecompensas() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      
+      if (historia != null) {
+        final scoreCalculado = _calcularScoreReal(historia);
+        
+        setState(() {
+          _scoreAtual = scoreCalculado;
+          _podeReceberRecompensas = scoreCalculado > 0;
+        });
+        
+        print('📊 [ConquistasScreen] Verificação: Score $_scoreAtual, Pode receber: $_podeReceberRecompensas');
+      } else {
+        setState(() {
+          _scoreAtual = 0;
+          _podeReceberRecompensas = false;
+        });
+        
+        print('📊 [ConquistasScreen] Verificação: Sem histórico, não pode receber recompensas');
+      }
+    } catch (e) {
+      print('❌ [ConquistasScreen] Erro na verificação: $e');
+      setState(() {
+        _scoreAtual = 0;
+        _podeReceberRecompensas = false;
+      });
+    }
+  }
+
   Future<void> _receberRecompensas() async {
+    if (!_podeReceberRecompensas || _receberRecompensasProcessando) {
+      return;
+    }
+
+    setState(() {
+      _receberRecompensasProcessando = true;
+    });
+    
     try {
       // Mostra confirmação antes de finalizar aventura
       final bool? confirmar = await showDialog<bool>(
@@ -366,7 +438,19 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
       final repository = ref.read(aventuraRepositoryProvider);
 
       // Carrega histórico atual para calcular score e tier
-      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      HistoriaJogador? historia;
+      try {
+        historia = await repository.carregarHistoricoJogador(emailJogador);
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          print('🔄 [ConquistasScreen] Erro 401 detectado, renovando autenticação...');
+          await GoogleDriveService().inicializarConexao();
+          historia = await repository.carregarHistoricoJogador(emailJogador);
+          print('✅ [ConquistasScreen] Histórico carregado após renovação da autenticação');
+        } else {
+          throw e;
+        }
+      }
       
       if (historia != null) {
         // Calcula score baseado no progresso da aventura
@@ -377,10 +461,32 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
         print('🎯 [ConquistasScreen] Score calculado: $scoreReal, Tier: $tierReal');
         
         // Gera prêmios/conquistas baseadas no score real usando planilha do Drive
-        await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, scoreReal, tierReal);
+        try {
+          await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, scoreReal, tierReal);
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [ConquistasScreen] Erro 401 na geração de prêmios, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, scoreReal, tierReal);
+            print('✅ [ConquistasScreen] Prêmios gerados após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
       } else {
         print('⚠️ [ConquistasScreen] Histórico não encontrado, usando score padrão');
-        await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, 5, 1);
+        try {
+          await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, 5, 1);
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [ConquistasScreen] Erro 401 no score padrão, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await dropsService.adicionarRecompensasBaseadasNoScore(emailJogador, 5, 1);
+            print('✅ [ConquistasScreen] Score padrão processado após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
       }
 
       // Finaliza aventura atual e inicia nova
@@ -504,6 +610,13 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
           ),
         );
       }
+    } finally {
+      // Sempre reabilita o botão, mesmo em caso de erro
+      if (mounted) {
+        setState(() {
+          _receberRecompensasProcessando = false;
+        });
+      }
     }
   }
 
@@ -570,12 +683,37 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
 
       // Carrega o histórico atual para obter o runId
       print('🔍 [ConquistasScreen] Carregando histórico para arquivar...');
-      final historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+      HistoriaJogador? historiaAtual;
+      try {
+        historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          print('🔄 [ConquistasScreen] Erro 401 detectado, renovando autenticação...');
+          await GoogleDriveService().inicializarConexao();
+          historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+          print('✅ [ConquistasScreen] Histórico carregado após renovação da autenticação');
+        } else {
+          throw e;
+        }
+      }
       
       if (historiaAtual != null && historiaAtual.runId.isNotEmpty) {
         print('📦 [ConquistasScreen] RunID encontrado: ${historiaAtual.runId}, iniciando arquivamento...');
         // Arquiva o histórico atual renomeando com o runId
-        final sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+        bool sucessoArquivamento = false;
+        try {
+          sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [ConquistasScreen] Erro 401 no arquivamento, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+            print('✅ [ConquistasScreen] Arquivamento realizado após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
+        
         if (sucessoArquivamento) {
           print('✅ [ConquistasScreen] Histórico arquivado com sucesso com RunID: ${historiaAtual.runId}');
         } else {
@@ -584,8 +722,19 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
       } else {
         print('⚠️ [ConquistasScreen] História nula ou sem RunID (${historiaAtual?.runId}), removendo histórico...');
         // Se não tem runId, remove o histórico (fallback)
-        await repository.removerHistoricoJogador(emailJogador);
-        print('✅ [ConquistasScreen] Histórico removido (sem RunID)');
+        try {
+          await repository.removerHistoricoJogador(emailJogador);
+          print('✅ [ConquistasScreen] Histórico removido (sem RunID)');
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [ConquistasScreen] Erro 401 na remoção, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await repository.removerHistoricoJogador(emailJogador);
+            print('✅ [ConquistasScreen] Histórico removido após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
       }
 
       // Atualiza estado do provider
@@ -603,11 +752,9 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
   int _calcularScoreReal(HistoriaJogador historia) {
     int score = 0;
     
-    // Score base por tier (cada tier vale 10 pontos)
-    score += historia.tier * 10;
-    
-    // Score por monstros (cada monstro vale 5 pontos)
-    score += historia.monstros.length * 5;
+    // Score APENAS por batalhas realizadas (cada batalha ganha vale 15 pontos)
+    // Só conta se realmente teve batalhas, não só ter iniciado aventura
+    score += historia.historicoBatalhas.length * 15;
     
     // Score por melhorias dos monstros (só conta se realmente melhoraram)
     for (var monstro in historia.monstros) {
@@ -629,17 +776,18 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
       }
     }
     
-    // Score por batalhas realizadas (cada batalha ganha vale 15 pontos)
-    // Só conta se realmente teve batalhas, não inimigos disponíveis
-    score += historia.historicoBatalhas.length * 15;
+    // Score bônus por tier alto (só após ter algum progresso real)
+    if (score > 0) {
+      score += historia.tier * 2; // Reduzido de 10 para 2
+    }
     
-    // Score mínimo de 1, máximo de 100 para balanceamento
-    score = score.clamp(1, 100);
+    // Score mínimo é 0 (sem progresso = sem recompensa)
+    score = score.clamp(0, 100);
     
     print('📊 [ConquistasScreen] Score calculado: $score');
-    print('   - Tier: ${historia.tier} × 10 = ${historia.tier * 10}');
-    print('   - Monstros: ${historia.monstros.length} × 5 = ${historia.monstros.length * 5}');
     print('   - Batalhas ganhas: ${historia.historicoBatalhas.length} × 15 = ${historia.historicoBatalhas.length * 15}');
+    print('   - Tier bônus: ${score > 0 ? historia.tier * 2 : 0}');
+    print('   - Monstros: ${historia.monstros.length} (não dá pontos base)');
     print('   - Levels/itens dos monstros: pontos variáveis');
     
     return score;
