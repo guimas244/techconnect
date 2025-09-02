@@ -8,6 +8,7 @@ import '../services/drops_service.dart';
 import '../data/aventura_repository.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../../core/config/developer_config.dart';
 
 class ConquistasScreen extends ConsumerStatefulWidget {
   const ConquistasScreen({super.key});
@@ -19,6 +20,9 @@ class ConquistasScreen extends ConsumerStatefulWidget {
 class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
   bool _receberRecompensasProcessando = false;
   bool _podeReceberRecompensas = false;
+  bool _recomecarAventuraProcessando = false;
+  bool _temAventuraAtiva = false;
+  bool _verificandoEstado = true;
   int _scoreAtual = 0;
 
   @override
@@ -130,19 +134,52 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                     ),
                                     const SizedBox(height: 24),
                                     
-                                    // Botão Receber Recompensas
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        child: InkWell(
+                                    // Loading durante verificação OU botões após carregamento
+                                    if (_verificandoEstado)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(vertical: 40),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
                                           borderRadius: BorderRadius.circular(16),
-                                          onTap: (_podeReceberRecompensas && !_receberRecompensasProcessando) ? _receberRecompensas : null,
-                                          splashColor: _podeReceberRecompensas ? Colors.orange.shade100 : null,
-                                          child: Container(
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            SizedBox(
+                                              width: 32,
+                                              height: 32,
+                                              child: CircularProgressIndicator(
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple.shade600),
+                                                strokeWidth: 3,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'Verificando aventura...',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey.shade600,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else ...[
+                                      // Botão Receber Recompensas
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(16),
+                                            onTap: (DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON && _podeReceberRecompensas && !_receberRecompensasProcessando) ? _receberRecompensas : null,
+                                            splashColor: (DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON && _podeReceberRecompensas) ? Colors.orange.shade100 : null,
+                                            child: Container(
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
-                                                colors: _podeReceberRecompensas 
+                                                colors: (DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON && _podeReceberRecompensas) 
                                                     ? [Colors.orange.shade400, Colors.red.shade400]
                                                     : [Colors.grey.shade400, Colors.grey.shade500],
                                                 begin: Alignment.topLeft,
@@ -151,7 +188,7 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                               borderRadius: BorderRadius.circular(16),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: (_podeReceberRecompensas ? Colors.orange : Colors.grey).withOpacity(0.18),
+                                                  color: ((DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON && _podeReceberRecompensas) ? Colors.orange : Colors.grey).withOpacity(0.18),
                                                   blurRadius: 12,
                                                   offset: const Offset(0, 6),
                                                 ),
@@ -175,16 +212,18 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                                     )
                                                   else
                                                     Icon(
-                                                      _podeReceberRecompensas ? Icons.card_giftcard : Icons.block,
+                                                      (DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON && _podeReceberRecompensas) ? Icons.card_giftcard : Icons.block,
                                                       color: Colors.white,
                                                       size: 26,
                                                     ),
                                                   Text(
                                                     _receberRecompensasProcessando 
                                                         ? 'PROCESSANDO...'
-                                                        : (_podeReceberRecompensas 
+                                                        : (!DeveloperConfig.ENABLE_RECEIVE_REWARDS_BUTTON 
                                                             ? 'RECEBER RECOMPENSAS'
-                                                            : 'SEM PROGRESSO (Score: $_scoreAtual)'),
+                                                            : (_podeReceberRecompensas 
+                                                                ? 'RECEBER RECOMPENSAS'
+                                                                : 'SEM PROGRESSO (Score: $_scoreAtual)')),
                                                     style: const TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.bold,
@@ -202,6 +241,73 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                     
                                     const SizedBox(height: 16),
                                     
+                                    // Botão Recomeçar Aventura
+                                    if (_temAventuraAtiva)
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(16),
+                                            onTap: (_temAventuraAtiva && !_recomecarAventuraProcessando) ? _recomecarAventura : null,
+                                            splashColor: _temAventuraAtiva ? Colors.red.shade100 : null,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: _temAventuraAtiva 
+                                                      ? [Colors.red.shade400, Colors.red.shade600]
+                                                      : [Colors.grey.shade400, Colors.grey.shade500],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                                borderRadius: BorderRadius.circular(16),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: (_temAventuraAtiva ? Colors.red : Colors.grey).withOpacity(0.18),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
+                                                  ),
+                                                ],
+                                              ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                              child: Center(
+                                                child: Wrap(
+                                                  alignment: WrapAlignment.center,
+                                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                                  spacing: 10,
+                                                  children: [
+                                                    if (_recomecarAventuraProcessando)
+                                                      SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child: CircularProgressIndicator(
+                                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                          strokeWidth: 2.5,
+                                                        ),
+                                                      )
+                                                    else
+                                                      Icon(Icons.refresh, color: Colors.white, size: 26),
+                                                    Text(
+                                                      _recomecarAventuraProcessando 
+                                                          ? 'ENCERRANDO...'
+                                                          : 'RECOMEÇAR AVENTURA',
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                        letterSpacing: 1.1,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    
+                                    if (_temAventuraAtiva) const SizedBox(height: 16),
+                                    
                                     // Botão Ver Prêmios
                                     SizedBox(
                                       width: double.infinity,
@@ -209,19 +315,21 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                         color: Colors.transparent,
                                         child: InkWell(
                                           borderRadius: BorderRadius.circular(16),
-                                          onTap: _visualizarDrops,
-                                          splashColor: Colors.purple.shade100,
+                                          onTap: DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON ? _visualizarDrops : null,
+                                          splashColor: DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON ? Colors.purple.shade100 : null,
                                           child: Container(
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
-                                                colors: [Colors.purple.shade400, Colors.indigo.shade400],
+                                                colors: DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON 
+                                                    ? [Colors.purple.shade400, Colors.indigo.shade400]
+                                                    : [Colors.grey.shade400, Colors.grey.shade500],
                                                 begin: Alignment.topLeft,
                                                 end: Alignment.bottomRight,
                                               ),
                                               borderRadius: BorderRadius.circular(16),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.purple.withOpacity(0.18),
+                                                  color: (DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON ? Colors.purple : Colors.grey).withOpacity(0.18),
                                                   blurRadius: 12,
                                                   offset: const Offset(0, 6),
                                                 ),
@@ -234,9 +342,13 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                                 crossAxisAlignment: WrapCrossAlignment.center,
                                                 spacing: 10,
                                                 children: [
-                                                  Icon(Icons.inventory, color: Colors.white, size: 26),
+                                                  Icon(
+                                                    DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON ? Icons.inventory : Icons.block, 
+                                                    color: Colors.white, 
+                                                    size: 26
+                                                  ),
                                                   Text(
-                                                    'VER PRÊMIOS',
+                                                    DeveloperConfig.ENABLE_VIEW_PRIZES_BUTTON ? 'VER PRÊMIOS' : 'VER PRÊMIOS',
                                                     style: const TextStyle(
                                                       fontSize: 18,
                                                       fontWeight: FontWeight.bold,
@@ -251,6 +363,7 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
                                         ),
                                       ),
                                     ),
+                                    ], // Fecha o else dos botões
                                   ],
                                 ),
                               ),
@@ -280,24 +393,30 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
         final scoreCalculado = _calcularScoreReal(historia);
         
         setState(() {
-          _scoreAtual = scoreCalculado;
+          _scoreAtual = historia.score; // Usa o score real da aventura atual
           _podeReceberRecompensas = scoreCalculado > 0;
+          _temAventuraAtiva = true;
+          _verificandoEstado = false;
         });
         
-        print('📊 [ConquistasScreen] Verificação: Score $_scoreAtual, Pode receber: $_podeReceberRecompensas');
+        print('📊 [ConquistasScreen] Verificação: Score $_scoreAtual, Pode receber: $_podeReceberRecompensas, Aventura ativa: $_temAventuraAtiva');
       } else {
         setState(() {
           _scoreAtual = 0;
           _podeReceberRecompensas = false;
+          _temAventuraAtiva = false;
+          _verificandoEstado = false;
         });
         
-        print('📊 [ConquistasScreen] Verificação: Sem histórico, não pode receber recompensas');
+        print('📊 [ConquistasScreen] Verificação: Sem histórico, não pode receber recompensas, sem aventura ativa');
       }
     } catch (e) {
       print('❌ [ConquistasScreen] Erro na verificação: $e');
       setState(() {
         _scoreAtual = 0;
         _podeReceberRecompensas = false;
+        _temAventuraAtiva = false;
+        _verificandoEstado = false;
       });
     }
   }
@@ -617,6 +736,259 @@ class _ConquistasScreenState extends ConsumerState<ConquistasScreen> {
           _receberRecompensasProcessando = false;
         });
       }
+    }
+  }
+
+  Future<void> _recomecarAventura() async {
+    if (!_temAventuraAtiva || _recomecarAventuraProcessando) {
+      return;
+    }
+
+    // Mostra confirmação antes de encerrar aventura
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 350, maxHeight: 400),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [Colors.red.withOpacity(0.1), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: const Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'Recomeçar Aventura',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Sua aventura atual será encerrada PERMANENTEMENTE. O score será registrado no ranking, mas você NÃO receberá recompensas.',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Score atual: $_scoreAtual pontos',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Deseja continuar?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey.shade600,
+                        side: BorderSide(color: Colors.grey.shade300, width: 1),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Recomeçar',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    setState(() {
+      _recomecarAventuraProcessando = true;
+    });
+
+    try {
+      // Mostra loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Registra score no ranking SEM gerar recompensas
+      await _registrarScoreSemRecompensas(emailJogador, repository);
+
+      // Finaliza aventura atual e inicia nova (mesma lógica do receber recompensas)
+      await _finalizarEIniciarNovaAventura();
+
+      // Fecha loading
+      if (mounted) Navigator.of(context).pop();
+
+      // Redireciona para a tela de aventura
+      if (mounted) {
+        context.go('/aventura');
+      }
+
+    } catch (e) {
+      // Fecha loading se aberto
+      if (mounted) Navigator.of(context).pop();
+
+      // Mostra erro
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Erro'),
+              ],
+            ),
+            content: Text('Erro ao recomeçar aventura: $e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      // Sempre reabilita o botão, mesmo em caso de erro
+      if (mounted) {
+        setState(() {
+          _recomecarAventuraProcessando = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _registrarScoreSemRecompensas(String emailJogador, dynamic repository) async {
+    try {
+      // Carrega histórico atual para registrar score
+      HistoriaJogador? historia;
+      try {
+        historia = await repository.carregarHistoricoJogador(emailJogador);
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          print('🔄 [ConquistasScreen] Erro 401 detectado no registro de score, renovando autenticação...');
+          await GoogleDriveService().inicializarConexao();
+          historia = await repository.carregarHistoricoJogador(emailJogador);
+          print('✅ [ConquistasScreen] Histórico carregado após renovação da autenticação');
+        } else {
+          throw e;
+        }
+      }
+      
+      if (historia != null) {
+        int scoreReal = _calcularScoreReal(historia);
+        
+        print('🔄 [ConquistasScreen] Registrando score sem recompensas');
+        print('🎯 [ConquistasScreen] Score calculado: $scoreReal, Tier: ${historia.tier}');
+        
+        // Atualiza apenas o ranking (sem gerar recompensas)
+        try {
+          await repository.atualizarRankingPorScore(historia);
+          print('✅ [ConquistasScreen] Score registrado no ranking com sucesso!');
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [ConquistasScreen] Erro 401 no ranking, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await repository.atualizarRankingPorScore(historia);
+            print('✅ [ConquistasScreen] Score registrado após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        print('⚠️ [ConquistasScreen] Histórico não encontrado para registro de score');
+      }
+    } catch (e) {
+      print('❌ [ConquistasScreen] Erro ao registrar score: $e');
+      throw e;
     }
   }
 
