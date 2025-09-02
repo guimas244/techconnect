@@ -643,7 +643,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
     }
     
-    // Primeiro processa evolução, depois item
+    // Primeiro processa evolução, depois ITENS EQUIPÁVEIS (não drops/prêmios)
     _processarEvolucaoEItens();
   }
 
@@ -1637,6 +1637,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
+  // ==========================================
+  // 🎯 EQUIPAR ITEM NO MONSTRO (NÃO É DROP!)
+  // ==========================================
+  // IMPORTANTE: Esta função EQUIPA o item no monstro
+  // O item NÃO é salvo na pasta "drops/meus prêmios" durante a batalha
+  // Drops/prêmios são salvos APENAS via "Receber Recompensa"
   Future<void> _equiparItemEMonstro(MonstroAventura monstro, Item item) async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
@@ -2533,7 +2539,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
   }
 
-  /// Salva item na pasta drops usando DropsService
+  // ==========================================
+  // ⚠️ FUNÇÃO DESABILITADA - NÃO USAR!
+  // ==========================================
+  // IMPORTANTE: Esta função está DESABILITADA e NÃO deve ser chamada durante batalhas
+  // Itens equipáveis NÃO devem ser salvos na pasta "drops/meus prêmios"
+  // Apenas itens de "Receber Recompensa" devem ir para a pasta drops
+  /// [DESABILITADA] Salva item na pasta drops usando DropsService
   Future<void> _salvarItemNaPastaDrops(Item item, String email) async {
     try {
       print('🔍 [BatalhaScreen] INÍCIO - Salvando item ${item.nome} na pasta drops para $email');
@@ -2585,7 +2597,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
-  /// Salva magia na pasta drops usando DropsService
+  // ==========================================
+  // ⚠️ FUNÇÃO DESABILITADA - NÃO USAR!
+  // ==========================================
+  // IMPORTANTE: Esta função está DESABILITADA e NÃO deve ser chamada durante batalhas
+  // Magias equipáveis NÃO devem ser salvas na pasta "drops/meus prêmios"
+  // Apenas magias de "Receber Recompensa" devem ir para a pasta drops
+  /// [DESABILITADA] Salva magia na pasta drops usando DropsService
   Future<void> _salvarMagiaNaPastaDrops(MagiaDrop magia, String email) async {
     try {
       print('🔍 [BatalhaScreen] INÍCIO - Salvando magia ${magia.nome} na pasta drops para $email');
