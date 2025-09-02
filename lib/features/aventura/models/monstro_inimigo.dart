@@ -48,7 +48,13 @@ class MonstroInimigo {
           : null,
       imagem: json['imagem'] ?? '',
       vida: json['vida'] ?? 50,
-      vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 50, // Se não tem vidaAtual, usa vida
+      vidaAtual: (() {
+        final vidaAtualJson = json['vidaAtual'];
+        final vidaJson = json['vida'] ?? 50;
+        final resultado = vidaAtualJson ?? vidaJson;
+        print('🏥 [DEBUG] MonstroInimigo.fromJson - vidaAtual: $vidaAtualJson, vida: $vidaJson, resultado: $resultado');
+        return resultado;
+      })(),
       energia: json['energia'] ?? 20,
       energiaAtual: json['energiaAtual'] ?? json['energia'] ?? 20, // Se não tem energiaAtual, usa energia
       agilidade: json['agilidade'] ?? 10,

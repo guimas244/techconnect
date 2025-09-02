@@ -14,7 +14,11 @@ enum AtributoJogo {
   habilidadeAumentarVida(min: 10, max: 30),
   habilidadeAumentarEnergia(min: 5, max: 15),
   habilidadeAumentarAtaque(min: 5, max: 15),
-  habilidadeAumentarDefesa(min: 8, max: 20);
+  habilidadeAumentarDefesa(min: 8, max: 20),
+  
+  // Sistema de recuperação de vida na evolução (valores em % da vida máxima)
+  evolucaoRecuperacaoVida(min: 50, max: 50), // Sempre recupera exatamente 50%
+  evolucaoLimiteRecuperacao(min: 50, max: 50); // Limite máximo é 50% da vida máxima
 
   final int min;
   final int max;

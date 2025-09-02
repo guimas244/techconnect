@@ -1704,10 +1704,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final monstrosAtualizados = historia.monstros.map((m) {
         print('  - Comparando com monstro: ${m.tipo} / ${m.tipoExtra} (vida atual: ${m.vidaAtual})');
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-          print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para ${estadoAtual!.vidaAtualJogador}');
-          // Atualiza a vida atual do monstro (seja vitória ou derrota)
+          // Garante que monstros mortos fiquem com vida = 0 (não negativa)
+          final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador;
+          print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
+          
           return m.copyWith(
-            vidaAtual: estadoAtual!.vidaAtualJogador,
+            vidaAtual: vidaFinal,
           );
         }
         return m;
@@ -1717,9 +1719,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final inimigosAtualizados = historia.monstrosInimigos.map((m) {
         if (m.tipo == widget.inimigo.tipo && 
             m.tipoExtra == widget.inimigo.tipoExtra) {
-          // Atualiza a vida atual do inimigo
+          // Garante que inimigos mortos fiquem com vida = 0 (não negativa)
+          final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo;
+          print('🏥 [DEBUG] Inimigo ${m.tipo.displayName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
+          
           return m.copyWith(
-            vidaAtual: estadoAtual!.vidaAtualInimigo,
+            vidaAtual: vidaFinal,
           );
         }
         return m;

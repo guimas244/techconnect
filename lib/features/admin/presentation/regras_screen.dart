@@ -223,6 +223,8 @@ class RegrasScreen extends StatelessWidget {
               initiallyExpanded: false,
               children: [
                 const SizedBox(height: 8),
+                _buildEvolucaoRecuperacaoVida(),
+                const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
@@ -828,6 +830,81 @@ class RegrasScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildEvolucaoRecuperacaoVida() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.pink.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.pink.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.healing, color: Colors.pink.shade700, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Sistema de Recuperação de Vida na Evolução:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '• Ao evoluir, o monstro recupera ${AtributoJogo.evolucaoRecuperacaoVida.min}% da sua vida máxima',
+            style: TextStyle(fontSize: 14),
+          ),
+          Text(
+            '• Recuperação só acontece se a vida atual estiver abaixo de ${AtributoJogo.evolucaoLimiteRecuperacao.min}%',
+            style: TextStyle(fontSize: 14),
+          ),
+          Text(
+            '• Se a vida já estiver acima de ${AtributoJogo.evolucaoLimiteRecuperacao.min}%, não há recuperação',
+            style: TextStyle(fontSize: 14),
+          ),
+          Text(
+            '• Vida negativa é tratada como 0 antes do cálculo',
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.pink.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Exemplos:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '• Monstro com 30/100 HP → Evolui → 80/105 HP (recuperou 50)',
+                  style: TextStyle(fontSize: 12),
+                ),
+                Text(
+                  '• Monstro com 60/100 HP → Evolui → 65/105 HP (sem recuperação)',
+                  style: TextStyle(fontSize: 12),
+                ),
+                Text(
+                  '• Monstro com 0/100 HP → Evolui → 55/105 HP (recuperou de 0 para 50)',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEvolucaoRegras() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -862,6 +939,7 @@ class RegrasScreen extends StatelessWidget {
           Text('• +5 pontos de Vida (sempre)'),
           Text('• +5 pontos de Energia (sempre)'),
           Text('• +5 pontos em 1 atributo aleatório (Ataque, Defesa ou Agilidade)'),
+          Text('• Recuperação de ${AtributoJogo.evolucaoRecuperacaoVida.min}% da vida máxima'),
         ],
       ),
     );

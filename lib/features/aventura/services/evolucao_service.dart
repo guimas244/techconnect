@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/monstro_aventura.dart';
 import '../models/habilidade.dart';
+import '../../../core/models/atributo_jogo_enum.dart';
 
 class EvolucaoService {
   final Random _random = Random();
@@ -63,15 +64,8 @@ class EvolucaoService {
     print('🎯 [Evolução] Atributo sorteado: $atributoSorteado (+5)');
     print('📈 [Evolução] Ganhos: +5 vida, +5 energia, +5 $atributoSorteado');
     
-    // Mantém a vida atual proporcional se o monstro não estava com vida cheia
-    int novaVidaAtual = monstro.vidaAtual;
-    if (monstro.vidaAtual == monstro.vida) {
-      // Se estava com vida cheia, continua com vida cheia
-      novaVidaAtual = novaVida;
-    } else {
-      // Se não estava com vida cheia, ganha +5 na vida atual também
-      novaVidaAtual = (monstro.vidaAtual + 5).clamp(0, novaVida);
-    }
+    // Sistema de recuperação de vida na evolução
+    int novaVidaAtual = _calcularRecuperacaoVida(monstro.vidaAtual, novaVida);
     
     // Mesma lógica para energia
     int novaEnergiaAtual = monstro.energiaAtual;
@@ -337,5 +331,42 @@ class EvolucaoService {
       'motivo': 'level_gap',
       'mensagem': 'muito mais poderoso que o inimigo derrotado',
     };
+  }
+
+  /// Calcula a recuperação de vida na evolução seguindo as regras:
+  /// - Se vida atual <= 0, considera como 0 e então restaura
+  /// - Recupera 50% da vida máxima 
+  /// - Não pode passar de 50% da vida máxima (limite)
+  /// - Se já tem mais que 50%, não recupera
+  int _calcularRecuperacaoVida(int vidaAtual, int vidaMaxima) {
+    // Obtém os valores dos atributos do jogo
+    final percentualRecuperacao = AtributoJogo.evolucaoRecuperacaoVida.min; // 50%
+    final percentualLimite = AtributoJogo.evolucaoLimiteRecuperacao.min; // 50%
+    
+    // Calcula os valores baseados na vida máxima
+    final pontos50Porcento = (vidaMaxima * percentualLimite / 100).round();
+    final pontosRecuperacao = (vidaMaxima * percentualRecuperacao / 100).round();
+    
+    // Se vida estiver negativa, considera como 0
+    final vidaReal = vidaAtual < 0 ? 0 : vidaAtual;
+    
+    print('🏥 [Evolução] Vida atual: $vidaAtual → vida real: $vidaReal');
+    print('🏥 [Evolução] Vida máxima: $vidaMaxima → 50% = $pontos50Porcento pontos');
+    
+    // Se já tem mais que 50%, não recupera
+    if (vidaReal >= pontos50Porcento) {
+      print('🏥 [Evolução] Já tem ${vidaReal}/$vidaMaxima vida (≥50%), não recupera');
+      return vidaReal;
+    }
+    
+    // Calcula a nova vida: vida atual + recuperação
+    final novaVida = vidaReal + pontosRecuperacao;
+    
+    // Não pode passar do limite de 50%
+    final vidaFinal = novaVida > pontos50Porcento ? pontos50Porcento : novaVida;
+    
+    print('🏥 [Evolução] Recuperação: $vidaReal + $pontosRecuperacao = $novaVida → final: $vidaFinal');
+    
+    return vidaFinal;
   }
 }
