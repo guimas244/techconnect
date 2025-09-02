@@ -634,9 +634,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
         );
+        // Salva histórico e atualiza ranking (prêmios serão atualizados apenas via "Receber Recompensa")
         await repository.salvarHistoricoEAtualizarRanking(historiaComScore);
         
-        print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico!');
+        print('✅ [BatalhaScreen] Score atualizado, batalha salva no histórico e ranking atualizado!');
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
@@ -1618,9 +1619,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
         await repository.salvarHistoricoJogador(historiaAtualizada);
         
-        // Salva a magia também na pasta drops para registro
-        print('🎯 [BatalhaScreen] CHAMANDO _salvarMagiaNaPastaDrops para ${magia.nome} e email $emailJogador');
-        await _salvarMagiaNaPastaDrops(magia, emailJogador);
+        // Magia equipada - drops/prêmios serão salvos apenas via "Receber Recompensa"
+        print('🎯 [BatalhaScreen] Magia equipada - não salvando na pasta drops durante batalha');
         
         print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.displayName}, substituindo ${habilidadeSubstituida.nome}');
       }
@@ -1661,9 +1661,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await repository.salvarHistoricoJogador(historiaAtualizada);
       debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
       
-      // Salva o item também na pasta drops para registro
-      print('🎯 [BatalhaScreen] CHAMANDO _salvarItemNaPastaDrops para ${item.nome} e email $emailJogador');
-      await _salvarItemNaPastaDrops(item, emailJogador);
+      // Item equipado - drops/prêmios serão salvos apenas via "Receber Recompensa"
+      print('🎯 [BatalhaScreen] Item equipado - não salvando na pasta drops durante batalha');
       
       // Após equipar o item, salva tudo e mostra botão para voltar
       await _finalizarBatalhaComSalvamento();
