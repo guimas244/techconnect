@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import '../../../core/services/google_drive_service.dart';
 import '../models/drop_jogador.dart';
 import 'excel_reader_service.dart';
@@ -7,6 +8,7 @@ import 'recompensa_service.dart';
 class DropsService {
   final GoogleDriveService _driveService = GoogleDriveService();
   final ExcelReaderService _excelReader = ExcelReaderService();
+  final Random _random = Random();
 
   /// Nome do arquivo de drops para um jogador específico
   String _getDropsFileName(String email) {
@@ -187,7 +189,7 @@ class DropsService {
     
     // Sorteia para a chance restante
     if (chanceRestante > 0) {
-      final numeroSorteado = DateTime.now().millisecondsSinceEpoch % 100; // Random baseado no tempo
+      final numeroSorteado = _random.nextInt(100); // Random verdadeiro
       final ganhouExtra = numeroSorteado < chanceRestante;
       print('🎲 [DropsService] Sorteio extra: $numeroSorteado/100 (precisa < $chanceRestante) → ${ganhouExtra ? 'GANHOU' : 'não ganhou'}');
       if (ganhouExtra) {
@@ -207,7 +209,7 @@ class DropsService {
     print('📊 [DropsService] Super Drop: Score $score ÷ 2 = ${score ~/ 2} × 1% = ${chanceTotal}% (máx 100%)');
     print('📊 [DropsService] Chance final: ${chanceReal}%');
     
-    final numeroSorteado = DateTime.now().millisecondsSinceEpoch % 100; // Random baseado no tempo
+    final numeroSorteado = _random.nextInt(100); // Random verdadeiro
     final ativou = numeroSorteado < chanceReal;
     print('🎲 [DropsService] Sorteio Super Drop: $numeroSorteado/100 (precisa < $chanceReal) → ${ativou ? '⭐ ATIVADO!' : 'não ativado'}');
     
