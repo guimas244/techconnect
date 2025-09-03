@@ -189,5 +189,5 @@ A arquitetura facilita testes:
 
 ---
 
-**Versão**: 1.1.1  
+**Versão**: 1.1.2  
 **Última atualização**: 03/09/2025

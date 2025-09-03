@@ -364,16 +364,16 @@ class GeradorNomesHabilidades {
         'Invoca o poder $tipoElemental para causar $valor de dano mortal'
       ],
       EfeitoHabilidade.aumentarVida: [
-        'Aumenta permanentemente a vida máxima em $valor pontos com energia $tipoElemental',
-        'Fortalece o corpo com poder $tipoElemental, aumentando a vida em $valor',
-        'Canaliza essência $tipoElemental para aumentar a vitalidade em $valor pontos',
-        'Absorve energia $tipoElemental para fortalecer a vida em $valor'
+        'Aumenta temporariamente a vida máxima em $valor pontos durante a batalha com energia $tipoElemental',
+        'Fortalece o corpo com poder $tipoElemental, aumentando a vida em $valor (apenas na batalha)',
+        'Canaliza essência $tipoElemental para aumentar temporariamente a vitalidade em $valor pontos',
+        'Absorve energia $tipoElemental para fortalecer a vida em $valor durante o combate'
       ],
       EfeitoHabilidade.aumentarEnergia: [
-        'Aumenta permanentemente a energia máxima em $valor pontos através do poder $tipoElemental',
-        'Expande as reservas de energia em $valor usando força $tipoElemental',
-        'Canaliza essência $tipoElemental para aumentar energia em $valor pontos',
-        'Absorve poder $tipoElemental para fortalecer a energia em $valor'
+        'Aumenta temporariamente a energia máxima em $valor pontos durante a batalha através do poder $tipoElemental',
+        'Expande as reservas de energia em $valor usando força $tipoElemental (apenas no combate)',
+        'Canaliza essência $tipoElemental para aumentar temporariamente energia em $valor pontos',
+        'Absorve poder $tipoElemental para fortalecer a energia em $valor durante a batalha'
       ],
       EfeitoHabilidade.aumentarAgilidade: [
         'Aumenta permanentemente a agilidade em $valor pontos com velocidade $tipoElemental',

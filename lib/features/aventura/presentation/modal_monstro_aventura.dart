@@ -12,6 +12,7 @@ class ModalMonstroAventura extends StatelessWidget {
   final int? ataqueAtual;
   final int? defesaAtual;
   final int? energiaAtual;
+  final int? energiaMaximaAtual; // Energia máxima com buffs
   final int? vidaMaximaAtual; // Vida máxima com buffs
   final bool isBatalha;
   
@@ -23,6 +24,7 @@ class ModalMonstroAventura extends StatelessWidget {
     this.ataqueAtual,
     this.defesaAtual,
     this.energiaAtual,
+    this.energiaMaximaAtual,
     this.vidaMaximaAtual,
     this.isBatalha = false,
   });
@@ -298,7 +300,7 @@ class ModalMonstroAventura extends StatelessWidget {
                     children: [
                       _buildVidaInfo(), // Nova função para mostrar vida atual/máxima
                       _buildEnergiaInfo(), // Nova função para mostrar energia atual/máxima
-                      _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.green),
+                      _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.purple),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -316,7 +318,7 @@ class ModalMonstroAventura extends StatelessWidget {
                         'Defesa', 
                         isBatalha && defesaAtual != null ? defesaAtual! : monstro.defesa, 
                         Remix.shield_cross_fill, 
-                        Colors.purple,
+                        Colors.green,
                         valorOriginal: isBatalha && defesaAtual != null ? monstro.defesa : null,
                       ),
                     ],
@@ -387,29 +389,44 @@ class ModalMonstroAventura extends StatelessWidget {
         const SizedBox(height: 2),
         Builder(
           builder: (context) {
-            int bonus = 0;
+            int bonusItem = 0;
             if (monstro.itemEquipado != null) {
               switch (nome.toLowerCase()) {
                 case 'vida':
-                  bonus = monstro.itemEquipado!.atributos['vida'] ?? 0;
+                  bonusItem = monstro.itemEquipado!.atributos['vida'] ?? 0;
                   break;
                 case 'energia':
-                  bonus = monstro.itemEquipado!.atributos['energia'] ?? 0;
+                  bonusItem = monstro.itemEquipado!.atributos['energia'] ?? 0;
                   break;
                 case 'ataque':
-                  bonus = monstro.itemEquipado!.atributos['ataque'] ?? 0;
+                  bonusItem = monstro.itemEquipado!.atributos['ataque'] ?? 0;
                   break;
                 case 'defesa':
-                  bonus = monstro.itemEquipado!.atributos['defesa'] ?? 0;
+                  bonusItem = monstro.itemEquipado!.atributos['defesa'] ?? 0;
                   break;
                 case 'agilidade':
-                  bonus = monstro.itemEquipado!.atributos['agilidade'] ?? 0;
+                  bonusItem = monstro.itemEquipado!.atributos['agilidade'] ?? 0;
                   break;
               }
             }
-            if (bonus > 0) {
+            
+            // Calcula buff total (item + habilidade de batalha)
+            int buffHabilidade = 0;
+            if (isBatalha) {
+              switch (nome.toLowerCase()) {
+                case 'ataque':
+                  buffHabilidade = ataqueAtual != null ? ataqueAtual! - monstro.ataque - bonusItem : 0;
+                  break;
+                case 'defesa':
+                  buffHabilidade = defesaAtual != null ? defesaAtual! - monstro.defesa - bonusItem : 0;
+                  break;
+              }
+            }
+            
+            int bonusTotal = bonusItem + buffHabilidade;
+            if (bonusTotal > 0) {
               return Text(
-                '$valor (+$bonus)',
+                '$valor (+$bonusTotal)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -452,36 +469,25 @@ class ModalMonstroAventura extends StatelessWidget {
       children: [
         Icon(
           Remix.heart_pulse_fill,
-          color: corVida,
+          color: Colors.red,
           size: 24,
         ),
         const SizedBox(height: 4),
-        // Nome com buff se houver
-        if (temBuffVida)
-          Text(
-            'Vida (+$buffVida)',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.green.shade600,
-              fontWeight: FontWeight.bold,
-            ),
-          )
-        else
-          Text(
-            'Vida',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        const SizedBox(height: 2),
-        // Mostra vida atual / vida máxima
         Text(
-          '${monstro.vidaAtual}/$vidaMaxima',
+          'Vida',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        // Mostra vida atual / vida máxima (com buff se houver)
+        Text(
+          temBuffVida ? '${monstro.vidaAtual}/$vidaMaxima (+$buffVida)' : '${monstro.vidaAtual}/$vidaMaxima',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: corVida,
+            color: Colors.red,
           ),
         ),
         const SizedBox(height: 4),
@@ -511,20 +517,26 @@ class ModalMonstroAventura extends StatelessWidget {
   Widget _buildEnergiaInfo() {
     // Usa energiaAtual se estiver em batalha, senão usa energia padrão
     final energiaAtualValue = isBatalha && energiaAtual != null ? energiaAtual! : monstro.energiaAtual;
+    // Usa energia máxima com buffs se estiver em batalha
+    final energiaMaxima = isBatalha && energiaMaximaAtual != null ? energiaMaximaAtual! : monstro.energia;
     
     // Calcula a cor da energia baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
-    double percentualEnergia = (energiaAtualValue / monstro.energia).clamp(0.0, 1.0);
+    double percentualEnergia = (energiaAtualValue / energiaMaxima).clamp(0.0, 1.0);
     Color corEnergia = percentualEnergia > 0.5 
         ? Colors.blue 
         : percentualEnergia > 0.25 
             ? Colors.orange 
             : Colors.red;
     
+    // Determina se há buff de energia
+    final temBuffEnergia = isBatalha && energiaMaxima > monstro.energia;
+    final buffEnergia = temBuffEnergia ? energiaMaxima - monstro.energia : 0;
+    
     return Column(
       children: [
         Icon(
           Remix.battery_charge_fill,
-          color: corEnergia,
+          color: Colors.blue,
           size: 24,
         ),
         const SizedBox(height: 4),
@@ -536,13 +548,13 @@ class ModalMonstroAventura extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        // Mostra energia atual / energia máxima
+        // Mostra energia atual / energia máxima (com buffs se houver)
         Text(
-          '$energiaAtualValue/${monstro.energia}',
+          temBuffEnergia ? '$energiaAtualValue/$energiaMaxima (+$buffEnergia)' : '$energiaAtualValue/$energiaMaxima',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: corEnergia,
+            color: Colors.blue,
           ),
         ),
         const SizedBox(height: 4),

@@ -24,6 +24,7 @@ class BatalhaService {
     final ataqueJogadorTotal = jogador.ataque + (itemJogador?.ataque ?? 0);
     final defesaJogadorTotal = jogador.defesa + (itemJogador?.defesa ?? 0);
     final vidaJogadorTotal = jogador.vida + (itemJogador?.vida ?? 0);
+    final energiaJogadorTotal = jogador.energia + (itemJogador?.energia ?? 0);
     final agilidadeJogadorTotal = jogador.agilidade + (itemJogador?.agilidade ?? 0);
     
     // Aplica level e item do inimigo
@@ -31,25 +32,28 @@ class BatalhaService {
     final ataqueInimigoTotal = (inimigo.ataqueTotal * levelMultiplier).round();
     final defesaInimigoTotal = (inimigo.defesaTotal * levelMultiplier).round();
     final vidaInimigoTotal = (inimigo.vidaTotal * levelMultiplier).round();
+    final energiaInimigoTotal = (inimigo.energiaTotal * levelMultiplier).round();
     final agilidadeInimigoTotal = (inimigo.agilidadeTotal * levelMultiplier).round();
     
-    print('📊 [BatalhaService] Jogador: ATK=$ataqueJogadorTotal DEF=$defesaJogadorTotal HP=$vidaJogadorTotal AGI=$agilidadeJogadorTotal');
-    print('📊 [BatalhaService] Inimigo Lv${inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
+    print('📊 [BatalhaService] Jogador: ATK=$ataqueJogadorTotal DEF=$defesaJogadorTotal HP=$vidaJogadorTotal EN=$energiaJogadorTotal AGI=$agilidadeJogadorTotal');
+    print('📊 [BatalhaService] Inimigo Lv${inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaInimigoTotal EN=$energiaInimigoTotal AGI=$agilidadeInimigoTotal');
     
     // Estado inicial da batalha
     EstadoBatalha estado = EstadoBatalha(
       jogador: jogador,
       inimigo: inimigo,
-      vidaAtualJogador: jogador.vidaAtual, // Usa vida atual
-      vidaAtualInimigo: inimigo.vidaAtual, // Usa vida atual
+      vidaAtualJogador: vidaJogadorTotal, // Usa vida máxima (vida base + item)
+      vidaAtualInimigo: vidaInimigoTotal, // Usa vida máxima (vida base + item + level)
       vidaMaximaJogador: vidaJogadorTotal, // Vida + item
       vidaMaximaInimigo: vidaInimigoTotal, // Vida + item + level
       ataqueAtualJogador: ataqueJogadorTotal, // Ataque + item
       defesaAtualJogador: defesaJogadorTotal, // Defesa + item
       ataqueAtualInimigo: ataqueInimigoTotal, // Ataque + item + level
       defesaAtualInimigo: defesaInimigoTotal, // Defesa + item + level
-      energiaAtualJogador: jogador.energiaAtual, // Energia atual do jogador
-      energiaAtualInimigo: inimigo.energiaAtual, // Energia atual do inimigo
+      energiaAtualJogador: energiaJogadorTotal, // Usa energia máxima (energia base + item)
+      energiaAtualInimigo: energiaInimigoTotal, // Usa energia máxima (energia base + item + level)
+      energiaMaximaJogador: energiaJogadorTotal, // Energia + item
+      energiaMaximaInimigo: energiaInimigoTotal, // Energia + item + level
       habilidadesUsadasJogador: [],
       habilidadesUsadasInimigo: [],
       historicoAcoes: [],
@@ -189,12 +193,12 @@ class BatalhaService {
       case EfeitoHabilidade.curarVida:
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.vidaMaximaJogador);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.vidaMaximaInimigo);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
         }
@@ -246,13 +250,21 @@ class BatalhaService {
         
       case EfeitoHabilidade.aumentarEnergia:
         if (isJogador) {
-          int novaEnergiaAtual = estado.energiaAtualJogador + habilidade.valorEfetivo;
-          novoEstado = estado.copyWith(energiaAtualJogador: novaEnergiaAtual);
-          descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          int novaEnergiaMaxima = estado.energiaMaximaJogador + habilidade.valorEfetivo;
+          int novaEnergiaAtual = estado.energiaAtualJogador + habilidade.valorEfetivo; // Também aumenta a energia atual
+          novoEstado = estado.copyWith(
+            energiaMaximaJogador: novaEnergiaMaxima,
+            energiaAtualJogador: novaEnergiaAtual,
+          );
+          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
         } else {
-          int novaEnergiaAtual = estado.energiaAtualInimigo + habilidade.valorEfetivo;
-          novoEstado = estado.copyWith(energiaAtualInimigo: novaEnergiaAtual);
-          descricao = '$atacante aumentou a energia em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          int novaEnergiaMaxima = estado.energiaMaximaInimigo + habilidade.valorEfetivo;
+          int novaEnergiaAtual = estado.energiaAtualInimigo + habilidade.valorEfetivo; // Também aumenta a energia atual
+          novoEstado = estado.copyWith(
+            energiaMaximaInimigo: novaEnergiaMaxima,
+            energiaAtualInimigo: novaEnergiaAtual,
+          );
+          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
         }
         break;
         

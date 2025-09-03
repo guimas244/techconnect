@@ -112,12 +112,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
       inimigo: widget.inimigo,
-      vidaAtualJogador: widget.jogador.vidaAtual, // Usa vida atual, não máxima
-      vidaAtualInimigo: widget.inimigo.vidaAtual, // Usa vida atual, não máxima
+      vidaAtualJogador: vidaComItem, // Usa vida máxima (vida base + item)
+      vidaAtualInimigo: vidaInimigoTotal, // Usa vida máxima (vida base + item + level)
       vidaMaximaJogador: vidaComItem, // Vida máxima inicial + item
       vidaMaximaInimigo: vidaInimigoTotal, // Vida máxima + item + level
-      energiaAtualJogador: widget.jogador.energiaAtual, // Energia atual do jogador
-      energiaAtualInimigo: widget.inimigo.energiaAtual, // Energia atual do inimigo
+      energiaAtualJogador: energiaComItem, // Usa energia máxima (energia base + item)
+      energiaAtualInimigo: energiaInimigoTotal, // Usa energia máxima (energia base + item + level)
+      energiaMaximaJogador: energiaComItem, // Energia máxima inicial + item
+      energiaMaximaInimigo: energiaInimigoTotal, // Energia máxima + item + level
       ataqueAtualJogador: ataqueComItem,
       defesaAtualJogador: defesaComItem,
       ataqueAtualInimigo: ataqueInimigoTotal, // Ataque + item + level
@@ -403,24 +405,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       case EfeitoHabilidade.aumentarEnergia:
         if (isJogador) {
           // Aumenta energia máxima e energia atual proporcionalmente
-          int energiaMaximaAntes = widget.jogador.energia;
+          int energiaMaximaAntes = estado.energiaMaximaJogador;
           int energiaAtualAntes = estado.energiaAtualJogador;
           int novaEnergiaMaxima = energiaMaximaAntes + habilidade.valorEfetivo;
           int novaEnergiaAtual = energiaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
           
           novoEstado = estado.copyWith(
             energiaAtualJogador: novaEnergiaAtual,
+            energiaMaximaJogador: novaEnergiaMaxima,
           );
           descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
         } else {
           // Aumenta energia máxima e energia atual proporcionalmente
-          int energiaMaximaAntes = widget.inimigo.energia;
+          int energiaMaximaAntes = estado.energiaMaximaInimigo;
           int energiaAtualAntes = estado.energiaAtualInimigo;
           int novaEnergiaMaxima = energiaMaximaAntes + habilidade.valorEfetivo;
           int novaEnergiaAtual = energiaAtualAntes + habilidade.valorEfetivo; // Aumenta a atual também
           
           novoEstado = estado.copyWith(
             energiaAtualInimigo: novaEnergiaAtual,
+            energiaMaximaInimigo: novaEnergiaMaxima,
           );
           descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
         }
@@ -1924,6 +1928,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final ataqueAtual = isJogador ? estadoAtual?.ataqueAtualJogador : estadoAtual?.ataqueAtualInimigo;
     final defesaAtual = isJogador ? estadoAtual?.defesaAtualJogador : estadoAtual?.defesaAtualInimigo;
     final energiaAtual = isJogador ? estadoAtual?.energiaAtualJogador : estadoAtual?.energiaAtualInimigo;
+    final energiaMaximaAtual = isJogador ? estadoAtual?.energiaMaximaJogador : estadoAtual?.energiaMaximaInimigo;
     final vidaMaximaAtual = isJogador ? estadoAtual?.vidaMaximaJogador : estadoAtual?.vidaMaximaInimigo;
     // Exibe detalhes do monstro (apenas uma vez)
     showDialog(
@@ -1934,6 +1939,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ataqueAtual: ataqueAtual,
         defesaAtual: defesaAtual,
         energiaAtual: energiaAtual,
+        energiaMaximaAtual: energiaMaximaAtual,
         vidaMaximaAtual: vidaMaximaAtual,
       ),
     );
@@ -2042,7 +2048,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             vidaAtual: estadoAtual!.vidaAtualJogador,
             vidaMaxima: estadoAtual!.vidaMaximaJogador, // Usa vida máxima com buffs
             energiaAtual: estadoAtual!.energiaAtualJogador,
-            energiaMaxima: widget.jogador.energia,
+            energiaMaxima: estadoAtual!.energiaMaximaJogador, // Usa energia máxima com buffs
             cor: Colors.blue,
             isJogador: true,
           ),
@@ -2091,7 +2097,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             vidaAtual: estadoAtual!.vidaAtualInimigo,
             vidaMaxima: estadoAtual!.vidaMaximaInimigo, // Usa vida máxima com buffs
             energiaAtual: estadoAtual!.energiaAtualInimigo,
-            energiaMaxima: estadoAtual!.inimigo.energia, // Energia do inimigo (pode usar base ou calculada)
+            energiaMaxima: estadoAtual!.energiaMaximaInimigo, // Usa energia máxima com buffs
             cor: Colors.red,
             isJogador: false,
           ),
