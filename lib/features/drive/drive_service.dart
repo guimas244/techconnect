@@ -43,6 +43,11 @@ class DriveService {
       return novaPasta.id;
     } catch (e) {
       print('❌ [DEBUG] Erro ao criar pasta TIPAGENS: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaTipagens, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
       return null;
     }
   }
@@ -80,6 +85,11 @@ class DriveService {
       return novaPasta.id;
     } catch (e) {
       print('❌ [DEBUG] Erro ao criar pasta HISTORIAS: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaHistorias, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
       return null;
     }
   }
@@ -116,6 +126,11 @@ class DriveService {
       return novaPasta.id;
     } catch (e) {
       print('❌ [DEBUG] Erro ao criar pasta TECH CONNECT: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaTechConnect, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
       return null;
     }
   }
@@ -362,6 +377,11 @@ class DriveService {
       return driveFolder.id;
     } catch (e) {
       print('❌ [DEBUG] Erro ao criar pasta DROPS: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaDrops, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
       return null;
     }
   }
@@ -449,6 +469,11 @@ class DriveService {
       return driveFolder.id;
     } catch (e) {
       print('❌ [DEBUG] Erro ao criar pasta RANKING: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaRanking, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
       return null;
     }
   }

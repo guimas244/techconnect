@@ -56,6 +56,30 @@ class RankingService {
       final rankingDiario = await carregarRankingDia(dataSemHora);
       final entradaExistente = rankingDiario.entradas.where((e) => VersionConfig.extractPlayerNameOnly(e.email) == VersionConfig.extractPlayerNameOnly(email)).firstOrNull;
       
+      // 🚨 VALIDAÇÃO ANTI-CHEAT: Verifica mudança de versão no meio da run
+      final entradaMesmaRun = rankingDiario.entradas.where((e) => e.runId == runId).firstOrNull;
+      if (entradaMesmaRun != null && entradaMesmaRun.version != VersionConfig.currentVersion) {
+        // Detectou mudança de versão no meio da run - INVALIDA
+        print('🚨 [ANTI-CHEAT] Mudança de versão detectada na run $runId: ${entradaMesmaRun.version} → ${VersionConfig.currentVersion}');
+        final nomeJogador = VersionConfig.extractPlayerNameOnly(email);
+        final novaEntrada = RankingEntry(
+          runId: runId,
+          email: VersionConfig.formatPlayerNameWithVersion(nomeJogador, 'versão inválida ($runId)'),
+          score: 0, // ZERA O SCORE
+          dataHora: dataHora ?? DateTime.now(),
+          version: 'versão inválida ($runId)',
+        );
+        
+        // Remove entrada anterior e adiciona a nova invalidada
+        final entradasFiltradas = rankingDiario.entradas.where((e) => e.runId != runId).toList();
+        entradasFiltradas.add(novaEntrada);
+        final rankingAtualizado = rankingDiario.copyWith(entradas: entradasFiltradas);
+        await _salvarRankingDia(rankingAtualizado);
+        
+        print('❌ [ANTI-CHEAT] Run invalidada e score zerado para $email');
+        return;
+      }
+      
       String emailComVersao = email;
       String versaoParaSalvar = VersionConfig.currentVersion;
       
@@ -68,8 +92,12 @@ class RankingService {
           // Downgrade detectado
           emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, VersionConfig.currentVersion, isDowngrade: true);
           versaoParaSalvar = VersionConfig.currentVersion;
-        } else if (VersionConfig.compareVersions(VersionConfig.currentVersion, versaoExistente) >= 0) {
-          // Versão igual ou superior, mantém a versão mais alta já salva
+        } else if (VersionConfig.compareVersions(VersionConfig.currentVersion, versaoExistente) > 0) {
+          // Versão superior, atualiza para a versão atual
+          emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, VersionConfig.currentVersion);
+          versaoParaSalvar = VersionConfig.currentVersion;
+        } else {
+          // Versão igual, mantém a versão existente
           emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, versaoExistente);
           versaoParaSalvar = versaoExistente;
         }

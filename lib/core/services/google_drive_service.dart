@@ -94,7 +94,7 @@ class GoogleDriveService {
     try {
       return await _salvar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
         final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
         print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) durante salvamento, tentando renovar...');
         _isConnected = false;
@@ -170,7 +170,7 @@ class GoogleDriveService {
     try {
       return await _listar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
         final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
         print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) durante listagem, tentando renovar...');
         _isConnected = false;
@@ -229,7 +229,7 @@ class GoogleDriveService {
     try {
       return await _baixar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
         final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
         print('🔒 Erro de autenticação/permissão (${is403 ? '403' : '401'}) para $nomeArquivo, tentando renovar...');
         _isConnected = false;
@@ -354,7 +354,7 @@ class GoogleDriveService {
     try {
       return await _baixar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
         final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
         print('🔒 [GoogleDriveService] Erro de autenticação/permissão (${is403 ? '403' : '401'}) ao baixar $nomeArquivo da pasta $pasta, tentando renovar...');
         _isConnected = false;
@@ -430,7 +430,7 @@ class GoogleDriveService {
     try {
       return await _salvar();
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication')) {
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
         final is403 = e.toString().contains('403') || e.toString().contains('access_denied');
         print('🔒 [GoogleDriveService] Erro de autenticação/permissão (${is403 ? '403' : '401'}) ao salvar $nomeArquivo na pasta $pasta, tentando renovar...');
         _isConnected = false;
