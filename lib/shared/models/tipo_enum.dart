@@ -37,6 +37,71 @@ enum Tipo {
 
   String get displayName => descricao;
 
+  String get monsterName {
+    switch (this) {
+      case Tipo.agua:
+        return 'Boquin';
+      case Tipo.alien:
+        return 'Luminitrix';
+      case Tipo.desconhecido:
+        return 'Energit';
+      case Tipo.deus:
+        return 'Champainho';
+      case Tipo.docrates:
+        return 'Mouser';
+      case Tipo.dragao:
+        return 'Dragãozinho';
+      case Tipo.eletrico:
+        return 'Catapichu';
+      case Tipo.fantasma:
+        return 'Fin';
+      case Tipo.fera:
+        return 'Gon';
+      case Tipo.fogo:
+        return 'Vulquini';
+      case Tipo.gelo:
+        return 'Buni';
+      case Tipo.inseto:
+        return 'Mosquov';
+      case Tipo.luz:
+        return 'Joy';
+      case Tipo.magico:
+        return 'Maguin';
+      case Tipo.marinho:
+        return 'Nemo';
+      case Tipo.mistico:
+        return 'Yng Yang';
+      case Tipo.normal:
+        return 'Pox';
+      case Tipo.nostalgico:
+        return 'Futi';
+      case Tipo.pedra:
+        return 'Pedra';
+      case Tipo.planta:
+        return 'Plan';
+      case Tipo.psiquico:
+        return 'Flori';
+      case Tipo.subterraneo:
+        return 'Minhoquita';
+      case Tipo.tecnologia:
+        return 'Maquinoso';
+      case Tipo.tempo:
+        return 'Cororo';
+      case Tipo.terrestre:
+        return 'Kiolho';
+      case Tipo.trevas:
+        return 'Trevoso';
+      case Tipo.venenoso:
+        return 'Scorpion';
+      case Tipo.vento:
+        return 'Balin';
+      case Tipo.voador:
+        return 'Balin'; // Usando mesmo nome que vento
+      case Tipo.zumbi:
+        return 'Ratazana';
+    }
+  }
+
   Color get cor {
     switch (this) {
       case Tipo.normal:

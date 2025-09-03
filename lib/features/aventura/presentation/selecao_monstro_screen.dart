@@ -206,7 +206,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        monstro.tipo.displayName,
+                        monstro.tipo.monsterName,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

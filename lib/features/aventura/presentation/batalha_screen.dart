@@ -421,7 +421,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   EstadoBatalha _aplicarHabilidadeSuporte(EstadoBatalha estado, Habilidade habilidade, bool isJogador) {
-    String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
+    String atacante = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
     String descricao = '';
     
     EstadoBatalha novoEstado = estado;
@@ -564,7 +564,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<EstadoBatalha> _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
-    String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
+    String atacante = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
 
     // Determina tipo do ataque (tipoElemental da habilidade ou tipo principal do monstro no ataque básico)
     Tipo tipoAtaque;
@@ -720,8 +720,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         
         // Cria registro da batalha
         final registroBatalha = RegistroBatalha(
-          jogadorNome: widget.jogador.tipo.displayName,
-          inimigoNome: widget.inimigo.tipo.displayName,
+          jogadorNome: widget.jogador.tipo.monsterName,
+          inimigoNome: widget.inimigo.tipo.monsterName,
           acoes: estadoAtual?.historicoAcoes ?? [],
           vencedor: 'jogador',
           dataHora: DateTime.now(),
@@ -787,7 +787,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         return;
       }
       
-      print('🎲 [Evolução] Monstro sorteado para evolução: ${monstroSorteado.tipo.displayName}');
+      print('🎲 [Evolução] Monstro sorteado para evolução: ${monstroSorteado.tipo.monsterName}');
       
       // Verifica se pode evoluir baseado no level gap
       final levelInimigoDerrrotado = widget.inimigo.level;
@@ -795,7 +795,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       
       if (!podeEvoluir) {
         // Monstro não pode evoluir por level gap, mas habilidades podem tentar evoluir
-        print('🚫 [Evolução] ${monstroSorteado.tipo.displayName} não evoluiu devido ao level gap, tentando evoluir habilidade...');
+        print('🚫 [Evolução] ${monstroSorteado.tipo.monsterName} não evoluiu devido ao level gap, tentando evoluir habilidade...');
         
         final resultadoHabilidade = evolucaoService.tentarEvoluirHabilidade(monstroSorteado, levelInimigoDerrrotado);
         final monstroAtualizado = resultadoHabilidade['monstroAtualizado'] as MonstroAventura;
@@ -854,7 +854,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         await _mostrarModalEvolucao(infoEvolucao);
       }
       
-      print('✅ [Evolução] ${monstroEvoluido.tipo.displayName} evoluiu para level ${monstroEvoluido.level}!');
+      print('✅ [Evolução] ${monstroEvoluido.tipo.monsterName} evoluiu para level ${monstroEvoluido.level}!');
       
     } catch (e) {
       print('❌ [Evolução] Erro ao processar evolução: $e');
@@ -1559,8 +1559,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       if (historia != null) {
         // Cria registro da batalha sem dar score
         final registroBatalha = RegistroBatalha(
-          jogadorNome: widget.jogador.tipo.displayName,
-          inimigoNome: widget.inimigo.tipo.displayName,
+          jogadorNome: widget.jogador.tipo.monsterName,
+          inimigoNome: widget.inimigo.tipo.monsterName,
           acoes: estadoAtual?.historicoAcoes ?? [],
           vencedor: 'inimigo',
           dataHora: DateTime.now(),
@@ -1734,7 +1734,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Magia equipada - drops/prêmios serão salvos apenas via "Receber Recompensa"
         print('🎯 [BatalhaScreen] Magia equipada - não salvando na pasta drops durante batalha');
         
-        print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.displayName}, substituindo ${habilidadeSubstituida.nome}');
+        print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.monsterName}, substituindo ${habilidadeSubstituida.nome}');
       }
 
       // Após equipar a magia, salva tudo e mostra botão para voltar
@@ -1765,7 +1765,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Atualiza o monstro com o item equipado
       final monstrosAtualizados = historia.monstros.map((m) {
         if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra && m.imagem == monstro.imagem) {
-          debugPrint('🟢 [BatalhaScreen] Equipando item no monstro: ${m.tipo.displayName}');
+          debugPrint('🟢 [BatalhaScreen] Equipando item no monstro: ${m.tipo.monsterName}');
           debugPrint('🟢 [BatalhaScreen] Item: ${item.toString()}');
           return m.copyWith(itemEquipado: item);
         }
@@ -1777,7 +1777,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Salva a história com o item equipado imediatamente
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
       await repository.salvarHistoricoJogador(historiaAtualizada);
-      debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.displayName}!');
+      debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.monsterName}!');
       
       // Item equipado - drops/prêmios serão salvos apenas via "Receber Recompensa"
       print('🎯 [BatalhaScreen] Item equipado - não salvando na pasta drops durante batalha');
@@ -1852,7 +1852,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             m.tipoExtra == widget.inimigo.tipoExtra) {
           // Garante que inimigos mortos fiquem com vida = 0 (não negativa)
           final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo;
-          print('🏥 [DEBUG] Inimigo ${m.tipo.displayName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
+          print('🏥 [DEBUG] Inimigo ${m.tipo.monsterName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
           
           return m.copyWith(
             vidaAtual: vidaFinal,
@@ -1897,7 +1897,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
     int vidaAntes = isJogador ? estado.vidaAtualInimigo : estado.vidaAtualJogador;
     int vidaMaximaDefensor = isJogador ? estado.inimigo.vida : estado.jogador.vida;
-    String atacanteNome = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
+    String atacanteNome = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
 
     final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
     final vidaDepois = vidaAntes - danoCalculado; // Permite vida negativa
@@ -2189,7 +2189,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Jogador
         Expanded(
           child: _buildStatusMonstro(
-            nome: widget.jogador.tipo.displayName,
+            nome: widget.jogador.tipo.monsterName,
             imagem: widget.jogador.imagem,
             vidaAtual: estadoAtual!.vidaAtualJogador,
             vidaMaxima: estadoAtual!.vidaMaximaJogador, // Usa vida máxima com buffs
@@ -2238,7 +2238,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Inimigo
         Expanded(
           child: _buildStatusMonstro(
-            nome: widget.inimigo.tipo.displayName,
+            nome: widget.inimigo.tipo.monsterName,
             imagem: widget.inimigo.imagem,
             vidaAtual: estadoAtual!.vidaAtualInimigo,
             vidaMaxima: estadoAtual!.vidaMaximaInimigo, // Usa vida máxima com buffs
@@ -2548,7 +2548,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           ...estadoAtual!.historicoAcoes.reversed.toList().asMap().entries.map((entry) {
             final index = estadoAtual!.historicoAcoes.length - entry.key;
             final acao = entry.value;
-            final isJogadorAcao = acao.atacante == widget.jogador.tipo.displayName;
+            final isJogadorAcao = acao.atacante == widget.jogador.tipo.monsterName;
             return _buildAcaoItem(index, acao, isJogadorAcao);
           }),
         ],

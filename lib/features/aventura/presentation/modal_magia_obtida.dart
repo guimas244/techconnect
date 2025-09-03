@@ -234,7 +234,7 @@ class _ModalMagiaObtidaState extends State<ModalMagiaObtida> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         child: Text(
-                          monstro.tipo.displayName,
+                          monstro.tipo.monsterName,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

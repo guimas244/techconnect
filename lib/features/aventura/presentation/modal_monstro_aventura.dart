@@ -121,7 +121,7 @@ class ModalMonstroAventura extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        monstro.tipo.displayName,
+                        monstro.tipo.monsterName,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -620,7 +620,7 @@ class _HabilidadesDialog extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Habilidades do ${monstro.tipo.displayName}',
+                    'Habilidades do ${monstro.tipo.monsterName}',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

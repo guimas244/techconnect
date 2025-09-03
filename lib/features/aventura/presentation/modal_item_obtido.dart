@@ -235,7 +235,7 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         child: Text(
-                          monstro.tipo.displayName,
+                          monstro.tipo.monsterName,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
