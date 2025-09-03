@@ -46,6 +46,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   EstadoBatalha? estadoAtual;
   bool batalhaConcluida = false;
   bool salvandoResultado = false;
+  bool processandoVitoria = false;
   bool jogadorComeca = true;
   bool itemGerado = false;
   bool evolucaoProcessada = false;
@@ -671,6 +672,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       setState(() {
         batalhaConcluida = true;
         vencedor = vencedorBatalha;
+        // Ativa o loading de processamento quando jogador vence
+        if (vencedorBatalha == 'jogador') {
+          processandoVitoria = true;
+        }
       });
     }
     
@@ -1680,9 +1685,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _equiparMagiaEMonstro(MonstroAventura monstro, MagiaDrop magia, Habilidade habilidadeSubstituida) async {
     try {
       // Converte a magia para habilidade com tipagem do monstro
+      // Atualiza a descrição substituindo o texto genérico pelo tipo elemental real
+      final descricaoAtualizada = magia.descricao.replaceAll(
+        'Tipagem elemental será definida ao equipar no monstro.',
+        'Tipo elemental: ${monstro.tipo.displayName}.'
+      );
+      
       final novaHabilidade = Habilidade(
         nome: magia.nome,
-        descricao: magia.descricao,
+        descricao: descricaoAtualizada,
         tipo: magia.tipo,
         efeito: magia.efeito,
         tipoElemental: monstro.tipo, // Usa o tipo principal do monstro
@@ -1788,6 +1799,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     print('🔘 [BatalhaScreen] Ativando botão "Voltar para Aventura"');
     if (mounted) {
       setState(() {
+        processandoVitoria = false; // Desativa o loading
         podeVoltarParaAventura = true;
       });
     }
@@ -2107,9 +2119,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           elevation: 2,
           automaticallyImplyLeading: false, // Remove seta de voltar
         ),
-        body: estadoAtual == null
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
+        body: Stack(
+          children: [
+            // Conteúdo principal da tela
+            estadoAtual == null
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
@@ -2134,6 +2149,34 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                   ],
                 ),
               ),
+            // Overlay de loading durante processamento da vitória
+            if (processandoVitoria)
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                        strokeWidth: 4,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Processando batalha...',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
         // Remove bottomNavigationBar de voltar
         bottomNavigationBar: null,
       ),
@@ -2398,7 +2441,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           else
             Text(
               venceuBatalha 
-                ? 'Aguarde finalizar processamento da vitória...'
+                ? 'Processando batalha...'
                 : 'Batalha finalizada!',
               style: TextStyle(
                 fontSize: 14,
