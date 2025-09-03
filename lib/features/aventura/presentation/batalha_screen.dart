@@ -59,6 +59,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // Animações e UI
   bool mostrandoAcao = false;
   bool aguardandoContinuar = false;
+  bool batalhaAutomatica = false; // Controla se está rodando batalha automática
 
   @override
   void initState() {
@@ -142,6 +143,102 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Executa rodada completa (ambos ataques) seguindo ordem de agilidade
     _executarRodadaCompletatAsync();
+  }
+
+  /// Executa a batalha inteira automaticamente até o fim
+  void _resumirBatalha() {
+    if (estadoAtual == null || batalhaConcluida) return;
+    
+    print('⚡ [Batalha Automática] Iniciando batalha automática...');
+    
+    setState(() {
+      batalhaAutomatica = true;
+      mostrandoAcao = true;
+      aguardandoContinuar = false;
+    });
+    
+    _executarBatalhaAutomaticaAsync();
+  }
+
+  /// Executa batalha automaticamente até alguém vencer
+  Future<void> _executarBatalhaAutomaticaAsync() async {
+    if (estadoAtual == null || batalhaConcluida) return;
+    
+    EstadoBatalha estadoAtualizado = estadoAtual!;
+    int maxRodadas = 50; // Limite de segurança para evitar loops infinitos
+    int rodadaCount = 0;
+    
+    while (!batalhaConcluida && rodadaCount < maxRodadas) {
+      rodadaCount++;
+      print('⚡ [Auto Battle] Rodada $rodadaCount');
+      
+      // Determina ordem dos ataques baseada na agilidade
+      bool jogadorPrimeiro = jogadorComeca;
+      
+      // Primeiro ataque
+      if (jogadorPrimeiro) {
+        estadoAtualizado = await _executarAtaqueJogador(estadoAtualizado);
+        if (estadoAtualizado.vidaAtualInimigo <= 0) {
+          _finalizarBatalhaAutomatica(estadoAtualizado, 'jogador');
+          return;
+        }
+        
+        // Pequeno delay para não sobrecarregar
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // Segundo ataque (inimigo)
+        estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
+        if (estadoAtualizado.vidaAtualJogador <= 0) {
+          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+          return;
+        }
+      } else {
+        estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
+        if (estadoAtualizado.vidaAtualJogador <= 0) {
+          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+          return;
+        }
+        
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        estadoAtualizado = await _executarAtaqueJogador(estadoAtualizado);
+        if (estadoAtualizado.vidaAtualInimigo <= 0) {
+          _finalizarBatalhaAutomatica(estadoAtualizado, 'jogador');
+          return;
+        }
+      }
+      
+      // Atualiza estado
+      if (mounted) {
+        setState(() {
+          estadoAtual = estadoAtualizado;
+          turnoAtual++;
+        });
+      }
+      
+      // Pequeno delay entre rodadas
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    
+    // Se chegou no limite de rodadas, empate
+    if (rodadaCount >= maxRodadas) {
+      print('⚠️ [Auto Battle] Limite de rodadas atingido, finalizando como empate');
+      _finalizarBatalhaAutomatica(estadoAtualizado, 'empate');
+    }
+  }
+
+  /// Finaliza batalha automática e processa resultados
+  void _finalizarBatalhaAutomatica(EstadoBatalha estadoFinal, String vencedorFinal) {
+    print('⚡ [Auto Battle] Finalizando batalha automática - Vencedor: $vencedorFinal');
+    
+    setState(() {
+      batalhaAutomatica = false;
+      mostrandoAcao = false;
+      aguardandoContinuar = false;
+    });
+    
+    // Usa a lógica existente de finalização
+    _finalizarRodada(estadoFinal, vencedorFinal);
   }
   
   Future<void> _executarRodadaCompletatAsync() async {
@@ -1831,6 +1928,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _salvarEstadoBatalha() async {
     if (estadoAtual == null) return;
     
+    // Durante batalha automática, não salva o estado a cada rodada
+    if (batalhaAutomatica) {
+      print('⚡ [Auto Battle] Pulando salvamento durante batalha automática');
+      return;
+    }
+    
     try {
       print('💾 [BatalhaScreen] Salvando estado da batalha...');
       
@@ -2475,50 +2578,82 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Widget _buildBotoesAcao() {
     return Column(
       children: [
-        if (aguardandoContinuar) ...[
-          // Botão de continuar após rodada completa
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _continuarBatalha,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        if (!batalhaAutomatica) ...[
+          // Botões de ação lado a lado - sempre visíveis durante a batalha
+          Row(
+            children: [
+              // Botão Próxima Rodada
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: mostrandoAcao ? null : (aguardandoContinuar ? _continuarBatalha : _executarRodadaCompleta),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: aguardandoContinuar ? Colors.green : Colors.blue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade400,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    aguardandoContinuar ? '▶️ Continuar' : '⚔️ Próxima Rodada',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              child: const Text(
-                'Continuar para Próxima Rodada',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              // Botão Auto Batalha
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: mostrandoAcao ? null : _resumirBatalha,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade400,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '⚡ Auto Batalha',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ] else if (!mostrandoAcao) ...[
-          // Botão de executar rodada completa
-          SizedBox(
+        ] else if (batalhaAutomatica) ...[
+          // Indicador de batalha automática em progresso
+          Container(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _executarRodadaCompleta,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange, width: 2),
+            ),
+            child: Column(
+              children: [
+                const CircularProgressIndicator(
+                  color: Colors.orange,
                 ),
-              ),
-              child: const Text(
-                'Atacar! (Rodada Completa)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 8),
+                Text(
+                  'Executando batalha automática...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
