@@ -123,6 +123,39 @@ assets/
    flutter run
    ```
 
+## 📦 Geração de APK
+
+Para gerar o APK de produção com nome automatizado:
+
+**🪟 Windows:**
+```batch
+build_apk.bat
+```
+
+**🐧 Linux/macOS/Git Bash:**
+```bash
+./build_apk.sh
+```
+
+**Resultado:** `build/app/outputs/flutter-apk/techterra-v{versão}-release.apk`
+
+## 🔢 Alteração de Versão
+
+Para alterar a versão do app (reflete em todos os pontos):
+
+1. **Edite apenas:** `pubspec.yaml`
+   ```yaml
+   version: 1.2.0+3  # major.minor.patch+buildNumber
+   ```
+
+2. **Execute:** Um dos comandos de build APK acima
+
+**Pontos que atualizam automaticamente:**
+- Tela inicial (título)
+- Ranking (versão salva nos scores)
+- Nome do APK gerado
+- Configurações do Android
+
 ## 📱 Funcionalidades
 
 ### ✅ Implementadas
@@ -156,5 +189,5 @@ A arquitetura facilita testes:
 
 ---
 
-**Versão**: 1.0.0  
-**Última atualização**: 10/08/2025
+**Versão**: 1.1.1  
+**Última atualização**: 03/09/2025

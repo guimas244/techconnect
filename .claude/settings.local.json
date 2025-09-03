@@ -11,7 +11,9 @@
       "Bash(dart run:*)",
       "Bash(dart pub:*)",
       "Bash(grep:*)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(chmod:*)",
+      "Bash(./build_apk.sh)"
     ],
     "deny": [],
     "ask": []
