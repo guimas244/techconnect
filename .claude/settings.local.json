@@ -10,7 +10,8 @@
       "Bash(flutter analyze:*)",
       "Bash(dart run:*)",
       "Bash(dart pub:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(copy:*)"
     ],
     "deny": [],
     "ask": []

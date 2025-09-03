@@ -8,6 +8,7 @@ import '../../../features/auth/providers/auth_provider.dart';
 import '../../aventura/providers/aventura_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../../../core/config/version_config.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -312,6 +313,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2D3748),
                         letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'v${VersionConfig.currentVersion}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 12),
