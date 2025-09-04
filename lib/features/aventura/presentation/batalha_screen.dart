@@ -1837,8 +1837,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final monstrosAtualizados = historia.monstros.map((m) {
         print('  - Comparando com monstro: ${m.tipo} / ${m.tipoExtra} (vida atual: ${m.vidaAtual})');
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-          // Garante que monstros mortos fiquem com vida = 0 (não negativa)
-          final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador;
+          // Limita a vida final ao valor original do monstro (sem buffs)
+          final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador.clamp(0, m.vida);
           print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
           
           return m.copyWith(
@@ -1852,8 +1852,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final inimigosAtualizados = historia.monstrosInimigos.map((m) {
         if (m.tipo == widget.inimigo.tipo && 
             m.tipoExtra == widget.inimigo.tipoExtra) {
-          // Garante que inimigos mortos fiquem com vida = 0 (não negativa)
-          final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo;
+          // Limita a vida final ao valor original do monstro (sem buffs e level)
+          final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo.clamp(0, m.vida);
           print('🏥 [DEBUG] Inimigo ${m.tipo.monsterName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
           
           return m.copyWith(
@@ -1963,8 +1963,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Atualiza a vida atual do jogador na história
       final monstrosAtualizados = historia.monstros.map((m) {
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-          // Atualiza a vida atual do monstro
-          return m.copyWith(vidaAtual: estadoAtual!.vidaAtualJogador);
+          // Limita a vida final ao máximo original do monstro (sem buffs)
+          final vidaFinalJogador = estadoAtual!.vidaAtualJogador.clamp(0, m.vida);
+          return m.copyWith(vidaAtual: vidaFinalJogador);
         }
         return m;
       }).toList();
@@ -1973,8 +1974,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final inimigosAtualizados = historia.monstrosInimigos.map((m) {
         if (m.tipo == widget.inimigo.tipo && 
             m.tipoExtra == widget.inimigo.tipoExtra) {
-          // Atualiza a vida atual do inimigo
-          return m.copyWith(vidaAtual: estadoAtual!.vidaAtualInimigo);
+          // Limita a vida final ao máximo original do monstro (sem buffs e level)
+          final vidaFinalInimigo = estadoAtual!.vidaAtualInimigo.clamp(0, m.vida);
+          return m.copyWith(vidaAtual: vidaFinalInimigo);
         }
         return m;
       }).toList();
