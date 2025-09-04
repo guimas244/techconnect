@@ -2,7 +2,7 @@
 class DeveloperConfig {
   /// Quando false, desabilita a edição de tipos (apenas visualização)
   /// Para reabilitar edição, altere para true
-  static const bool ENABLE_TYPE_EDITING = false;
+  static const bool ENABLE_TYPE_EDITING = true;
   
   /// Quando false, desabilita o botão de receber recompensas em todas as condições
   /// Para reabilitar botão de recompensas, altere para true

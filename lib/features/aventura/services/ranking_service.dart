@@ -3,6 +3,7 @@ import 'dart:math';
 import '../models/ranking_entry.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../../../core/config/version_config.dart';
+import '../../../core/utils/date_folder_manager.dart';
 
 class RankingService {
   static final RankingService _instance = RankingService._internal();
@@ -10,6 +11,7 @@ class RankingService {
   RankingService._internal();
 
   final GoogleDriveService _driveService = GoogleDriveService();
+  final DateFolderManager _folderManager = DateFolderManager();
 
   /// Gera um ID único para uma nova run/aventura
   String gerarRunId() {
@@ -20,13 +22,12 @@ class RankingService {
 
   /// Converte DateTime para horário de Brasília
   DateTime paraHorarioBrasilia(DateTime utc) {
-    // UTC-3 (horário de Brasília)
-    return utc.subtract(const Duration(hours: 3));
+    return _folderManager.paraHorarioBrasilia(utc);
   }
 
   /// Obtém DateTime atual em horário de Brasília
   DateTime get agora {
-    return paraHorarioBrasilia(DateTime.now().toUtc());
+    return _folderManager.agora;
   }
 
   /// Formata data para nome do arquivo (YYYY-MM-DD)
@@ -34,9 +35,9 @@ class RankingService {
     return '${data.year.toString().padLeft(4, '0')}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
   }
 
-  /// Obtém nome do arquivo de ranking para uma data específica
-  String _getNomeArquivoRanking(DateTime data) {
-    return 'ranking_${_formatarDataParaNomeArquivo(data)}.json';
+  /// Obtém nome do arquivo de ranking para uma data específica e email
+  String _getNomeArquivoRanking(DateTime data, String email) {
+    return 'ranking_${email}_${_formatarDataParaNomeArquivo(data)}.json';
   }
 
   /// Salva ou atualiza o ranking de um jogador
@@ -52,8 +53,8 @@ class RankingService {
       
       print('🏆 [RankingService] Atualizando ranking para $email - Score: $score - RunId: $runId');
       
-      // Verifica se já existe uma entrada para este email no ranking do dia
-      final rankingDiario = await carregarRankingDia(dataSemHora);
+      // Carrega o ranking individual do email para o dia
+      final rankingDiario = await carregarRankingDiaEmail(dataSemHora, email);
       final entradaExistente = rankingDiario.entradas.where((e) => VersionConfig.extractPlayerNameOnly(e.email) == VersionConfig.extractPlayerNameOnly(email)).firstOrNull;
       
       // 🚨 VALIDAÇÃO ANTI-CHEAT: Verifica mudança de versão no meio da run
@@ -74,7 +75,7 @@ class RankingService {
         final entradasFiltradas = rankingDiario.entradas.where((e) => e.runId != runId).toList();
         entradasFiltradas.add(novaEntrada);
         final rankingAtualizado = rankingDiario.copyWith(entradas: entradasFiltradas);
-        await _salvarRankingDia(rankingAtualizado);
+        await _salvarRankingDia(rankingAtualizado, email);
         
         print('❌ [ANTI-CHEAT] Run invalidada e score zerado para $email');
         return;
@@ -121,7 +122,7 @@ class RankingService {
       final rankingAtualizado = rankingDiario.adicionarOuAtualizar(novaEntrada);
 
       // Salva no Drive
-      await _salvarRankingDia(rankingAtualizado);
+      await _salvarRankingDia(rankingAtualizado, email);
 
       print('✅ [RankingService] Ranking atualizado com sucesso para $email');
       
@@ -131,20 +132,23 @@ class RankingService {
     }
   }
 
-  /// Carrega o ranking de um dia específico
-  Future<RankingDiario> carregarRankingDia(DateTime data) async {
+  /// Carrega o ranking individual de um email para um dia específico
+  Future<RankingDiario> carregarRankingDiaEmail(DateTime data, String email) async {
     try {
       final dataSemHora = DateTime(data.year, data.month, data.day);
-      final nomeArquivo = _getNomeArquivoRanking(dataSemHora);
+      final nomeArquivo = _getNomeArquivoRanking(dataSemHora, email);
       
-      print('📊 [RankingService] Carregando ranking do dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
+      print('📊 [RankingService] Carregando ranking individual para $email no dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
 
-      // Tenta baixar o arquivo do Drive
-      final conteudoJson = await _driveService.baixarArquivoDaPasta(nomeArquivo, 'rankings');
+      // Carrega da pasta rankings com subpasta por data
+      final dataFormatada = _folderManager.formatarDataParaPasta(dataSemHora);
+      final pastaComData = 'rankings/$dataFormatada';
+      print('🎯 [RankingService] Carregando da pasta: $pastaComData/$nomeArquivo');
+      final conteudoJson = await _driveService.baixarArquivoDaPasta(nomeArquivo, pastaComData);
       
       if (conteudoJson.isEmpty) {
-        // Se não existe, cria ranking vazio para o dia
-        print('📊 [RankingService] Ranking não encontrado para o dia, criando novo');
+        // Se não existe, cria ranking vazio para o email no dia
+        print('📊 [RankingService] Ranking individual não encontrado para $email, criando novo');
         return RankingDiario(
           data: dataSemHora,
           entradas: [],
@@ -154,11 +158,11 @@ class RankingService {
       final dados = json.decode(conteudoJson) as Map<String, dynamic>;
       final ranking = RankingDiario.fromJson(dados);
       
-      print('✅ [RankingService] Ranking carregado: ${ranking.entradas.length} entradas');
+      print('✅ [RankingService] Ranking individual carregado para $email: ${ranking.entradas.length} entradas');
       return ranking;
       
     } catch (e) {
-      print('❌ [RankingService] Erro ao carregar ranking do dia: $e');
+      print('❌ [RankingService] Erro ao carregar ranking individual para $email: $e');
       // Em caso de erro, retorna ranking vazio
       final dataSemHora = DateTime(data.year, data.month, data.day);
       return RankingDiario(
@@ -168,21 +172,98 @@ class RankingService {
     }
   }
 
-  /// Salva o ranking diário no Drive
-  Future<void> _salvarRankingDia(RankingDiario ranking) async {
+  /// Carrega o ranking consolidado de um dia específico (todos os emails)
+  Future<RankingDiario> carregarRankingDia(DateTime data) async {
     try {
-      final nomeArquivo = _getNomeArquivoRanking(ranking.data);
+      final dataSemHora = DateTime(data.year, data.month, data.day);
+      
+      print('📊 [RankingService] Carregando ranking consolidado do dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
+
+      // Lista todos os arquivos da pasta da data
+      final dataFormatada = _folderManager.formatarDataParaPasta(dataSemHora);
+      final pastaComData = 'rankings/$dataFormatada';
+      
+      // Usar método para listar arquivos por data (precisa implementar)
+      final arquivos = await _listarArquivosRankingPorData(dataSemHora);
+      
+      if (arquivos.isEmpty) {
+        print('📊 [RankingService] Nenhum arquivo de ranking encontrado para o dia');
+        return RankingDiario(data: dataSemHora, entradas: []);
+      }
+      
+      // Consolida todas as entradas de todos os emails
+      final List<RankingEntry> todasEntradas = [];
+      
+      for (final arquivo in arquivos) {
+        try {
+          final conteudoJson = await _driveService.baixarArquivoDaPasta(arquivo, pastaComData);
+          if (conteudoJson.isNotEmpty) {
+            final dados = json.decode(conteudoJson) as Map<String, dynamic>;
+            final ranking = RankingDiario.fromJson(dados);
+            todasEntradas.addAll(ranking.entradas);
+          }
+        } catch (e) {
+          print('⚠️ [RankingService] Erro ao processar arquivo $arquivo: $e');
+        }
+      }
+      
+      final rankingConsolidado = RankingDiario(
+        data: dataSemHora,
+        entradas: todasEntradas,
+      );
+      
+      print('✅ [RankingService] Ranking consolidado carregado: ${todasEntradas.length} entradas de ${arquivos.length} arquivos');
+      return rankingConsolidado;
+      
+    } catch (e) {
+      print('❌ [RankingService] Erro ao carregar ranking consolidado: $e');
+      final dataSemHora = DateTime(data.year, data.month, data.day);
+      return RankingDiario(data: dataSemHora, entradas: []);
+    }
+  }
+
+  /// Salva o ranking diário no Drive na pasta rankings por email
+  Future<void> _salvarRankingDia(RankingDiario ranking, String email) async {
+    try {
+      final nomeArquivo = _getNomeArquivoRanking(ranking.data, email);
       final dadosJson = ranking.toJson();
       
-      print('💾 [RankingService] Salvando ranking do dia: ${_formatarDataParaNomeArquivo(ranking.data)}');
+      print('💾 [RankingService] Salvando ranking do dia: ${_formatarDataParaNomeArquivo(ranking.data)} para $email');
       
-      await _driveService.salvarArquivoEmPasta(nomeArquivo, json.encode(dadosJson), 'rankings');
+      // Salva na pasta rankings com subpasta por data
+      final dataFormatada = _folderManager.formatarDataParaPasta(ranking.data);
+      final pastaComData = 'rankings/$dataFormatada';
+      print('🎯 [RankingService] Salvando na pasta: $pastaComData/$nomeArquivo');
+      await _driveService.salvarArquivoEmPasta(nomeArquivo, json.encode(dadosJson), pastaComData);
       
-      print('✅ [RankingService] Ranking salvo com sucesso');
+      print('✅ [RankingService] Ranking salvo com sucesso para $email');
       
     } catch (e) {
       print('❌ [RankingService] Erro ao salvar ranking: $e');
       throw Exception('Erro ao salvar ranking: $e');
+    }
+  }
+
+  /// Lista todos os arquivos de ranking de uma data específica
+  Future<List<String>> _listarArquivosRankingPorData(DateTime data) async {
+    try {
+      final dataFormatada = _folderManager.formatarDataParaPasta(data);
+      
+      // Busca arquivos que começam com "ranking_" na pasta da data
+      // Precisa usar o DriveService para listar arquivos da subpasta
+      final arquivos = await _driveService.listarArquivosDaPasta('rankings/$dataFormatada');
+      
+      // Filtra apenas arquivos de ranking
+      final arquivosRanking = arquivos.where((nome) => 
+        nome.startsWith('ranking_') && nome.endsWith('.json')
+      ).toList();
+      
+      print('📋 [RankingService] Encontrados ${arquivosRanking.length} arquivos de ranking para data $dataFormatada');
+      return arquivosRanking;
+      
+    } catch (e) {
+      print('❌ [RankingService] Erro ao listar arquivos de ranking: $e');
+      return [];
     }
   }
 
@@ -232,7 +313,7 @@ class RankingService {
     }
   }
 
-  /// Lista todas as datas que possuem ranking (últimos 30 dias)
+  /// Lista todas as datas que possuem ranking (últimos 30 dias) na pasta rankings
   Future<List<DateTime>> getDataComRanking({int diasLimite = 30}) async {
     try {
       final hoje = DateTime(agora.year, agora.month, agora.day);
@@ -241,17 +322,18 @@ class RankingService {
       // Verifica os últimos N dias
       for (int i = 0; i < diasLimite; i++) {
         final dataVerificar = hoje.subtract(Duration(days: i));
-        final nomeArquivo = _getNomeArquivoRanking(dataVerificar);
         
-        // Verifica se existe arquivo para esta data
-        final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, 'rankings');
-        if (conteudo.isNotEmpty) {
+        // Verifica se existe qualquer arquivo de ranking para esta data
+        final arquivos = await _listarArquivosRankingPorData(dataVerificar);
+        if (arquivos.isNotEmpty) {
           datasComRanking.add(dataVerificar);
         }
       }
       
       // Ordena por data (mais recente primeiro)
       datasComRanking.sort((a, b) => b.compareTo(a));
+      
+      print('📋 [RankingService] Encontradas ${datasComRanking.length} datas com ranking');
       return datasComRanking;
       
     } catch (e) {
@@ -299,16 +381,16 @@ class RankingService {
     }
   }
 
-  /// Remove uma entrada específica (por runId)
-  Future<void> removerEntrada(String runId, DateTime data) async {
+  /// Remove uma entrada específica (por runId e email)
+  Future<void> removerEntrada(String runId, DateTime data, String email) async {
     try {
-      final ranking = await carregarRankingDia(data);
+      final ranking = await carregarRankingDiaEmail(data, email);
       final entradasFiltradas = ranking.entradas.where((e) => e.runId != runId).toList();
       
       final rankingAtualizado = ranking.copyWith(entradas: entradasFiltradas);
-      await _salvarRankingDia(rankingAtualizado);
+      await _salvarRankingDia(rankingAtualizado, email);
       
-      print('✅ [RankingService] Entrada removida: $runId');
+      print('✅ [RankingService] Entrada removida: $runId do email $email');
       
     } catch (e) {
       print('❌ [RankingService] Erro ao remover entrada: $e');

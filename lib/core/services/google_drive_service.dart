@@ -325,12 +325,26 @@ class GoogleDriveService {
       
       if (pasta == 'tipagens') {
         arquivos = await _driveService!.listInTipagensFolder();
-      } else if (pasta == 'historias') {
-        arquivos = await _driveService!.listInHistoriasFolder();
+      } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
+        // Suporte a subpastas de historias (historias/2025-09-04/jogador)
+        if (pasta.startsWith('historias/') && pasta.length > 10) {
+          final subpasta = pasta.substring(10); // Remove "historias/"
+          print('📅 [GoogleDriveService] Buscando na subpasta de historias: $subpasta');
+          arquivos = await _driveService!.listInHistoriasFolderByPath(subpasta);
+        } else {
+          arquivos = await _driveService!.listInHistoriasFolder();
+        }
       } else if (pasta == 'drops') {
         arquivos = await _driveService!.listInDropsFolder();
-      } else if (pasta == 'rankings') {
-        arquivos = await _driveService!.listInRankingFolder();
+      } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
+        // Suporte a subpastas de rankings (rankings/2025-09-04)
+        if (pasta.startsWith('rankings/') && pasta.length > 9) {
+          final dataStr = pasta.substring(9); // Remove "rankings/"
+          print('📅 [GoogleDriveService] Buscando na subpasta de data: $dataStr');
+          arquivos = await _driveService!.listInRankingFolderByDate(dataStr);
+        } else {
+          arquivos = await _driveService!.listInRankingFolder();
+        }
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
@@ -388,6 +402,7 @@ class GoogleDriveService {
       }
 
       print('💾 [GoogleDriveService] Salvando arquivo: $nomeArquivo na pasta: $pasta');
+      print('🔍 [GoogleDriveService] Testando pasta: "$pasta" - startsWith rankings/: ${pasta.startsWith('rankings/')}');
       
       if (conteudo.startsWith('{') || conteudo.startsWith('[')) {
         // É JSON
@@ -395,14 +410,32 @@ class GoogleDriveService {
         
         if (pasta == 'tipagens') {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
-        } else if (pasta == 'historias') {
-          await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
+          // Suporte a subpastas de historias (historias/2025-09-04/jogador)
+          if (pasta.startsWith('historias/') && pasta.length > 10) {
+            final subpasta = pasta.substring(10); // Remove "historias/"
+            print('📅 [GoogleDriveService] Salvando na subpasta de historias: $subpasta');
+            await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+          } else {
+            await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+          }
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
-        } else if (pasta == 'rankings') {
-          await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
+        } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
+          // Suporte a subpastas de rankings (rankings/2025-09-04)
+          print('✅ [GoogleDriveService] Usando pasta RANKINGS para: $pasta');
+          
+          // Extrai a data da pasta se for subpasta
+          if (pasta.startsWith('rankings/') && pasta.length > 9) {
+            final dataStr = pasta.substring(9); // Remove "rankings/"
+            print('📅 [GoogleDriveService] Data extraída da pasta: $dataStr');
+            await _driveService!.createJsonFileInRankingWithDate(nomeArquivo, dadosJson, dataStr);
+          } else {
+            await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
+          }
         } else {
           // Fallback para pasta padrão (tipagens)
+          print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         }
       } else {
@@ -411,14 +444,32 @@ class GoogleDriveService {
         
         if (pasta == 'tipagens') {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
-        } else if (pasta == 'historias') {
-          await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+        } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
+          // Suporte a subpastas de historias (historias/2025-09-04/jogador)
+          if (pasta.startsWith('historias/') && pasta.length > 10) {
+            final subpasta = pasta.substring(10); // Remove "historias/"
+            print('📅 [GoogleDriveService] Salvando na subpasta de historias: $subpasta');
+            await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+          } else {
+            await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
+          }
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
-        } else if (pasta == 'rankings') {
-          await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
+        } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
+          // Suporte a subpastas de rankings (rankings/2025-09-04)
+          print('✅ [GoogleDriveService] Usando pasta RANKINGS para: $pasta');
+          
+          // Extrai a data da pasta se for subpasta
+          if (pasta.startsWith('rankings/') && pasta.length > 9) {
+            final dataStr = pasta.substring(9); // Remove "rankings/"
+            print('📅 [GoogleDriveService] Data extraída da pasta: $dataStr');
+            await _driveService!.createJsonFileInRankingWithDate(nomeArquivo, dadosJson, dataStr);
+          } else {
+            await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
+          }
         } else {
           // Fallback para pasta padrão (tipagens)
+          print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         }
       }
@@ -558,5 +609,56 @@ class GoogleDriveService {
       }
     }
     return false;
+  }
+
+  /// Lista nomes de todos os arquivos de uma pasta específica
+  Future<List<String>> listarArquivosDaPasta(String pasta) async {
+    try {
+      if (_driveService == null) {
+        final conectou = await inicializarConexao();
+        if (!conectou) return [];
+      }
+
+      print('📂 [GoogleDriveService] Listando arquivos da pasta: $pasta');
+      
+      List<drive.File> arquivos = [];
+      
+      if (pasta == 'tipagens') {
+        arquivos = await _driveService!.listInTipagensFolder();
+      } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
+        // Suporte a subpastas de historias (historias/2025-09-04/jogador)
+        if (pasta.startsWith('historias/') && pasta.length > 10) {
+          final subpasta = pasta.substring(10); // Remove "historias/"
+          print('📅 [GoogleDriveService] Buscando na subpasta de historias: $subpasta');
+          arquivos = await _driveService!.listInHistoriasFolderByPath(subpasta);
+        } else {
+          arquivos = await _driveService!.listInHistoriasFolder();
+        }
+      } else if (pasta == 'drops') {
+        arquivos = await _driveService!.listInDropsFolder();
+      } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
+        // Suporte a subpastas de rankings (rankings/2025-09-04)
+        if (pasta.startsWith('rankings/') && pasta.length > 9) {
+          final dataStr = pasta.substring(9); // Remove "rankings/"
+          print('📅 [GoogleDriveService] Listando arquivos da subpasta de data: $dataStr');
+          arquivos = await _driveService!.listInRankingFolderByDate(dataStr);
+        } else {
+          arquivos = await _driveService!.listInRankingFolder();
+        }
+      } else {
+        // Fallback para pasta raiz
+        arquivos = await _driveService!.listInRootFolder();
+      }
+      
+      // Extrai apenas os nomes dos arquivos
+      final nomesArquivos = arquivos.map((file) => file.name ?? '').where((name) => name.isNotEmpty).toList();
+      
+      print('✅ [GoogleDriveService] Encontrados ${nomesArquivos.length} arquivos na pasta $pasta');
+      return nomesArquivos;
+      
+    } catch (e) {
+      print('❌ [GoogleDriveService] Erro ao listar arquivos da pasta $pasta: $e');
+      return [];
+    }
   }
 }

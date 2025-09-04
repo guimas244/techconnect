@@ -511,26 +511,90 @@ class DriveService {
     );
 
     if (arquivoExistente.id != null) {
-      // Atualizar arquivo existente
-      await updateJsonFileInRanking(arquivoExistente.id!, jsonData);
-      print('✅ [DriveService] Arquivo atualizado na pasta RANKING: $filename');
-    } else {
-      // Criar novo arquivo na pasta RANKING
-      final file = drive.File();
-      file.name = filename;
-      file.parents = [pastaRankingId];
-
-      final jsonString = json.encode(jsonData);
-      final jsonBytes = utf8.encode(jsonString);
-      final media = drive.Media(
-        Stream.fromIterable([jsonBytes]),
-        jsonBytes.length,
-        contentType: 'application/json',
-      );
-
-      await api.files.create(file, uploadMedia: media);
-      print('✅ [DriveService] Arquivo criado na pasta RANKING: $filename');
+      // Tentar atualizar arquivo existente
+      try {
+        await updateJsonFileInRanking(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado na pasta RANKING: $filename');
+        return; // Sucesso, não precisa criar novo
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo (sem permissão): $e');
+        print('🔄 [DriveService] Criando novo arquivo ao invés de atualizar...');
+        // Modifica o nome do arquivo para evitar conflito
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+        // Continua para criar novo arquivo abaixo
+      }
     }
+    
+    // Criar novo arquivo na pasta RANKING (ou quando falha ao atualizar)
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [pastaRankingId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Novo arquivo criado na pasta RANKING: $filename');
+  }
+
+  /// Cria arquivo JSON na pasta RANKING com subpasta por data
+  Future<void> createJsonFileInRankingWithDate(String filename, Map<String, dynamic> jsonData, String dateStr) async {
+    final pastaRankingId = await criarPastaRanking();
+    if (pastaRankingId == null) {
+      throw Exception('Não foi possível acessar pasta RANKING');
+    }
+
+    // Criar ou encontrar subpasta por data
+    final subpastaId = await _criarOuEncontrarSubpasta(pastaRankingId, dateStr);
+    if (subpastaId == null) {
+      throw Exception('Não foi possível criar/acessar subpasta para data: $dateStr');
+    }
+
+    // Verificar se arquivo já existe na subpasta
+    final arquivosSubpasta = await _listFilesInFolder(subpastaId);
+    final arquivoExistente = arquivosSubpasta.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Tentar atualizar arquivo existente
+      try {
+        await _updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado na subpasta $dateStr: $filename');
+        return; // Sucesso, não precisa criar novo
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo na subpasta: $e');
+        print('🔄 [DriveService] Criando novo arquivo na subpasta...');
+        // Modifica o nome do arquivo para evitar conflito
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+      }
+    }
+    
+    // Criar novo arquivo na subpasta
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [subpastaId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Novo arquivo criado na subpasta $dateStr: $filename');
   }
 
   /// Atualiza arquivo JSON na pasta RANKING
@@ -548,6 +612,182 @@ class DriveService {
   }
 
   /// Baixa um arquivo específico da pasta RANKING
+  /// Cria ou encontra uma subpasta dentro da pasta pai
+  Future<String?> _criarOuEncontrarSubpasta(String pastaParentId, String nomeSubpasta) async {
+    try {
+      print('📁 [DEBUG] Criando/encontrando subpasta: $nomeSubpasta dentro de $pastaParentId');
+
+      // Lista subpastas existentes
+      final response = await api.files.list(
+        q: "parents in '$pastaParentId' and mimeType='application/vnd.google-apps.folder' and name='$nomeSubpasta'",
+        $fields: 'files(id, name)',
+      );
+
+      if (response.files?.isNotEmpty == true) {
+        final subpastaId = response.files!.first.id!;
+        print('✅ [DEBUG] Subpasta encontrada: $nomeSubpasta (ID: $subpastaId)');
+        return subpastaId;
+      }
+
+      // Criar nova subpasta
+      final folder = drive.File();
+      folder.name = nomeSubpasta;
+      folder.parents = [pastaParentId];
+      folder.mimeType = 'application/vnd.google-apps.folder';
+
+      final createdFolder = await api.files.create(folder);
+      final subpastaId = createdFolder.id!;
+      print('✅ [DEBUG] Subpasta criada: $nomeSubpasta (ID: $subpastaId)');
+      return subpastaId;
+
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar/encontrar subpasta $nomeSubpasta: $e');
+      return null;
+    }
+  }
+
+  /// Lista arquivos em uma pasta específica
+  Future<List<drive.File>> _listFilesInFolder(String folderId) async {
+    try {
+      final response = await api.files.list(
+        q: "parents in '$folderId'",
+        $fields: 'files(id, name, createdTime)',
+      );
+      return response.files ?? [];
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao listar arquivos na pasta $folderId: $e');
+      return [];
+    }
+  }
+
+  /// Atualiza um arquivo JSON genérico
+  Future<void> _updateJsonFile(String fileId, Map<String, dynamic> jsonData) async {
+    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+    final contentBytes = utf8.encode(content);
+    final media = drive.Media(
+      Stream.fromIterable([contentBytes]),
+      contentBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.update(drive.File(), fileId, uploadMedia: media);
+  }
+
+  /// Lista arquivos na pasta RANKING por data específica
+  Future<List<drive.File>> listInRankingFolderByDate(String dateStr) async {
+    try {
+      final pastaRankingId = await criarPastaRanking();
+      if (pastaRankingId == null) {
+        print('❌ [DEBUG] Não foi possível acessar pasta RANKING');
+        return [];
+      }
+
+      // Encontra a subpasta da data
+      final subpastaId = await _criarOuEncontrarSubpasta(pastaRankingId, dateStr);
+      if (subpastaId == null) {
+        print('❌ [DEBUG] Não foi possível acessar subpasta para data: $dateStr');
+        return [];
+      }
+
+      // Lista arquivos na subpasta
+      return await _listFilesInFolder(subpastaId);
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao listar arquivos na subpasta $dateStr: $e');
+      return [];
+    }
+  }
+
+  /// Lista arquivos na pasta HISTORIAS por caminho específico (data/jogador)
+  Future<List<drive.File>> listInHistoriasFolderByPath(String path) async {
+    try {
+      final pastaHistoriasId = await criarPastaHistorias();
+      if (pastaHistoriasId == null) {
+        print('❌ [DEBUG] Não foi possível acessar pasta HISTORIAS');
+        return [];
+      }
+
+      // Divide o caminho (ex: "2025-09-04/jogador1@gmail.com")
+      final partes = path.split('/');
+      String pastaAtualId = pastaHistoriasId;
+
+      // Navega através do caminho
+      for (final parte in partes) {
+        final subpastaId = await _criarOuEncontrarSubpasta(pastaAtualId, parte);
+        if (subpastaId == null) {
+          print('❌ [DEBUG] Não foi possível acessar subpasta: $parte');
+          return [];
+        }
+        pastaAtualId = subpastaId;
+      }
+
+      // Lista arquivos na pasta final
+      return await _listFilesInFolder(pastaAtualId);
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao listar arquivos no caminho $path: $e');
+      return [];
+    }
+  }
+
+  /// Cria arquivo JSON na pasta HISTORIAS com caminho específico (data/jogador)
+  Future<void> createJsonFileInHistoriasWithPath(String filename, Map<String, dynamic> jsonData, String path) async {
+    final pastaHistoriasId = await criarPastaHistorias();
+    if (pastaHistoriasId == null) {
+      throw Exception('Não foi possível acessar pasta HISTORIAS');
+    }
+
+    // Divide o caminho (ex: "2025-09-04/jogador1@gmail.com")
+    final partes = path.split('/');
+    String pastaAtualId = pastaHistoriasId;
+
+    // Cria/navega através do caminho
+    for (final parte in partes) {
+      final subpastaId = await _criarOuEncontrarSubpasta(pastaAtualId, parte);
+      if (subpastaId == null) {
+        throw Exception('Não foi possível criar/acessar subpasta: $parte');
+      }
+      pastaAtualId = subpastaId;
+    }
+
+    // Verificar se arquivo já existe na pasta final
+    final arquivos = await _listFilesInFolder(pastaAtualId);
+    final arquivoExistente = arquivos.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Tentar atualizar arquivo existente
+      try {
+        await _updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado em HISTORIAS/$path: $filename');
+        return; // Sucesso, não precisa criar novo
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo em HISTORIAS: $e');
+        print('🔄 [DriveService] Criando novo arquivo...');
+        // Modifica o nome do arquivo para evitar conflito
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+      }
+    }
+    
+    // Criar novo arquivo na pasta final
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [pastaAtualId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Novo arquivo criado em HISTORIAS/$path: $filename');
+  }
+
   Future<String> downloadFileFromRanking(String filename) async {
     try {
       final pastaRankingId = await criarPastaRanking();

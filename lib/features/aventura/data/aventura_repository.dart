@@ -38,11 +38,37 @@ class AventuraRepository {
   Future<HistoriaJogador?> carregarHistoricoJogador(String email) async {
     try {
       print('📥 [Repository] Carregando histórico para: $email');
-      final nomeArquivo = 'historico_$email.json';
-      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, 'historias');
       
+      // Cria o caminho com data atual e email do jogador
+      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$email';
+      final nomeArquivo = 'historico_$email.json';
+      
+      print('📂 [Repository] Buscando em: $caminhoCompleto/$nomeArquivo');
+      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
+      
+      // Se não encontrou no dia atual, busca nos últimos 7 dias
       if (conteudo.isEmpty) {
-        print('📥 [Repository] Conteúdo vazio');
+        print('📥 [Repository] Não encontrado no dia atual, buscando nos últimos dias...');
+        for (int i = 1; i <= 7; i++) {
+          final dataAnterior = hoje.subtract(Duration(days: i));
+          final dataAnteriorFormatada = '${dataAnterior.year.toString().padLeft(4, '0')}-${dataAnterior.month.toString().padLeft(2, '0')}-${dataAnterior.day.toString().padLeft(2, '0')}';
+          final caminhoAnterior = 'historias/$dataAnteriorFormatada/$email';
+          
+          print('📂 [Repository] Tentando: $caminhoAnterior/$nomeArquivo');
+          final conteudoAnterior = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoAnterior);
+          
+          if (conteudoAnterior.isNotEmpty) {
+            print('✅ [Repository] Encontrado histórico em $dataAnteriorFormatada');
+            final json = jsonDecode(conteudoAnterior);
+            final historia = HistoriaJogador.fromJson(json);
+            print('📥 [Repository] História processada: ${historia.monstros.length} monstros');
+            return historia;
+          }
+        }
+        
+        print('📥 [Repository] Nenhum histórico encontrado nos últimos 7 dias');
         return null;
       }
       
@@ -68,8 +94,14 @@ class AventuraRepository {
       print('   - Mapa: ${historia.mapaAventura}');
       print('   - Inimigos: ${historia.monstrosInimigos.length}');
       
+      // Cria o caminho com data atual e email do jogador
+      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/${historia.email}';
       final nomeArquivo = 'historico_${historia.email}.json';
+      
       print('💾 [Repository] Nome do arquivo: $nomeArquivo');
+      print('📂 [Repository] Salvando em: $caminhoCompleto/$nomeArquivo');
       
       // Tenta serializar JSON com try-catch específico
       String json;
@@ -87,7 +119,7 @@ class AventuraRepository {
       print('💾 [Repository] Primeiros 300 chars do JSON: ${json.substring(0, json.length > 300 ? 300 : json.length)}...');
       
       print('💾 [Repository] Chamando DriveService.salvarArquivoEmPasta...');
-      final sucesso = await _driveService.salvarArquivoEmPasta(nomeArquivo, json, 'historias');
+      final sucesso = await _driveService.salvarArquivoEmPasta(nomeArquivo, json, caminhoCompleto);
       print('💾 [Repository] Resultado do salvamento: $sucesso');
       
       if (sucesso) {
