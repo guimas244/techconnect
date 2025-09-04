@@ -19,12 +19,12 @@ class EvolucaoService {
   bool podeEvoluir(MonstroAventura monstroSorteado, int levelMonstroInimigo) {
     // Pode evoluir se monstro <= inimigo
     if (monstroSorteado.level <= levelMonstroInimigo) {
-      print('✅ [Evolução] ${monstroSorteado.tipo.displayName} (Lv.${monstroSorteado.level}) pode evoluir contra inimigo (Lv.$levelMonstroInimigo)');
+      print('✅ [Evolução] ${monstroSorteado.tipo.monsterName} (Lv.${monstroSorteado.level}) pode evoluir contra inimigo (Lv.$levelMonstroInimigo)');
       return true;
     }
     
     // Não pode evoluir se monstro > inimigo
-    print('🚫 [Evolução] ${monstroSorteado.tipo.displayName} (Lv.${monstroSorteado.level}) não evoluiu - mais poderoso que inimigo (Lv.$levelMonstroInimigo)');
+    print('🚫 [Evolução] ${monstroSorteado.tipo.monsterName} (Lv.${monstroSorteado.level}) não evoluiu - mais poderoso que inimigo (Lv.$levelMonstroInimigo)');
     return false;
   }
 
@@ -35,7 +35,7 @@ class EvolucaoService {
   /// - +5 pontos em vida e energia (sempre)
   /// - +1 level em 1 habilidade aleatória
   MonstroAventura evoluirMonstro(MonstroAventura monstro) {
-    print('🌟 [Evolução] ${monstro.tipo.displayName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
+    print('🌟 [Evolução] ${monstro.tipo.monsterName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
     
     // Lista de atributos que podem ganhar +5 pontos aleatoriamente
     final atributosDisponiveis = ['ataque', 'defesa', 'agilidade'];
@@ -93,7 +93,7 @@ class EvolucaoService {
 
   /// Evolui um monstro com atributos e habilidades, considerando level gap das habilidades
   Map<String, dynamic> evoluirMonstroCompleto(MonstroAventura monstro, int levelInimigoDerrrotado) {
-    print('🌟 [Evolução] ${monstro.tipo.displayName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
+    print('🌟 [Evolução] ${monstro.tipo.monsterName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
     
     // Primeiro, tenta evoluir uma habilidade (sem evoluir o level do monstro ainda)
     final resultadoHabilidade = _tentarEvoluirHabilidadeSemLevel(monstro, levelInimigoDerrrotado);
@@ -117,7 +117,7 @@ class EvolucaoService {
   /// Tenta evoluir apenas uma habilidade (sem evoluir o monstro)
   /// Usado quando o monstro não pode evoluir por level gap mas habilidades podem
   Map<String, dynamic> tentarEvoluirHabilidade(MonstroAventura monstro, int levelInimigoDerrrotado) {
-    print('🎯 [Evolução] Tentando evoluir habilidade de ${monstro.tipo.displayName} (monstro não evoluiu por level gap)');
+    print('🎯 [Evolução] Tentando evoluir habilidade de ${monstro.tipo.monsterName} (monstro não evoluiu por level gap)');
     
     // Usa o método do monstro para tentar evoluir uma habilidade
     final resultadoHabilidade = monstro.evoluir(levelInimigoDerrrotado: levelInimigoDerrrotado);
@@ -178,7 +178,7 @@ class EvolucaoService {
     }
     
     return {
-      'monstro': monstroOriginal.tipo.displayName,
+      'monstro': monstroOriginal.tipo.monsterName,
       'monstroEvoluiu': false, // Monstro não evoluiu por level gap
       'habilidadeEvoluida': infoHabilidade,
     };
@@ -226,7 +226,7 @@ class EvolucaoService {
     }
     
     return {
-      'monstro': monstroDepois.tipo.displayName,
+      'monstro': monstroDepois.tipo.monsterName,
       'levelAntes': monstroAntes.level,
       'levelDepois': monstroDepois.level,
       'ganhos': {
@@ -260,7 +260,7 @@ class EvolucaoService {
     }
     
     return {
-      'monstro': monstroDepois.tipo.displayName,
+      'monstro': monstroDepois.tipo.monsterName,
       'levelAntes': monstroAntes.level,
       'levelDepois': monstroDepois.level,
       'ganhos': {
@@ -325,7 +325,7 @@ class EvolucaoService {
   /// Cria informações quando não há evolução por level gap
   Map<String, dynamic> criarInfoSemEvolucao(MonstroAventura monstroSorteado, int levelInimigo) {
     return {
-      'monstro': monstroSorteado.tipo.displayName,
+      'monstro': monstroSorteado.tipo.monsterName,
       'levelMonstro': monstroSorteado.level,
       'levelInimigo': levelInimigo,
       'motivo': 'level_gap',
