@@ -88,6 +88,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final ataqueComItem = widget.jogador.ataque + (item?.atributos['ataque'] ?? 0);
     final defesaComItem = widget.jogador.defesa + (item?.atributos['defesa'] ?? 0);
     final vidaComItem = widget.jogador.vida + (item?.atributos['vida'] ?? 0);
+    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.atributos['vida'] ?? 0);
     final energiaComItem = widget.jogador.energia + (item?.atributos['energia'] ?? 0);
     final agilidadeComItem = widget.jogador.agilidade + (item?.atributos['agilidade'] ?? 0);
 
@@ -97,6 +98,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final ataqueInimigoTotal = (widget.inimigo.ataqueTotal * levelMultiplier).round();
     final defesaInimigoTotal = (widget.inimigo.defesaTotal * levelMultiplier).round();
     final vidaInimigoTotal = (widget.inimigo.vidaTotal * levelMultiplier).round();
+    final vidaAtualInimigoTotal = (widget.inimigo.vidaAtual + (itemInimigo?.atributos['vida'] ?? 0)) * levelMultiplier;
     final energiaInimigoTotal = (widget.inimigo.energiaTotal * levelMultiplier).round();
     final agilidadeInimigoTotal = (widget.inimigo.agilidadeTotal * levelMultiplier).round();
     
@@ -104,8 +106,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
     
-    print('📊 [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaComItem AGI=$agilidadeComItem');
-    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
+    print('📊 [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
+    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=${vidaAtualInimigoTotal.round()}/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     print('📊 [Stats] Multiplier level: ${levelMultiplier}x');
     if (itemInimigo != null) {
       print('📊 [Item] Inimigo equipado: ${itemInimigo.nome}');
@@ -114,8 +116,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
       inimigo: widget.inimigo,
-      vidaAtualJogador: vidaComItem, // Usa vida máxima (vida base + item)
-      vidaAtualInimigo: vidaInimigoTotal, // Usa vida máxima (vida base + item + level)
+      vidaAtualJogador: vidaAtualComItem, // Usa vida atual + bônus do item
+      vidaAtualInimigo: vidaAtualInimigoTotal.round(), // Usa vida atual + bônus do item + level
       vidaMaximaJogador: vidaComItem, // Vida máxima inicial + item
       vidaMaximaInimigo: vidaInimigoTotal, // Vida máxima + item + level
       energiaAtualJogador: energiaComItem, // Usa energia máxima (energia base + item)

@@ -13,7 +13,10 @@
       "Bash(grep:*)",
       "Bash(copy:*)",
       "Bash(chmod:*)",
-      "Bash(./build_apk.sh)"
+      "Bash(./build_apk.sh)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub:*)",
+      "Bash(/bashes)"
     ],
     "deny": [],
     "ask": []
