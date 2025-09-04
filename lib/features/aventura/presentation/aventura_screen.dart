@@ -145,29 +145,33 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final historia = await repository.sortearMonstrosParaJogador(emailJogador);
       
       print('🎲 [AventuraScreen] Monstros sorteados, atualizando estado...');
-      setState(() {
-        historiaAtual = historia;
-      });
-      
-      // Como o sorteio criou os monstros, definimos estado como pode iniciar para mostrar os monstros
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Aventura criada e salva com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          historiaAtual = historia;
+        });
+        
+        // Como o sorteio criou os monstros, definimos estado como pode iniciar para mostrar os monstros
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aventura criada e salva com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
       print('✅ [AventuraScreen] Aventura completa criada com sucesso');
     } catch (e) {
       print('❌ [AventuraScreen] Erro no sorteio: $e');
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao sortear monstros: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao sortear monstros: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -208,32 +212,39 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           ),
         );
 
-        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+        // Verifica se widget ainda está montado antes de usar ref
+        if (mounted) {
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
 
-        // Mensagem diferente baseada no tipo de aventura
-        final mensagem = isAventuraNova 
-            ? 'Aventura iniciada! Boa sorte na jornada!'
-            : 'Aventura continuada! Bem-vindo de volta!';
+          // Mensagem diferente baseada no tipo de aventura
+          final mensagem = isAventuraNova 
+              ? 'Aventura iniciada! Boa sorte na jornada!'
+              : 'Aventura continuada! Bem-vindo de volta!';
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(mensagem),
-            backgroundColor: Colors.green,
-          ),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(mensagem),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         throw Exception('Falha ao iniciar aventura');
       }
     } catch (e, stack) {
       debugPrint('❌ [AventuraScreen] Erro ao iniciar aventura: $e');
       debugPrint('❌ [AventuraScreen] Stacktrace: $stack');
-      ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao iniciar aventura: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      
+      // Verifica se widget ainda está montado antes de usar ref
+      if (mounted) {
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao iniciar aventura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
