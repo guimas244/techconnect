@@ -22,6 +22,11 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
   Map<String, dynamic> _estatisticas = {};
   bool _carregando = false;
   String? _erro;
+  
+  // Variáveis para carregamento progressivo
+  int _arquivosCarregados = 0;
+  int _totalArquivos = 0;
+  String _progressoTexto = '';
 
   @override
   void initState() {
@@ -38,10 +43,49 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     setState(() {
       _carregando = true;
       _erro = null;
+      _arquivosCarregados = 0;
+      _totalArquivos = 0;
+      _progressoTexto = 'Iniciando carregamento...';
     });
 
     try {
-      final topJogadores = await _rankingService.getTopJogadores(_dataAtual, limite: 50);
+      // Carrega ranking com progresso
+      final topJogadores = await _rankingService.getTopJogadoresProgressivo(
+        _dataAtual, 
+        limite: 50,
+        onProgress: (carregados, total, topParciais) {
+          if (!mounted) return;
+          
+          final percentual = total > 0 ? (carregados * 100 / total).round() : 0;
+          
+          setState(() {
+            _arquivosCarregados = carregados;
+            _totalArquivos = total;
+            _progressoTexto = total > 0 
+                ? '$percentual% ($carregados/$total arquivos)'
+                : 'Carregando...';
+            
+            // Atualiza dados parciais imediatamente com animação suave
+            _topJogadores = List.from(topParciais);
+            
+            // Atualiza estatísticas parciais também
+            if (topParciais.isNotEmpty) {
+              final scores = topParciais.map((e) => e.score).toList();
+              final jogadoresUnicos = topParciais.map((e) => e.email).toSet();
+              
+              _estatisticas = {
+                'totalJogadores': jogadoresUnicos.length,
+                'totalRuns': topParciais.length,
+                'scoreMaximo': scores.isNotEmpty ? scores.reduce((a, b) => a > b ? a : b) : 0,
+                'scoreMedio': scores.isNotEmpty ? (scores.reduce((a, b) => a + b) / scores.length).round() : 0,
+                'scoreMinimo': scores.isNotEmpty ? scores.reduce((a, b) => a < b ? a : b) : 0,
+              };
+            }
+          });
+        },
+      );
+      
+      // Carrega estatísticas após terminar o ranking
       final estatisticas = await _rankingService.getEstatisticasDia(_dataAtual);
 
       if (!mounted) return;
@@ -50,6 +94,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
         _topJogadores = topJogadores;
         _estatisticas = estatisticas;
         _carregando = false;
+        _progressoTexto = '';
       });
     } catch (e) {
       if (!mounted) return;
@@ -57,6 +102,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       setState(() {
         _erro = 'Erro ao carregar ranking: $e';
         _carregando = false;
+        _progressoTexto = '';
       });
     }
   }
@@ -308,6 +354,91 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
               
               const SizedBox(height: 16),
               
+              // Indicador de progresso (acima da tabela)
+              if (_carregando && _topJogadores.isNotEmpty)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.blue.shade600,
+                        Colors.blue.shade500,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Progress indicator compacto
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              value: _totalArquivos > 0 
+                                  ? _arquivosCarregados / _totalArquivos 
+                                  : null,
+                              backgroundColor: Colors.white.withOpacity(0.3),
+                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          if (_totalArquivos > 0)
+                            Text(
+                              '${(_arquivosCarregados * 100 / _totalArquivos).round()}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 9,
+                                color: Colors.white,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Carregando ranking...',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              _progressoTexto,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Ícone de carregamento
+                      Icon(
+                        Icons.trending_up,
+                        color: Colors.white.withOpacity(0.8),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              
               // Lista de ranking
               Expanded(
                 child: Container(
@@ -316,14 +447,14 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _carregando
+                  child: _carregando && _topJogadores.isEmpty
                       ? const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               CircularProgressIndicator(),
                               SizedBox(height: 16),
-                              Text('Carregando ranking...'),
+                              Text('Iniciando carregamento...'),
                             ],
                           ),
                         )
@@ -369,7 +500,9 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                     final posicao = index + 1;
                                     final isUsuarioAtual = jogador.email == emailUsuario;
 
-                                    return Container(
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
                                       margin: const EdgeInsets.only(bottom: 8),
                                       decoration: BoxDecoration(
                                         color: isUsuarioAtual 

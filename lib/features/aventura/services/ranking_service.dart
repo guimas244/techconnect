@@ -222,6 +222,79 @@ class RankingService {
     }
   }
 
+  /// Carrega o ranking consolidado com carregamento progressivo
+  /// O callback é chamado a cada arquivo carregado com o progresso
+  Future<RankingDiario> carregarRankingDiaProgressivo(
+    DateTime data, {
+    Function(int carregados, int total, List<RankingEntry> entradasParciais)? onProgress,
+  }) async {
+    try {
+      final dataSemHora = DateTime(data.year, data.month, data.day);
+      
+      print('📊 [RankingService] Carregando ranking progressivo do dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
+
+      // Lista todos os arquivos da pasta da data
+      final dataFormatada = _folderManager.formatarDataParaPasta(dataSemHora);
+      final pastaComData = 'rankings/$dataFormatada';
+      
+      final arquivos = await _listarArquivosRankingPorData(dataSemHora);
+      
+      if (arquivos.isEmpty) {
+        print('📊 [RankingService] Nenhum arquivo de ranking encontrado para o dia');
+        onProgress?.call(0, 0, []);
+        return RankingDiario(data: dataSemHora, entradas: []);
+      }
+      
+      // Consolida todas as entradas de todos os emails progressivamente
+      final List<RankingEntry> todasEntradas = [];
+      final totalArquivos = arquivos.length;
+      
+      for (int i = 0; i < arquivos.length; i++) {
+        final arquivo = arquivos[i];
+        try {
+          print('📄 [RankingService] Carregando arquivo ${i + 1}/$totalArquivos: $arquivo');
+          
+          final conteudoJson = await _driveService.baixarArquivoDaPasta(arquivo, pastaComData);
+          if (conteudoJson.isNotEmpty) {
+            final dados = json.decode(conteudoJson) as Map<String, dynamic>;
+            final ranking = RankingDiario.fromJson(dados);
+            todasEntradas.addAll(ranking.entradas);
+            
+            // Chama callback com progresso parcial
+            onProgress?.call(i + 1, totalArquivos, List.from(todasEntradas));
+            
+            print('✅ [RankingService] Arquivo $arquivo processado: +${ranking.entradas.length} entradas (total: ${todasEntradas.length})');
+          } else {
+            // Mesmo se arquivo estiver vazio, chama o callback para atualizar progresso
+            onProgress?.call(i + 1, totalArquivos, List.from(todasEntradas));
+            print('⚠️ [RankingService] Arquivo $arquivo está vazio');
+          }
+        } catch (e) {
+          print('⚠️ [RankingService] Erro ao processar arquivo $arquivo: $e');
+          // Mesmo com erro, chama callback para atualizar progresso
+          onProgress?.call(i + 1, totalArquivos, List.from(todasEntradas));
+        }
+        
+        // Pequeno delay para não sobrecarregar
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      
+      final rankingConsolidado = RankingDiario(
+        data: dataSemHora,
+        entradas: todasEntradas,
+      );
+      
+      print('✅ [RankingService] Ranking progressivo finalizado: ${todasEntradas.length} entradas de ${arquivos.length} arquivos');
+      return rankingConsolidado;
+      
+    } catch (e) {
+      print('❌ [RankingService] Erro ao carregar ranking progressivo: $e');
+      final dataSemHora = DateTime(data.year, data.month, data.day);
+      onProgress?.call(0, 0, []);
+      return RankingDiario(data: dataSemHora, entradas: []);
+    }
+  }
+
   /// Salva o ranking diário no Drive na pasta rankings por email
   Future<void> _salvarRankingDia(RankingDiario ranking, String email) async {
     try {
@@ -278,6 +351,31 @@ class RankingService {
       
     } catch (e) {
       print('❌ [RankingService] Erro ao obter top jogadores: $e');
+      return [];
+    }
+  }
+
+  /// Obtém os top N jogadores de um dia específico com carregamento progressivo
+  Future<List<RankingEntry>> getTopJogadoresProgressivo(
+    DateTime data, {
+    int limite = 10,
+    Function(int carregados, int total, List<RankingEntry> topParciais)? onProgress,
+  }) async {
+    try {
+      final ranking = await carregarRankingDiaProgressivo(data, onProgress: (carregados, total, entradas) {
+        // Ordena as entradas parciais e pega o top
+        final rankingParcial = RankingDiario(data: data, entradas: entradas);
+        final topParcial = rankingParcial.entradasOrdenadas.take(limite).toList();
+        
+        // Chama callback com o top parcial
+        onProgress?.call(carregados, total, topParcial);
+      });
+      
+      final ordenadas = ranking.entradasOrdenadas;
+      return ordenadas.take(limite).toList();
+      
+    } catch (e) {
+      print('❌ [RankingService] Erro ao obter top jogadores progressivo: $e');
       return [];
     }
   }
