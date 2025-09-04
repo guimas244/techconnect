@@ -23,8 +23,15 @@ class AventuraRepository {
   Future<bool> jogadorTemHistorico(String email) async {
     try {
       print('🔍 [Repository] Verificando histórico para: $email');
+      
+      // Usa o mesmo padrão de caminho que o carregamento e salvamento
+      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$email';
       final nomeArquivo = 'historico_$email.json';
-      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, 'historias');
+      
+      print('🔍 [Repository] Buscando em: $caminhoCompleto/$nomeArquivo');
+      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
       final temHistorico = conteudo.isNotEmpty;
       print('🔍 [Repository] Tem histórico: $temHistorico');
       return temHistorico;
