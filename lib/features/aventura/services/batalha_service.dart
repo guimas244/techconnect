@@ -128,8 +128,8 @@ class BatalhaService {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('❌ [Batalha] Jogador sem habilidades disponíveis!');
-      return estado;
+      print('👊 [Batalha] Jogador sem habilidades disponíveis - usa ataque básico!');
+      return await _aplicarAtaqueBasico(estado, true); // é jogador
     }
     
     final habilidadeEscolhida = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
@@ -152,8 +152,8 @@ class BatalhaService {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('❌ [Batalha] Inimigo sem habilidades disponíveis!');
-      return estado;
+      print('👊 [Batalha] Inimigo sem habilidades disponíveis - usa ataque básico!');
+      return await _aplicarAtaqueBasico(estado, false); // é inimigo
     }
     
     final habilidadeEscolhida = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
@@ -341,6 +341,7 @@ class BatalhaService {
         }
         
         print('🎯 [EFETIVIDADE] ${tipoDefensor.displayName} recebe ${(multiplicadorEfetividade * 100).toInt()}% de dano de ${tipoHabilidadeAtacante.displayName} ($efetividadeTexto)');
+        print('📊 [DEBUG DADOS] Dados de defesa carregados para ${tipoDefensor.displayName}: ${dadosDefesaDefensor.entries.take(5).map((e) => '${e.key.displayName}=${e.value}').join(', ')}...');
       } else {
         print('⚠️ [AVISO] Não foi possível carregar dados de defesa de ${tipoDefensor.displayName}, usando multiplicador padrão (1.0)');
       }
@@ -356,9 +357,13 @@ class BatalhaService {
     int danoComAtaque = danoBase + ataqueAtacante;
     int danoAntesEfetividade = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
     
+    print('🧮 [CALCULO] Base: $danoBase + Ataque: $ataqueAtacante - Defesa: $defesaAlvo = $danoAntesEfetividade');
+    
     // APLICA MULTIPLICADOR DE EFETIVIDADE
     double danoComEfetividade = danoAntesEfetividade * multiplicadorEfetividade;
-    int danoFinal = danoComEfetividade.round().clamp(0, danoAntesEfetividade * 3); // Máximo 3x o dano base
+    int danoFinal = danoComEfetividade.round().clamp(1, danoAntesEfetividade * 3); // Mínimo 1 de dano, máximo 3x
+    
+    print('🎯 [EFETIVIDADE FINAL] $danoAntesEfetividade × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
     
     // Aplica dano
     int vidaAntes, vidaDepois;
@@ -419,6 +424,97 @@ class BatalhaService {
     );
     
     print('⚔️ [Batalha] $descricao');
+    
+    return novoEstado;
+  }
+
+  /// Aplica ataque básico usando o tipo principal do atacante
+  Future<EstadoBatalha> _aplicarAtaqueBasico(EstadoBatalha estado, bool isJogador) async {
+    String atacante = isJogador ? estado.jogador.tipo.displayName : estado.inimigo.tipo.displayName;
+    
+    // LÓGICA CORRETA: Para ataque básico, usa tipo principal do atacante
+    final tipoElementalAtacante = isJogador ? estado.jogador.tipo : estado.inimigo.tipo;
+    final tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo;
+    
+    print('⚔️ [ATAQUE BÁSICO] ${tipoElementalAtacante.displayName} atacando ${tipoDefensor.displayName} (${isJogador ? "Inimigo" : "Jogador"})');
+    
+    // Busca multiplicador de efetividade
+    double multiplicadorEfetividade = 1.0;
+    String efetividadeTexto = 'NORMAL';
+    
+    try {
+      final tipagemRepository = TipagemRepository();
+      final dadosDefesaDefensor = await tipagemRepository.carregarDadosTipo(tipoDefensor);
+      
+      if (dadosDefesaDefensor != null) {
+        multiplicadorEfetividade = dadosDefesaDefensor[tipoElementalAtacante] ?? 1.0;
+        
+        if (multiplicadorEfetividade > 1.0) {
+          efetividadeTexto = 'SUPER EFETIVO';
+        } else if (multiplicadorEfetividade < 1.0 && multiplicadorEfetividade > 0.0) {
+          efetividadeTexto = 'POUCO EFETIVO';
+        } else if (multiplicadorEfetividade == 0.0) {
+          efetividadeTexto = 'NÃO AFETA';
+        }
+        
+        print('🎯 [EFETIVIDADE BÁSICO] ${tipoDefensor.displayName} recebe ${(multiplicadorEfetividade * 100).toInt()}% de dano de ${tipoElementalAtacante.displayName} ($efetividadeTexto)');
+      } else {
+        print('⚠️ [AVISO] Não foi possível carregar dados de defesa de ${tipoDefensor.displayName}, usando multiplicador padrão (1.0)');
+      }
+    } catch (e) {
+      print('❌ [ERRO] Erro ao buscar efetividade: $e');
+    }
+    
+    // Calcula dano do ataque básico
+    int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
+    int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
+    
+    // Ataque básico: usa apenas 50% do ataque do atacante como dano base
+    int danoBase = (ataqueAtacante * 0.5).round().clamp(1, ataqueAtacante);
+    int danoComAtaque = danoBase + (ataqueAtacante * 0.3).round(); // Bônus menor para ataque básico
+    int danoAntesEfetividade = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
+    
+    print('🧮 [CALCULO BÁSICO] Base: $danoBase + Bônus: ${(ataqueAtacante * 0.3).round()} - Defesa: $defesaAlvo = $danoAntesEfetividade');
+    
+    // Aplica multiplicador de efetividade
+    double danoComEfetividade = danoAntesEfetividade * multiplicadorEfetividade;
+    int danoFinal = danoComEfetividade.round().clamp(1, danoAntesEfetividade * 3);
+    
+    print('🎯 [EFETIVIDADE FINAL BÁSICO] $danoAntesEfetividade × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
+    
+    // Aplica dano
+    int vidaAntes, vidaDepois;
+    EstadoBatalha novoEstado;
+    
+    if (isJogador) {
+      vidaAntes = estado.vidaAtualInimigo;
+      vidaDepois = estado.vidaAtualInimigo - danoFinal;
+      novoEstado = estado.copyWith(vidaAtualInimigo: vidaDepois);
+    } else {
+      vidaAntes = estado.vidaAtualJogador;
+      vidaDepois = estado.vidaAtualJogador - danoFinal;
+      novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
+    }
+    
+    String descricao = '$atacante usou Ataque Básico (${tipoElementalAtacante.displayName}): $danoBase base + bônus - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    
+    // Adiciona ação ao histórico
+    AcaoBatalha acao = AcaoBatalha(
+      atacante: atacante,
+      habilidadeNome: 'Ataque Básico',
+      danoBase: danoBase,
+      danoTotal: danoFinal,
+      defesaAlvo: defesaAlvo,
+      vidaAntes: vidaAntes,
+      vidaDepois: vidaDepois,
+      descricao: descricao,
+    );
+    
+    novoEstado = novoEstado.copyWith(
+      historicoAcoes: [...estado.historicoAcoes, acao],
+    );
+    
+    print('👊 [ATAQUE BÁSICO] $descricao');
     
     return novoEstado;
   }
