@@ -9,6 +9,7 @@ import '../../../core/providers/user_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
+import '../presentation/casa_vigarista_modal.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -270,9 +271,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       (0.75, 0.68), // Ponto 5 - Inferior direito (mais alto)
     ];
     
+    // Adiciona pontos dos monstros
     for (int i = 0; i < posicoes.length && i < monstrosParaUsar.length; i++) {
       pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosParaUsar));
     }
+    
+    // Adiciona Casa do Vigarista (baú de tesouro) - posição central superior
+    pontos.add(_buildCasaDoVigarista(0.5, 0.25));
     
     return pontos;
   }
@@ -336,6 +341,138 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCasaDoVigarista(double left, double top) {
+    // Verifica se o jogador tem score suficiente (mínimo = 2 * tier atual)
+    int tierAtual = historiaAtual?.tier ?? 1;
+    int scoreAtual = historiaAtual?.score ?? 0;
+    int custoMinimo = 2 * tierAtual;
+    bool podeAcessar = scoreAtual >= custoMinimo;
+    
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxTop = screenHeight * 0.85;
+    final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
+    
+    return Positioned(
+      left: MediaQuery.of(context).size.width * left - 35, // Centraliza o ícone
+      top: calcTop,
+      child: GestureDetector(
+        onTap: () => _mostrarCasaDoVigarista(podeAcessar, custoMinimo),
+        child: Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            color: podeAcessar 
+                ? Colors.amber.withOpacity(0.9)
+                : Colors.grey.withOpacity(0.6),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: podeAcessar ? Colors.yellow.shade700 : Colors.grey.shade500, 
+              width: 3
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: podeAcessar 
+                    ? Colors.amber.withOpacity(0.8)
+                    : Colors.grey.withOpacity(0.4),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.inventory_2_outlined, // Ícone de baú de tesouro
+            color: podeAcessar ? Colors.yellow.shade100 : Colors.grey.shade300,
+            size: 40,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarCasaDoVigarista(bool podeAcessar, int custoMinimo) {
+    if (!podeAcessar) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.block, color: Colors.red),
+                const SizedBox(width: 8),
+                const Text('Acesso Negado'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Você não possui score suficiente para acessar a Casa do Vigarista.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Score necessário: $custoMinimo pontos',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                Text(
+                  'Seu score atual: ${historiaAtual?.score ?? 0} pontos',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Derrote mais monstros para ganhar score!',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Entendi'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    if (historiaAtual == null) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CasaVigaristaModal(
+          historia: historiaAtual!,
+          onHistoriaAtualizada: (historiaAtualizada) async {
+            // Atualiza o estado local
+            setState(() {
+              historiaAtual = historiaAtualizada;
+            });
+
+            // Salva no repositório
+            try {
+              final repository = ref.read(aventuraRepositoryProvider);
+              await repository.salvarHistoricoJogador(historiaAtualizada);
+              print('💾 [MapaAventura] História atualizada após compra na Casa do Vigarista');
+            } catch (e) {
+              print('❌ [MapaAventura] Erro ao salvar história: $e');
+            }
+          },
+        );
+      },
     );
   }
 

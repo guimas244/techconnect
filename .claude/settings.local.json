@@ -16,7 +16,8 @@
       "Bash(./build_apk.sh)",
       "Bash(flutter clean:*)",
       "Bash(flutter pub:*)",
-      "Bash(/bashes)"
+      "Bash(/bashes)",
+      "Read(/\\/**)"
     ],
     "deny": [],
     "ask": []
