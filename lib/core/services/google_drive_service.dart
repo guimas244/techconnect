@@ -574,6 +574,11 @@ class GoogleDriveService {
         List<drive.File> arquivos;
         if (pasta == 'historias') {
           arquivos = await _driveService!.listInHistoriasFolder();
+        } else if (pasta.startsWith('historias/')) {
+          // Suporte a subpastas de historias (historias/2025-09-05/jogador)
+          final subpasta = pasta.substring(10); // Remove "historias/"
+          print('📅 [GoogleDriveService] Renomeando na subpasta de historias: $subpasta');
+          arquivos = await _driveService!.listInHistoriasFolderByPath(subpasta);
         } else {
           print('❌ [GoogleDriveService] Pasta não suportada: $pasta');
           return false;

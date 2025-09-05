@@ -523,20 +523,54 @@ class AventuraRepository {
   Future<bool> arquivarHistoricoJogador(String email, String runId) async {
     try {
       print('📦 [Repository] INICIANDO arquivamento para: $email (RunID: $runId)');
+      
+      // Verifica se runId não está vazio - se estiver, gera um temporário
+      String runIdFinal = runId;
+      if (runId.isEmpty) {
+        print('⚠️ [Repository] AVISO: runId está vazio, gerando runId temporário para arquivamento');
+        runIdFinal = 'legacy_${DateTime.now().millisecondsSinceEpoch}';
+        print('🆔 [Repository] RunId temporário gerado: $runIdFinal');
+      }
+      
       final nomeAtual = 'historico_$email.json';
-      final novoNome = 'historico_${email}_$runId.json';
+      final novoNome = 'historico_${email}_$runIdFinal.json';
       
       print('📦 [Repository] Arquivo atual: $nomeAtual');
       print('📦 [Repository] Novo nome: $novoNome');
+      
+      // Cria o caminho com data atual (mesmo padrão usado em carregarHistoricoJogador e salvarHistoricoJogador)
+      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$email';
+      
+      print('📦 [Repository] Caminho completo: $caminhoCompleto');
       print('📦 [Repository] Chamando DriveService.renomearArquivoDaPasta...');
       
-      // Renomeia o arquivo no Drive
-      final sucesso = await _driveService.renomearArquivoDaPasta(nomeAtual, novoNome, 'historias');
+      // Renomeia o arquivo no Drive usando o caminho completo
+      final sucesso = await _driveService.renomearArquivoDaPasta(nomeAtual, novoNome, caminhoCompleto);
       
       if (sucesso) {
-        print('✅ [Repository] Histórico arquivado com SUCESSO: $nomeAtual → $novoNome');
+        print('✅ [Repository] Histórico arquivado com SUCESSO: $caminhoCompleto/$nomeAtual → $novoNome');
       } else {
-        print('❌ [Repository] FALHA ao arquivar histórico: $nomeAtual → $novoNome');
+        print('❌ [Repository] FALHA ao arquivar histórico: $caminhoCompleto/$nomeAtual → $novoNome');
+        
+        // Se falhar na data atual, tenta buscar nos últimos 7 dias (mesmo padrão do carregarHistoricoJogador)
+        print('🔍 [Repository] Tentando arquivar nos últimos dias...');
+        for (int i = 1; i <= 7; i++) {
+          final dataAnterior = hoje.subtract(Duration(days: i));
+          final dataAnteriorFormatada = '${dataAnterior.year.toString().padLeft(4, '0')}-${dataAnterior.month.toString().padLeft(2, '0')}-${dataAnterior.day.toString().padLeft(2, '0')}';
+          final caminhoAnterior = 'historias/$dataAnteriorFormatada/$email';
+          
+          print('🔍 [Repository] Tentando arquivar em: $caminhoAnterior');
+          final sucessoAnterior = await _driveService.renomearArquivoDaPasta(nomeAtual, novoNome, caminhoAnterior);
+          
+          if (sucessoAnterior) {
+            print('✅ [Repository] Histórico arquivado com SUCESSO em data anterior: $caminhoAnterior/$nomeAtual → $novoNome');
+            return true;
+          }
+        }
+        
+        print('❌ [Repository] Não foi possível arquivar o histórico em nenhuma das datas dos últimos 7 dias');
       }
       
       return sucesso;
