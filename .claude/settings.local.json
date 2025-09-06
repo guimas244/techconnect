@@ -18,7 +18,8 @@
       "Bash(flutter pub:*)",
       "Bash(/bashes)",
       "Read(/\\/**)",
-      "Bash(flutter:*)"
+      "Bash(flutter:*)",
+      "Read(//d/**)"
     ],
     "deny": [],
     "ask": []
