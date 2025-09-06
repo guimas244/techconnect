@@ -320,9 +320,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Aplica habilidade e desconta energia
     var novoEstado = await _aplicarHabilidade(estado, habilidade, true);
     
-    // Desconta energia
+    // Desconta energia (limita pela energia máxima com item durante a batalha)
     novoEstado = novoEstado.copyWith(
-      energiaAtualJogador: (estado.energiaAtualJogador - habilidade.custoEnergia).clamp(0, widget.jogador.energia)
+      energiaAtualJogador: (estado.energiaAtualJogador - habilidade.custoEnergia).clamp(0, estado.energiaMaximaJogador)
     );
     
     return novoEstado;
@@ -348,9 +348,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Aplica habilidade e desconta energia
     var novoEstado = await _aplicarHabilidade(estado, habilidade, false);
     
-    // Desconta energia
+    // Desconta energia (limita pela energia máxima com item durante a batalha)
     novoEstado = novoEstado.copyWith(
-      energiaAtualInimigo: (estado.energiaAtualInimigo - habilidade.custoEnergia).clamp(0, widget.inimigo.energia)
+      energiaAtualInimigo: (estado.energiaAtualInimigo - habilidade.custoEnergia).clamp(0, estado.energiaMaximaInimigo)
     );
     
     return novoEstado;
@@ -1855,10 +1855,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           // Calcula vida máxima do jogador com item para limitar corretamente
           final vidaMaximaComItem = m.vida + (m.itemEquipado?.vida ?? 0);
           final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador.clamp(0, vidaMaximaComItem);
+          // Também limita a energia atual ao valor máximo base do monstro (sem item)
+          final energiaFinal = estadoAtual!.energiaAtualJogador.clamp(0, m.energia);
           print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
+          print('  ✅ MATCH! Atualizando energia para $energiaFinal (original: ${estadoAtual!.energiaAtualJogador}, max base: ${m.energia})');
           
           return m.copyWith(
             vidaAtual: vidaFinal,
+            energiaAtual: energiaFinal,
           );
         }
         return m;
@@ -1935,18 +1939,18 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       descricao: '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
     );
 
-    // Restaura 10% da energia máxima do atacante
+    // Restaura 10% da energia máxima do atacante (com item durante batalha)
     if (isJogador) {
-      final energiaRestaurada = (estado.jogador.energia * 0.1).round();
-      final novaEnergia = (estado.energiaAtualJogador + energiaRestaurada).clamp(0, estado.jogador.energia);
+      final energiaRestaurada = (estado.energiaMaximaJogador * 0.1).round();
+      final novaEnergia = (estado.energiaAtualJogador + energiaRestaurada).clamp(0, estado.energiaMaximaJogador);
       return estado.copyWith(
         vidaAtualInimigo: vidaDepois,
         energiaAtualJogador: novaEnergia,
         historicoAcoes: [...estado.historicoAcoes, acao],
       );
     } else {
-      final energiaRestaurada = (estado.inimigo.energia * 0.1).round();
-      final novaEnergia = (estado.energiaAtualInimigo + energiaRestaurada).clamp(0, estado.inimigo.energia);
+      final energiaRestaurada = (estado.energiaMaximaInimigo * 0.1).round();
+      final novaEnergia = (estado.energiaAtualInimigo + energiaRestaurada).clamp(0, estado.energiaMaximaInimigo);
       return estado.copyWith(
         vidaAtualJogador: vidaDepois,
         energiaAtualInimigo: novaEnergia,
