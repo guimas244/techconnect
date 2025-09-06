@@ -201,8 +201,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                                historiaAtualizada.monstrosInimigos.isNotEmpty &&
                                historiaAtualizada.mapaAventura != null;
 
-        // Navegar para o mapa de aventura
-        Navigator.push(
+        // Navegar para o mapa de aventura e aguardar retorno
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => MapaAventuraScreen(
@@ -211,6 +211,11 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         );
+
+        // Atualizar estado quando voltar da aventura
+        if (mounted) {
+          await _verificarEstadoJogador();
+        }
 
         // Verifica se widget ainda está montado antes de usar ref
         if (mounted) {

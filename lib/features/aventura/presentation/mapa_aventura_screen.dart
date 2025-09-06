@@ -382,10 +382,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
             ],
           ),
-          child: Icon(
-            Icons.inventory_2_outlined, // Ícone de baú de tesouro
-            color: podeAcessar ? Colors.yellow.shade100 : Colors.grey.shade300,
-            size: 40,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/npc/loja.png',
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              color: podeAcessar ? null : Colors.grey.shade300,
+              colorBlendMode: podeAcessar ? null : BlendMode.saturation,
+            ),
           ),
         ),
       ),
