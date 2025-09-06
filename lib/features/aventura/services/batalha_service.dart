@@ -195,12 +195,12 @@ class BatalhaService {
           int vidaAntes = estado.vidaAtualJogador;
           int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.vidaMaximaJogador);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
-          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
+          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
           int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.vidaMaximaInimigo);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
-          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome})';
+          descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         }
         break;
         
@@ -208,11 +208,11 @@ class BatalhaService {
         if (isJogador) {
           int novoAtaque = estado.ataqueAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualJogador: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
           int novoAtaque = estado.ataqueAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualInimigo: novoAtaque);
-          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou o ataque em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         }
         break;
         
@@ -220,11 +220,11 @@ class BatalhaService {
         if (isJogador) {
           int novaDefesa = estado.defesaAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualJogador: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
           int novaDefesa = estado.defesaAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
-          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a defesa em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         }
         break;
         
@@ -236,7 +236,7 @@ class BatalhaService {
             vidaMaximaJogador: novaVidaMaxima,
             vidaAtualJogador: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
           int novaVidaMaxima = estado.vidaMaximaInimigo + habilidade.valorEfetivo;
           int novaVidaAtual = estado.vidaAtualInimigo + habilidade.valorEfetivo; // Também aumenta a vida atual
@@ -244,7 +244,7 @@ class BatalhaService {
             vidaMaximaInimigo: novaVidaMaxima,
             vidaAtualInimigo: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a vida máxima em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         }
         break;
         
@@ -256,7 +256,7 @@ class BatalhaService {
             energiaMaximaJogador: novaEnergiaMaxima,
             energiaAtualJogador: novaEnergiaAtual,
           );
-          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
           int novaEnergiaMaxima = estado.energiaMaximaInimigo + habilidade.valorEfetivo;
           int novaEnergiaAtual = estado.energiaAtualInimigo + habilidade.valorEfetivo; // Também aumenta a energia atual
@@ -264,12 +264,12 @@ class BatalhaService {
             energiaMaximaInimigo: novaEnergiaMaxima,
             energiaAtualInimigo: novaEnergiaAtual,
           );
-          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome})';
+          descricao = '$atacante aumentou a energia máxima em ${habilidade.valorEfetivo} (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         }
         break;
         
       default:
-        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valorEfetivo})';
+        descricao = '$atacante usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}] (efeito: ${habilidade.valorEfetivo})';
         break;
     }
     
@@ -405,7 +405,7 @@ class BatalhaService {
       }
     }
     
-    String descricao = '$atacante usou ${habilidade.nome}: $danoBase (+$ataqueInfo ataque) - $defesaInfo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    String descricao = '$atacante usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) - $defesaInfo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(
@@ -496,7 +496,7 @@ class BatalhaService {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
-    String descricao = '$atacante usou Ataque Básico (${tipoElementalAtacante.displayName}): $danoBase base + bônus - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    String descricao = '$atacante usou Ataque Básico[${tipoElementalAtacante.displayName}]: $danoBase base + bônus - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(

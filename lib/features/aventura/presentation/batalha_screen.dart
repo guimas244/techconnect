@@ -47,6 +47,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool batalhaConcluida = false;
   bool salvandoResultado = false;
   bool processandoVitoria = false;
+  bool processandoDerrota = false;
   bool jogadorComeca = true;
   bool itemGerado = false;
   bool evolucaoProcessada = false;
@@ -436,13 +437,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
           int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}';
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -451,12 +452,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int ataqueAntes = estado.ataqueAtualJogador;
           int novoAtaque = estado.ataqueAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualJogador: novoAtaque);
-          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           int ataqueAntes = estado.ataqueAtualInimigo;
           int novoAtaque = estado.ataqueAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(ataqueAtualInimigo: novoAtaque);
-          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou o ataque de $ataqueAntes para $novoAtaque (+${habilidade.valorEfetivo}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -465,12 +466,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int defesaAntes = estado.defesaAtualJogador;
           int novaDefesa = estado.defesaAtualJogador + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualJogador: novaDefesa);
-          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           int defesaAntes = estado.defesaAtualInimigo;
           int novaDefesa = estado.defesaAtualInimigo + habilidade.valorEfetivo;
           novoEstado = estado.copyWith(defesaAtualInimigo: novaDefesa);
-          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a defesa de $defesaAntes para $novaDefesa (+${habilidade.valorEfetivo}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -486,7 +487,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             vidaMaximaJogador: novaVidaMaxima,
             vidaAtualJogador: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           // Aumenta vida máxima e vida atual proporcionalmente
           int vidaMaximaAntes = estado.vidaMaximaInimigo;
@@ -498,7 +499,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             vidaMaximaInimigo: novaVidaMaxima,
             vidaAtualInimigo: novaVidaAtual,
           );
-          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a vida máxima de $vidaMaximaAntes para $novaVidaMaxima (+${habilidade.valorEfetivo}) e vida atual para $novaVidaAtual usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -514,7 +515,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             energiaAtualJogador: novaEnergiaAtual,
             energiaMaximaJogador: novaEnergiaMaxima,
           );
-          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           // Aumenta energia máxima e energia atual proporcionalmente
           int energiaMaximaAntes = estado.energiaMaximaInimigo;
@@ -526,12 +527,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             energiaAtualInimigo: novaEnergiaAtual,
             energiaMaximaInimigo: novaEnergiaMaxima,
           );
-          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}';
+          descricao = '$atacante aumentou a energia máxima de $energiaMaximaAntes para $novaEnergiaMaxima (+${habilidade.valorEfetivo}) e energia atual para $novaEnergiaAtual usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
       default:
-        descricao = '$atacante usou ${habilidade.nome} (efeito: ${habilidade.valorEfetivo})';
+        descricao = '$atacante usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}] (efeito: ${habilidade.valorEfetivo})';
         break;
     }
     
@@ -640,7 +641,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
     
-    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
     if (efetividade == 0.0) {
@@ -677,6 +678,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Ativa o loading de processamento quando jogador vence
         if (vencedorBatalha == 'jogador') {
           processandoVitoria = true;
+        } else {
+          // Ativa o loading de processamento quando jogador perde
+          processandoDerrota = true;
         }
       });
     }
@@ -691,6 +695,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         _salvarResultadoNoDrive().then((_) {
           if (mounted) {
             setState(() {
+              processandoDerrota = false; // Desativa o loading
               podeVoltarParaAventura = true;
             });
           }
@@ -1916,7 +1921,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       defesaAlvo: defesaAlvo,
       vidaAntes: vidaAntes,
       vidaDepois: vidaDepois,
-      descricao: '$atacanteNome usou Ataque Básico por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
+      descricao: '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
     );
 
     // Restaura 10% da energia máxima do atacante
@@ -2163,6 +2168,32 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                     children: [
                       CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                        strokeWidth: 4,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Processando batalha...',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // Overlay de loading durante processamento da derrota
+            if (processandoDerrota)
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
                         strokeWidth: 4,
                       ),
                       SizedBox(height: 16),
