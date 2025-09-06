@@ -29,6 +29,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   late String mapaEscolhido;
   HistoriaJogador? historiaAtual;
   bool isLoading = true;
+  bool isAdvancingTier = false;
   
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
@@ -138,6 +139,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     int scoreAtual = historiaAtual?.score ?? 0;
     int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
     bool podeAvancarTier = mortosNoTier >= 3;
+    print('🎯 [DEBUG] mortosNoTier: $mortosNoTier, podeAvancarTier: $podeAvancarTier');
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -252,6 +254,42 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             ),
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
+            
+            // Overlay de loading quando avançando tier
+            if (isAdvancingTier)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.8),
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 3,
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          'Preparando novo andar...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Gerando novos monstros e salvando progresso',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -546,10 +584,20 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   Future<void> _avancarTier() async {
+    print('🎯 [DEBUG] _avancarTier() iniciado');
+    setState(() {
+      isAdvancingTier = true;
+      print('🎯 [DEBUG] isAdvancingTier definido como true');
+    });
+    
     try {
       final repository = ref.read(aventuraRepositoryProvider);
       
-      if (historiaAtual == null) return;
+      if (historiaAtual == null) {
+        print('❌ [DEBUG] historiaAtual é null, retornando');
+        return;
+      }
+      print('🎯 [DEBUG] historiaAtual não é null, continuando...');
       
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
@@ -572,6 +620,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       
     } catch (e) {
       print('❌ [MapaAventura] Erro ao avançar tier: $e');
+    } finally {
+      print('🎯 [DEBUG] Finally executado, resetando isAdvancingTier');
+      setState(() {
+        isAdvancingTier = false;
+      });
     }
   }
 
@@ -672,7 +725,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
+                  print('🎯 [DEBUG] Botão Confirmar clicado');
                   Navigator.of(context).pop();
+                  print('🎯 [DEBUG] Modal fechado, chamando _avancarTier()');
                   _avancarTier();
                 },
                 child: const Text('Confirmar'),
