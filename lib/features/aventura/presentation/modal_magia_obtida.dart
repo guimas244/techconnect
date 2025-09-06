@@ -318,11 +318,13 @@ class _ModalMagiaObtidaState extends State<ModalMagiaObtida> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              '${habilidade.tipo.name} | Lv.${habilidade.level} | Poder: ${habilidade.valorEfetivo}',
+                              _buildDetalheHabilidade(habilidade),
                               style: TextStyle(
                                 fontSize: 9,
                                 color: Colors.grey.shade600,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -342,5 +344,65 @@ class _ModalMagiaObtidaState extends State<ModalMagiaObtida> {
         ),
       ],
     );
+  }
+
+  String _buildDetalheHabilidade(Habilidade habilidade) {
+    String tipoInfo = habilidade.tipo.name;
+    String levelInfo = 'Lv.${habilidade.level}';
+    String poderInfo = 'Poder: ${habilidade.valorEfetivo}';
+    
+    // Para habilidades de suporte, adiciona detalhes sobre o que ela faz
+    if (habilidade.tipo.name.toLowerCase() == 'suporte') {
+      String efeitoDetalhe = _getEfeitoDetalhe(habilidade);
+      return '$tipoInfo ($efeitoDetalhe) | $levelInfo | $poderInfo';
+    }
+    
+    return '$tipoInfo | $levelInfo | $poderInfo';
+  }
+
+  String _getEfeitoDetalhe(Habilidade habilidade) {
+    String efeitoNome = habilidade.efeito.name.toLowerCase();
+    
+    // Mapeamento dos efeitos para descrições mais claras
+    switch (efeitoNome) {
+      case 'cura':
+      case 'cure':
+      case 'heal':
+        return 'Cura de Vida';
+      case 'boost_vida':
+      case 'vida':
+      case 'hp':
+        return 'Aumento de Vida';
+      case 'boost_energia':
+      case 'energia':
+      case 'mp':
+      case 'mana':
+        return 'Aumento de Energia';
+      case 'boost_ataque':
+      case 'ataque':
+      case 'attack':
+        return 'Aumento de Ataque';
+      case 'boost_defesa':
+      case 'defesa':
+      case 'defense':
+        return 'Aumento de Defesa';
+      case 'boost_agilidade':
+      case 'agilidade':
+      case 'speed':
+        return 'Aumento de Agilidade';
+      case 'regeneracao':
+      case 'regen':
+        return 'Regeneração';
+      case 'protecao':
+      case 'shield':
+        return 'Proteção';
+      case 'buff':
+        return 'Fortalecimento';
+      case 'debuff':
+        return 'Enfraquecimento';
+      default:
+        // Se não encontrar um mapeamento específico, usa o nome do efeito
+        return habilidade.efeito.name;
+    }
   }
 }
