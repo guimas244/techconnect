@@ -651,6 +651,8 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Widget _buildCardMonstroBonito(dynamic monstro) {
+    final isMorto = monstro.vidaAtual <= 0;
+    
     return GestureDetector(
       onTap: () => _mostrarModalMonstro(monstro),
       child: Card(
@@ -665,9 +667,24 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                 flex: 3,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    monstro.imagem,
-                    fit: BoxFit.contain,
+                  child: ColorFiltered(
+                    colorFilter: isMorto
+                        ? const ColorFilter.matrix([
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0, 0, 0, 1, 0,
+                          ])
+                        : const ColorFilter.matrix([
+                            1, 0, 0, 0, 0,
+                            0, 1, 0, 0, 0,
+                            0, 0, 1, 0, 0,
+                            0, 0, 0, 1, 0,
+                          ]),
+                    child: Image.asset(
+                      monstro.imagem,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
