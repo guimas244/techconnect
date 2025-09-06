@@ -463,18 +463,25 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
     final random = Random();
     final tipos = Tipo.values;
     final tipoAleatorio = tipos[random.nextInt(tipos.length)];
+    final tierAtual = widget.historia.tier;
     
-    final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipoAleatorio, null);
-    return habilidades.isNotEmpty ? habilidades.first : 
-    Habilidade(
+    final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipoAleatorio, null, levelCustomizado: tierAtual);
+    
+    if (habilidades.isNotEmpty) {
+      // A habilidade já foi gerada com o level correto
+      return habilidades.first;
+    }
+    
+    // Habilidade fallback também usa o tier atual
+    return Habilidade(
       nome: 'Habilidade Misteriosa',
       descricao: 'Uma habilidade obtida na Casa do Vigarista',
       tipo: TipoHabilidade.ofensiva,
       efeito: EfeitoHabilidade.danoDirecto,
       tipoElemental: tipoAleatorio,
-      valor: 10,
-      custoEnergia: 5,
-      level: 1,
+      valor: 10 * tierAtual, // Valor escalado com o tier
+      custoEnergia: (5 * tierAtual).clamp(5, 50), // Custo escalado mas limitado
+      level: tierAtual, // Level igual ao tier atual
     );
   }
 

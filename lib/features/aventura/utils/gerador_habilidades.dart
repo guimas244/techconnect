@@ -9,17 +9,17 @@ class GeradorHabilidades {
   static final _random = Random();
 
   /// Gera 4 habilidades para um monstro baseado nos seus tipos
-  static List<Habilidade> gerarHabilidadesMonstro(Tipo tipo, Tipo? tipoExtra) {
+  static List<Habilidade> gerarHabilidadesMonstro(Tipo tipo, Tipo? tipoExtra, {int? levelCustomizado}) {
     final habilidades = <Habilidade>[];
     
     for (int i = 0; i < 4; i++) {
-      habilidades.add(_gerarHabilidadeAleatoria(tipo, tipoExtra));
+      habilidades.add(_gerarHabilidadeAleatoria(tipo, tipoExtra, levelCustomizado: levelCustomizado));
     }
     
     return habilidades;
   }
 
-  static Habilidade _gerarHabilidadeAleatoria(Tipo tipo, Tipo? tipoExtra) {
+  static Habilidade _gerarHabilidadeAleatoria(Tipo tipo, Tipo? tipoExtra, {int? levelCustomizado}) {
     // Determina o tipo da habilidade (40% suporte, 60% ofensiva)
     final isSuporte = _random.nextDouble() < 0.4;
     final tipoHabilidade = isSuporte ? TipoHabilidade.suporte : TipoHabilidade.ofensiva;
@@ -50,7 +50,7 @@ class GeradorHabilidades {
       tipoElemental: tipoElemental,
       valor: valor,
       custoEnergia: custoEnergia,
-      level: _gerarLevel(),
+      level: levelCustomizado ?? _gerarLevel(),
     );
   }
 
