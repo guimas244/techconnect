@@ -21,6 +21,7 @@ import '../services/drops_service.dart';
 import '../models/drop_jogador.dart';
 // Removendo import não usado
 import 'modal_monstro_aventura.dart';
+import 'modal_monstro_inimigo.dart';
 import 'modal_item_obtido.dart';
 import 'modal_magia_obtida.dart';
 
@@ -86,30 +87,39 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
-    final ataqueComItem = widget.jogador.ataque + (item?.atributos['ataque'] ?? 0);
-    final defesaComItem = widget.jogador.defesa + (item?.atributos['defesa'] ?? 0);
-    final vidaComItem = widget.jogador.vida + (item?.atributos['vida'] ?? 0);
-    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.atributos['vida'] ?? 0);
-    final energiaComItem = widget.jogador.energia + (item?.atributos['energia'] ?? 0);
-    final agilidadeComItem = widget.jogador.agilidade + (item?.atributos['agilidade'] ?? 0);
+    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0);
+    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0);
+    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0);
+    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0);
+    final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
+    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0);
 
-    // Aplica bônus do item equipado e level do inimigo
+    // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
-    final levelMultiplier = 1.0 + (widget.inimigo.level - 1) * 0.1; // 10% por level acima de 1
-    final ataqueInimigoTotal = (widget.inimigo.ataqueTotal * levelMultiplier).round();
-    final defesaInimigoTotal = (widget.inimigo.defesaTotal * levelMultiplier).round();
-    final vidaInimigoTotal = (widget.inimigo.vidaTotal * levelMultiplier).round();
-    final vidaAtualInimigoTotal = (widget.inimigo.vidaAtual + (itemInimigo?.atributos['vida'] ?? 0)) * levelMultiplier;
-    final energiaInimigoTotal = (widget.inimigo.energiaTotal * levelMultiplier).round();
-    final agilidadeInimigoTotal = (widget.inimigo.agilidadeTotal * levelMultiplier).round();
+    
+    // Debug: mostra stats base do inimigo
+    print('🎯 [DEBUG] Inimigo stats base: ATK=${widget.inimigo.ataque} DEF=${widget.inimigo.defesa} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vida} AGI=${widget.inimigo.agilidade}');
+    print('🎯 [DEBUG] Inimigo stats com item: ATK=${widget.inimigo.ataqueTotal} DEF=${widget.inimigo.defesaTotal} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vidaTotal} AGI=${widget.inimigo.agilidadeTotal}');
+    if (itemInimigo != null) {
+      print('🎯 [DEBUG] Item do inimigo: ${itemInimigo.nome} - ATK+${itemInimigo.ataque} DEF+${itemInimigo.defesa} HP+${itemInimigo.vida} AGI+${itemInimigo.agilidade}');
+    } else {
+      print('🎯 [DEBUG] Inimigo SEM item equipado');
+    }
+    final ataqueInimigoTotal = widget.inimigo.ataqueTotal;
+    final defesaInimigoTotal = widget.inimigo.defesaTotal;
+    final vidaInimigoTotal = widget.inimigo.vidaTotal;
+    // Vida atual do inimigo: JSON base + bônus do item
+    final vidaAtualComBonusItem = widget.inimigo.vidaAtual + (itemInimigo?.vida ?? 0);
+    final vidaAtualInimigoTotal = vidaAtualComBonusItem;
+    final energiaInimigoTotal = widget.inimigo.energiaTotal;
+    final agilidadeInimigoTotal = widget.inimigo.agilidadeTotal;
     
     // Determina quem começa baseado na agilidade
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
     
     print('📊 [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
-    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=${vidaAtualInimigoTotal.round()}/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
-    print('📊 [Stats] Multiplier level: ${levelMultiplier}x');
+    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('📊 [Item] Inimigo equipado: ${itemInimigo.nome}');
     }
@@ -118,7 +128,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       jogador: widget.jogador,
       inimigo: widget.inimigo,
       vidaAtualJogador: vidaAtualComItem, // Usa vida atual + bônus do item
-      vidaAtualInimigo: vidaAtualInimigoTotal.round(), // Usa vida atual + bônus do item + level
+      vidaAtualInimigo: vidaAtualInimigoTotal, // Usa vida atual + level multiplier
       vidaMaximaJogador: vidaComItem, // Vida máxima inicial + item
       vidaMaximaInimigo: vidaInimigoTotal, // Vida máxima + item + level
       energiaAtualJogador: energiaComItem, // Usa energia máxima (energia base + item)
@@ -1842,8 +1852,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final monstrosAtualizados = historia.monstros.map((m) {
         print('  - Comparando com monstro: ${m.tipo} / ${m.tipoExtra} (vida atual: ${m.vidaAtual})');
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-          // Limita a vida final ao valor original do monstro (sem buffs)
-          final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador.clamp(0, m.vida);
+          // Calcula vida máxima do jogador com item para limitar corretamente
+          final vidaMaximaComItem = m.vida + (m.itemEquipado?.vida ?? 0);
+          final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador.clamp(0, vidaMaximaComItem);
           print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
           
           return m.copyWith(
@@ -1857,8 +1868,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final inimigosAtualizados = historia.monstrosInimigos.map((m) {
         if (m.tipo == widget.inimigo.tipo && 
             m.tipoExtra == widget.inimigo.tipoExtra) {
-          // Limita a vida final ao valor original do monstro (sem buffs e level)
-          final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo.clamp(0, m.vida);
+          // Limita a vida final ao valor máximo com item (valores fixos do JSON)
+          final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo.clamp(0, m.vidaTotal);
           print('🏥 [DEBUG] Inimigo ${m.tipo.monsterName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
           
           return m.copyWith(
@@ -1968,8 +1979,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Atualiza a vida atual do jogador na história
       final monstrosAtualizados = historia.monstros.map((m) {
         if (m.tipo == widget.jogador.tipo && m.tipoExtra == widget.jogador.tipoExtra) {
-          // Limita a vida final ao máximo original do monstro (sem buffs)
-          final vidaFinalJogador = estadoAtual!.vidaAtualJogador.clamp(0, m.vida);
+          // Calcula vida máxima do jogador com item para limitar corretamente
+          final vidaMaximaComItem = m.vida + (m.itemEquipado?.vida ?? 0);
+          final vidaFinalJogador = estadoAtual!.vidaAtualJogador.clamp(0, vidaMaximaComItem);
           return m.copyWith(vidaAtual: vidaFinalJogador);
         }
         return m;
@@ -1979,8 +1991,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final inimigosAtualizados = historia.monstrosInimigos.map((m) {
         if (m.tipo == widget.inimigo.tipo && 
             m.tipoExtra == widget.inimigo.tipoExtra) {
-          // Limita a vida final ao máximo original do monstro (sem buffs e level)
-          final vidaFinalInimigo = estadoAtual!.vidaAtualInimigo.clamp(0, m.vida);
+          // Limita a vida final ao valor máximo com item (valores fixos do JSON)
+          final vidaFinalInimigo = estadoAtual!.vidaAtualInimigo.clamp(0, m.vidaTotal);
           return m.copyWith(vidaAtual: vidaFinalInimigo);
         }
         return m;
@@ -2006,16 +2018,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // ========================================
   
   void _mostrarDetalheMonstro(dynamic monstro, bool isJogador) {
+    // Para monstros inimigos, usa o modal específico sem conversão
+    if (!isJogador && monstro is MonstroInimigo) {
+      showDialog(
+        context: context,
+        builder: (context) => ModalMonstroInimigo(monstro: monstro),
+      );
+      return;
+    }
+    
     // Converte MonstroInimigo para MonstroAventura se necessário
     MonstroAventura monstroAventura;
     if (monstro is MonstroAventura) {
       // ...aplica bônus do item...
       final item = monstro.itemEquipado;
-      int ataque = monstro.ataque + (item?.atributos['ataque'] ?? 0);
-      int defesa = monstro.defesa + (item?.atributos['defesa'] ?? 0);
-      int agilidade = monstro.agilidade + (item?.atributos['agilidade'] ?? 0);
-      int vida = monstro.vida + (item?.atributos['vida'] ?? 0);
-      int energia = monstro.energia + (item?.atributos['energia'] ?? 0);
+      int ataque = monstro.ataque + (item?.ataque ?? 0);
+      int defesa = monstro.defesa + (item?.defesa ?? 0);
+      int agilidade = monstro.agilidade + (item?.agilidade ?? 0);
+      int vida = monstro.vida + (item?.vida ?? 0);
+      int energia = monstro.energia + (item?.energia ?? 0);
       monstroAventura = monstro.copyWith(
         ataque: ataque,
         defesa: defesa,
@@ -2045,7 +2066,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         agilidade: monstro.agilidade,
         habilidades: monstro.habilidades,
         imagem: monstro.imagem,
-        itemEquipado: null,
+        itemEquipado: monstro.itemEquipado,
       );
     }
     // Obtém os valores atuais do estado da batalha

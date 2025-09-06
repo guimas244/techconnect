@@ -287,16 +287,16 @@ class ModalMonstroInimigo extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildVidaInfo(), // Nova função para mostrar vida atual/máxima
-                      _buildAtributoInfo('Energia', monstro.energia, Remix.battery_charge_fill, Colors.blue),
-                      _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.green),
+                      _buildAtributoInfo('Energia', monstro.energiaTotal, Remix.battery_charge_fill, Colors.blue),
+                      _buildAtributoInfo('Agilidade', monstro.agilidadeTotal, Remix.run_fill, Colors.green),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildAtributoInfo('Ataque', monstro.ataque, Remix.boxing_fill, Colors.orange),
-                      _buildAtributoInfo('Defesa', monstro.defesa, Remix.shield_cross_fill, Colors.purple),
+                      _buildAtributoInfo('Ataque', monstro.ataqueTotal, Remix.boxing_fill, Colors.orange),
+                      _buildAtributoInfo('Defesa', monstro.defesaTotal, Remix.shield_cross_fill, Colors.purple),
                     ],
                   ),
                 ],
@@ -399,7 +399,35 @@ class ModalMonstroInimigo extends StatelessWidget {
     );
   }
 
-  Widget _buildAtributoInfo(String nome, int valor, IconData icone, Color cor) {
+  Widget _buildAtributoInfo(String nome, int valorTotal, IconData icone, Color cor) {
+    // Calcula valores base e bônus do item (valores fixos do JSON)
+    int valorBase = 0;
+    int bonus = 0;
+    int valorFinal = 0;
+    
+    switch (nome) {
+      case 'Energia':
+        valorBase = monstro.energia;
+        bonus = monstro.itemEquipado?.energia ?? 0;
+        valorFinal = monstro.energiaTotal;
+        break;
+      case 'Agilidade':
+        valorBase = monstro.agilidade;
+        bonus = monstro.itemEquipado?.agilidade ?? 0;
+        valorFinal = monstro.agilidadeTotal;
+        break;
+      case 'Ataque':
+        valorBase = monstro.ataque;
+        bonus = monstro.itemEquipado?.ataque ?? 0;
+        valorFinal = monstro.ataqueTotal;
+        break;
+      case 'Defesa':
+        valorBase = monstro.defesa;
+        bonus = monstro.itemEquipado?.defesa ?? 0;
+        valorFinal = monstro.defesaTotal;
+        break;
+    }
+    
     return Column(
       children: [
         Icon(icone, color: cor, size: 24),
@@ -413,21 +441,52 @@ class ModalMonstroInimigo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          '$valor',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: cor,
+        // Mostra valor com formato (+ bônus) se houver item
+        if (bonus > 0)
+          Column(
+            children: [
+              Text(
+                '$valorFinal',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cor,
+                ),
+              ),
+              Text(
+                '$valorBase (+$bonus)',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            '$valorFinal',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: cor,
+            ),
           ),
-        ),
       ],
     );
   }
 
   Widget _buildVidaInfo() {
-    // Calcula a cor da vida baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
-    double percentualVida = (monstro.vidaAtual / monstro.vida).clamp(0.0, 1.0);
+    // Calcula valores de vida (valores fixos do JSON)
+    final vidaBase = monstro.vida;
+    final bonusVida = monstro.itemEquipado?.vida ?? 0;
+    final vidaMaximaTotal = monstro.vidaTotal; // vida base + item (valores fixos)
+    
+    // Vida atual = JSON base + bônus do item
+    final vidaAtualComBonusItem = monstro.vidaAtual + bonusVida;
+    
+    // Calcula a cor da vida baseada na porcentagem
+    double percentualVida = (vidaAtualComBonusItem / vidaMaximaTotal).clamp(0.0, 1.0);
     Color corVida = percentualVida > 0.5 
         ? Colors.green 
         : percentualVida > 0.25 
@@ -450,15 +509,37 @@ class ModalMonstroInimigo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        // Mostra vida atual / vida máxima
-        Text(
-          '${monstro.vidaAtual}/${monstro.vida}',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: corVida,
+        // Mostra vida atual/máxima com bônus se houver
+        if (bonusVida > 0)
+          Column(
+            children: [
+              Text(
+                '$vidaAtualComBonusItem/$vidaMaximaTotal',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: corVida,
+                ),
+              ),
+              Text(
+                '${monstro.vidaAtual} (+$bonusVida)',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          )
+        else
+          Text(
+            '${monstro.vidaAtual}/$vidaBase',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: corVida,
+            ),
           ),
-        ),
         const SizedBox(height: 4),
         // Barra de vida
         Container(
