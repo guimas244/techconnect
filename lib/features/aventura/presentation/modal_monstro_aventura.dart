@@ -425,13 +425,25 @@ class ModalMonstroAventura extends StatelessWidget {
             
             int bonusTotal = bonusItem + buffHabilidade;
             if (bonusTotal > 0) {
-              return Text(
-                '$valor (+$bonusTotal)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: cor,
-                ),
+              return Column(
+                children: [
+                  Text(
+                    '$valor',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: cor,
+                    ),
+                  ),
+                  Text(
+                    '${valor - bonusTotal} (+$bonusTotal)',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
               );
             } else {
               return Text(
@@ -481,14 +493,43 @@ class ModalMonstroAventura extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        // Mostra vida atual / vida máxima (com buff se houver)
-        Text(
-          temBuffVida ? '${monstro.vidaAtual}/$vidaMaxima (+$buffVida)' : '${monstro.vidaAtual}/$vidaMaxima',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
-          ),
+        // Mostra vida atual / vida máxima (com bônus do item se houver)
+        Builder(
+          builder: (context) {
+            final bonusItem = monstro.itemEquipado?.atributos['vida'] ?? 0;
+            
+            if (bonusItem > 0 && !temBuffVida) {
+              return Column(
+                children: [
+                  Text(
+                    '${monstro.vidaAtual}/$vidaMaxima',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  Text(
+                    '${monstro.vida} (+$bonusItem)',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Text(
+                temBuffVida ? '${monstro.vidaAtual}/$vidaMaxima (+$buffVida)' : '${monstro.vidaAtual}/$vidaMaxima',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              );
+            }
+          },
         ),
         const SizedBox(height: 4),
         // Barra de vida
@@ -548,14 +589,43 @@ class ModalMonstroAventura extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        // Mostra energia atual / energia máxima (com buffs se houver)
-        Text(
-          temBuffEnergia ? '$energiaAtualValue/$energiaMaxima (+$buffEnergia)' : '$energiaAtualValue/$energiaMaxima',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
+        // Mostra energia atual / energia máxima (com bônus do item se houver)
+        Builder(
+          builder: (context) {
+            final bonusItem = monstro.itemEquipado?.atributos['energia'] ?? 0;
+            
+            if (bonusItem > 0 && !temBuffEnergia) {
+              return Column(
+                children: [
+                  Text(
+                    '$energiaAtualValue/$energiaMaxima',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  Text(
+                    '${monstro.energia} (+$bonusItem)',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Text(
+                temBuffEnergia ? '$energiaAtualValue/$energiaMaxima (+$buffEnergia)' : '$energiaAtualValue/$energiaMaxima',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              );
+            }
+          },
         ),
         const SizedBox(height: 4),
         // Barra de energia
