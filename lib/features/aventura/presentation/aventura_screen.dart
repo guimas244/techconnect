@@ -6,7 +6,6 @@ import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/google_drive_service.dart';
-import '../../tipagem/providers/tipagem_provider.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 

@@ -6,6 +6,8 @@ import '../models/historia_jogador.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../presentation/batalha_screen.dart';
+import 'modal_monstro_aventura.dart';
+import 'modal_monstro_inimigo.dart';
 import 'package:remixicon/remixicon.dart';
 
 class SelecaoMonstroScreen extends ConsumerWidget {
@@ -73,14 +75,75 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: AssetImage(monstroInimigo.imagem),
-                          fit: BoxFit.cover,
+                    // Imagem e tipos do monstro inimigo com borda
+                    GestureDetector(
+                      onTap: () => _mostrarDetalheMonstroInimigo(context, monstroInimigo),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: monstroInimigo.tipo.cor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: monstroInimigo.tipo.cor.withValues(alpha: 0.6),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: monstroInimigo.tipo.cor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Imagem do monstro inimigo
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                image: DecorationImage(
+                                  image: AssetImage(monstroInimigo.imagem),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Tipos do monstro inimigo
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Tipo principal
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    image: DecorationImage(
+                                      image: AssetImage(monstroInimigo.tipo.iconAsset),
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                                if (monstroInimigo.tipoExtra != null) ...[
+                                  const SizedBox(width: 4),
+                                  // Tipo extra
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      image: DecorationImage(
+                                        image: AssetImage(monstroInimigo.tipoExtra!.iconAsset),
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -187,15 +250,73 @@ class SelecaoMonstroScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Imagem do monstro
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: AssetImage(monstro.imagem),
-                      fit: BoxFit.cover,
+                // Imagem e tipos do monstro com borda
+                GestureDetector(
+                  onTap: () => _mostrarDetalheMonstro(context, monstro),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: monstro.tipo.cor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: monstro.tipo.cor.withValues(alpha: 0.6),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: monstro.tipo.cor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Imagem do monstro
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: AssetImage(monstro.imagem),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Tipos do monstro
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Tipo principal
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(4),
+                                image: DecorationImage(
+                                  image: AssetImage(monstro.tipo.iconAsset),
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            // Tipo extra
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(4),
+                                image: DecorationImage(
+                                  image: AssetImage(monstro.tipoExtra.iconAsset),
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -286,4 +407,19 @@ class SelecaoMonstroScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _mostrarDetalheMonstro(BuildContext context, MonstroAventura monstro) {
+    showDialog(
+      context: context,
+      builder: (context) => ModalMonstroAventura(monstro: monstro),
+    );
+  }
+
+  void _mostrarDetalheMonstroInimigo(BuildContext context, MonstroInimigo monstroInimigo) {
+    showDialog(
+      context: context,
+      builder: (context) => ModalMonstroInimigo(monstro: monstroInimigo),
+    );
+  }
+
 }
