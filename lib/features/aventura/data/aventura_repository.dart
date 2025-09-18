@@ -200,7 +200,7 @@ class AventuraRepository {
     final historia = HistoriaJogador(
       email: email,
       monstros: monstrosSorteados,
-      aventuraIniciada: true,
+      aventuraIniciada: false, // Inicialmente false, só muda para true quando clicar "Iniciar Aventura"
       mapaAventura: mapaEscolhido,
       monstrosInimigos: monstrosInimigos,
       runId: runId,

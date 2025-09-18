@@ -19,7 +19,8 @@
       "Bash(/bashes)",
       "Read(/\\/**)",
       "Bash(flutter:*)",
-      "Read(//d/**)"
+      "Read(//d/**)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

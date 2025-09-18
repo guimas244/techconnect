@@ -8,6 +8,10 @@ import '../../../core/providers/user_provider.dart';
 import '../../../core/services/google_drive_service.dart';
 import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
+import '../../../shared/models/tipo_enum.dart';
+import '../utils/gerador_habilidades.dart';
+import '../../../shared/models/atributos_jogo_enum.dart';
+import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
   const AventuraScreen({super.key});
@@ -17,6 +21,7 @@ class AventuraScreen extends ConsumerStatefulWidget {
 }
 
 class _AventuraScreenState extends ConsumerState<AventuraScreen> {
+  bool _temMudancasNaoSalvas = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -26,23 +31,51 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     };
   }
   String _getTextoBotaoAventura() {
-    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
-      return 'CONTINUAR AVENTURA';
+    if (_temMudancasNaoSalvas) {
+      return 'SALVAR';
     }
     if (historiaAtual != null && historiaAtual!.monstros.isEmpty) {
       return 'SORTEAR MONSTROS';
+    }
+    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      return 'CONTINUAR AVENTURA';
+    }
+    if (historiaAtual != null && !historiaAtual!.aventuraIniciada) {
+      return 'INICIAR AVENTURA';
     }
     return 'INICIAR AVENTURA';
   }
 
   IconData _getIconeBotaoAventura() {
-    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
-      return Icons.play_circle_filled;
+    if (_temMudancasNaoSalvas) {
+      return Icons.save;
     }
     if (historiaAtual != null && historiaAtual!.monstros.isEmpty) {
       return Icons.casino;
     }
+    if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      return Icons.play_circle_filled;
+    }
+    if (historiaAtual != null && !historiaAtual!.aventuraIniciada) {
+      return Icons.play_arrow;
+    }
     return Icons.play_arrow;
+  }
+
+  bool _podeUsarBotaoAventura() {
+    // Botão sempre habilitado quando há mudanças para salvar
+    if (_temMudancasNaoSalvas) {
+      return true;
+    }
+    // Comportamento normal quando não há mudanças
+    return true;
+  }
+
+  bool _podeUsarBotaoConquistas() {
+    // Desabilitado quando há mudanças não salvas
+    return !_temMudancasNaoSalvas &&
+           historiaAtual != null &&
+           historiaAtual!.aventuraIniciada;
   }
 
   // Mantém apenas uma definição do método _buildTipoIcon
@@ -133,6 +166,105 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     }
   }
 
+  Future<List<MonstroAventura>> _gerarNovosMonstrosLocal() async {
+    final random = Random();
+    final tiposDisponiveis = Tipo.values.toList();
+    tiposDisponiveis.shuffle(random);
+
+    final monstrosSorteados = <MonstroAventura>[];
+
+    // Sorteia 3 tipos únicos (mesma lógica do repository)
+    for (int i = 0; i < 3 && i < tiposDisponiveis.length; i++) {
+      final tipo = tiposDisponiveis[i];
+      // Sorteia tipo extra diferente do principal
+      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+      outrosTipos.shuffle(random);
+      final tipoExtra = outrosTipos.first;
+
+      // Gera 4 habilidades para o monstro
+      final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
+
+      // Sorteia atributos usando os ranges definidos
+      final monstro = MonstroAventura(
+        tipo: tipo,
+        tipoExtra: tipoExtra,
+        imagem: 'assets/monstros_aventura/${tipo.name}.png',
+        vida: AtributoJogo.vida.sortearValor(random),
+        energia: AtributoJogo.energia.sortearValor(random),
+        agilidade: AtributoJogo.agilidade.sortearValor(random),
+        ataque: AtributoJogo.ataque.sortearValor(random),
+        defesa: AtributoJogo.defesa.sortearValor(random),
+        habilidades: habilidades,
+        itemEquipado: null, // Sem item inicial
+      );
+      monstrosSorteados.add(monstro);
+    }
+
+    return monstrosSorteados;
+  }
+
+  Future<void> _sortearMonstrosComLoading() async {
+    if (historiaAtual == null) return;
+
+    // Mostra dialog de loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Sorteando novos monstros...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Simula o tempo de processamento
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // APENAS sorteia novos monstros SEM salvar no Drive - criando localmente
+      final novosMonstros = await _gerarNovosMonstrosLocal();
+
+      if (mounted) {
+        // Fecha o dialog de loading
+        Navigator.of(context).pop();
+
+        // Atualiza APENAS localmente, NÃO salva no Drive ainda
+        setState(() {
+          historiaAtual = historiaAtual!.copyWith(
+            monstros: novosMonstros,
+            aventuraIniciada: false,
+            score: 0,
+          );
+          _temMudancasNaoSalvas = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Novos monstros sorteados! Clique em "Salvar" para confirmar.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o dialog de loading
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao sortear novos monstros: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _sortearMonstros() async {
     final emailJogador = ref.read(validUserEmailProvider);
     print('🎲 [AventuraScreen] Iniciando sorteio de monstros...');
@@ -167,6 +299,84 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao sortear monstros: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _botaoPrincipalAction() async {
+    if (_temMudancasNaoSalvas) {
+      await _salvarEIniciarAventura();
+    } else if (historiaAtual != null &&
+               historiaAtual!.monstros.isNotEmpty &&
+               !historiaAtual!.aventuraIniciada) {
+      // Se tem monstros mas aventura não foi iniciada, mostra aviso
+      await _mostrarModalContinuarAventura();
+    } else {
+      await _iniciarAventura();
+    }
+  }
+
+  Future<void> _salvarEIniciarAventura() async {
+    if (historiaAtual == null || !_temMudancasNaoSalvas) return;
+
+    try {
+      // Mostra loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Salvando nova aventura...'),
+            ],
+          ),
+        ),
+      );
+
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Primeiro salva a história atualizada com os novos monstros
+      final sucessoSalvamento = await repository.salvarHistoricoJogador(historiaAtual!);
+
+      if (sucessoSalvamento) {
+        // Depois inicia uma nova aventura (sorteia novos inimigos)
+        final aventuraCompleta = await repository.iniciarAventura(historiaAtual!.email);
+
+        if (aventuraCompleta != null && mounted) {
+          // Fecha o loading
+          Navigator.of(context).pop();
+
+          setState(() {
+            historiaAtual = aventuraCompleta;
+            _temMudancasNaoSalvas = false;
+          });
+
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nova aventura iniciada com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Falha ao salvar histórico no Drive');
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar e iniciar aventura: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -266,9 +476,28 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.go('/home');
+            _voltarParaHome();
           },
         ),
+        actions: [
+          if (historiaAtual != null)
+            IconButton(
+              icon: Icon(
+                Icons.refresh,
+                color: (historiaAtual?.score == 0 && historiaAtual?.aventuraIniciada == false)
+                    ? Colors.white
+                    : Colors.grey,
+              ),
+              onPressed: (historiaAtual?.score == 0 && historiaAtual?.aventuraIniciada == false)
+                  ? _mostrarModalReiniciarAventura
+                  : null,
+              tooltip: (historiaAtual?.score == 0 && historiaAtual?.aventuraIniciada == false)
+                  ? 'Sortear novos monstros'
+                  : historiaAtual?.aventuraIniciada == true
+                      ? 'Não é possível reiniciar (aventura já iniciada)'
+                      : 'Não é possível reiniciar (score > 0)',
+            ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -556,42 +785,47 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: _iniciarAventura,
+              onTap: _podeUsarBotaoAventura() ? _botaoPrincipalAction : null,
               splashColor: Colors.deepPurple.shade100,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange.shade400, Colors.deepPurple.shade400],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.18),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+              child: Opacity(
+                opacity: _podeUsarBotaoAventura() ? 1.0 : 0.5,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _temMudancasNaoSalvas
+                          ? [Colors.green.shade400, Colors.teal.shade400]
+                          : [Colors.orange.shade400, Colors.deepPurple.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                child: Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 10,
-                    children: [
-                      Icon(_getIconeBotaoAventura(), color: Colors.white, size: 26),
-                      Text(
-                        _getTextoBotaoAventura(),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1.1,
-                        ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_temMudancasNaoSalvas ? Colors.green : Colors.orange).withOpacity(0.18),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
                     ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  child: Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      children: [
+                        Icon(_getIconeBotaoAventura(), color: Colors.white, size: 26),
+                        Text(
+                          _getTextoBotaoAventura(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -607,42 +841,45 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: _irParaConquistas,
+                onTap: _podeUsarBotaoConquistas() ? _irParaConquistas : null,
                 splashColor: Colors.amber.shade100,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber.shade400, Colors.orange.shade400],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.18),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+                child: Opacity(
+                  opacity: _podeUsarBotaoConquistas() ? 1.0 : 0.5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.amber.shade400, Colors.orange.shade400],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  child: Center(
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 10,
-                      children: [
-                        Icon(Icons.emoji_events, color: Colors.white, size: 26),
-                        Text(
-                          'CONQUISTAS',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 1.1,
-                          ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.18),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
                       ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    child: Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 10,
+                        children: [
+                          Icon(Icons.emoji_events, color: Colors.white, size: 26),
+                          Text(
+                            'CONQUISTAS',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -755,6 +992,162 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   void _irParaConquistas() {
     context.go('/conquistas');
   }
+
+  Future<void> _voltarParaHome() async {
+    if (_temMudancasNaoSalvas) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Mudanças não salvas'),
+          content: const Text(
+            'Você tem mudanças não salvas que serão perdidas se voltar. '
+            'Tem certeza que deseja sair sem salvar?'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Sair sem salvar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmar != true) return;
+    }
+
+    if (mounted) {
+      context.go('/home');
+    }
+  }
+
+  Future<void> _mostrarModalContinuarAventura() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Continuar Aventura'),
+        content: const Text(
+          'Ao continuar, você não poderá mais sortear novos monstros pelo menu de aventura. '
+          'Apenas pela tela de conquistas será possível obter novos monstros. '
+          'Tem certeza que deseja continuar?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.deepPurple),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await _iniciarAventuraComFlag();
+    }
+  }
+
+  Future<void> _iniciarAventuraComFlag() async {
+    if (historiaAtual == null) return;
+
+    try {
+      // Mostra loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Iniciando aventura...'),
+            ],
+          ),
+        ),
+      );
+
+      // Atualiza a flag aventuraIniciada para true
+      final historiaAtualizada = historiaAtual!.copyWith(aventuraIniciada: true);
+
+      // Salva no Drive a história com flag atualizada
+      final repository = ref.read(aventuraRepositoryProvider);
+      final sucessoSalvamento = await repository.salvarHistoricoJogador(historiaAtualizada);
+
+      if (sucessoSalvamento && mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        setState(() {
+          historiaAtual = historiaAtualizada;
+        });
+
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
+
+        // Vai para a tela do mapa da aventura
+        if (mounted) {
+          context.go('/aventura/mapa');
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aventura iniciada! Botão refresh desabilitado.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('Falha ao salvar no Drive');
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao iniciar aventura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _mostrarModalReiniciarAventura() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reiniciar Aventura'),
+        content: const Text(
+          'Isso irá sortear 3 novos monstros para você. '
+          'Tem certeza que deseja continuar?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.deepPurple),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      await _sortearMonstrosComLoading();
+    }
+  }
+
 
 
 
