@@ -375,12 +375,6 @@ class GeradorNomesHabilidades {
         'Canaliza essência $tipoElemental para aumentar temporariamente energia em $valor pontos',
         'Absorve poder $tipoElemental para fortalecer a energia em $valor durante a batalha'
       ],
-      EfeitoHabilidade.aumentarAgilidade: [
-        'Aumenta permanentemente a agilidade em $valor pontos com velocidade $tipoElemental',
-        'Acelera os movimentos em $valor usando poder $tipoElemental',
-        'Canaliza energia $tipoElemental para aumentar agilidade em $valor pontos',
-        'Absorve essência $tipoElemental para melhorar velocidade em $valor'
-      ],
       EfeitoHabilidade.aumentarAtaque: [
         'Aumenta permanentemente o poder de ataque em $valor com força $tipoElemental',
         'Fortalece os ataques em $valor usando energia $tipoElemental',

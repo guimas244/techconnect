@@ -248,8 +248,23 @@ class DriveService {
     final arquivoExistente = arquivosExistentes.where((file) => file.name == name).firstOrNull;
     
     if (arquivoExistente != null && arquivoExistente.id != null) {
-      print('🔄 [DEBUG] Arquivo já existe, atualizando: $name (ID: ${arquivoExistente.id})');
-      return await updateJsonFileInHistorias(arquivoExistente.id!, jsonData);
+      print('🔄 [HISTORIAS-LOG] Arquivo já existe, tentando atualizar: $name (ID: ${arquivoExistente.id})');
+      try {
+        final result = await updateJsonFileInHistorias(arquivoExistente.id!, jsonData);
+        print('✅ [HISTORIAS-LOG] Arquivo atualizado com sucesso na pasta HISTORIAS: $name');
+        return result;
+      } catch (e) {
+        print('❌ [HISTORIAS-LOG] ERRO ao atualizar arquivo: $e');
+        print('🔍 [HISTORIAS-LOG] Tipo do erro: ${e.runtimeType}');
+        print('🔍 [HISTORIAS-LOG] Conteúdo completo do erro: ${e.toString()}');
+        
+        // Verificar se é erro 403 especificamente
+        if (e.toString().contains('403')) {
+          print('🚨 [HISTORIAS-LOG] ERRO 403 DETECTADO - Sem permissão para alterar arquivo');
+        }
+        
+        rethrow;
+      }
     }
     
     print('💾 [DEBUG] Criando novo arquivo JSON na pasta HISTORIAS: $name');
@@ -268,16 +283,26 @@ class DriveService {
   }
 
   Future<drive.File> updateJsonFileInHistorias(String fileId, Map<String, dynamic> jsonData) async {
-    print('� [DEBUG] Atualizando arquivo JSON na pasta HISTORIAS (ID: $fileId)');
+    print('🔄 [HISTORIAS-LOG] Atualizando arquivo JSON na pasta HISTORIAS (ID: $fileId)');
     
-    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
-    final contentBytes = utf8.encode(content);
-    final media = drive.Media(
-      http.ByteStream.fromBytes(contentBytes),
-      contentBytes.length,
-    );
-    final meta = drive.File();
-    return await api.files.update(meta, fileId, uploadMedia: media);
+    try {
+      final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+      final contentBytes = utf8.encode(content);
+      final media = drive.Media(
+        http.ByteStream.fromBytes(contentBytes),
+        contentBytes.length,
+      );
+      final meta = drive.File();
+      
+      print('📡 [HISTORIAS-LOG] Enviando requisição de atualização para o Drive...');
+      final result = await api.files.update(meta, fileId, uploadMedia: media);
+      print('✅ [HISTORIAS-LOG] Requisição de atualização concluída com sucesso');
+      return result;
+    } catch (e) {
+      print('❌ [HISTORIAS-LOG] ERRO na requisição de atualização: $e');
+      print('🔍 [HISTORIAS-LOG] Tipo do erro na atualização: ${e.runtimeType}');
+      rethrow;
+    }
   }
 
   Future<drive.File> updateJsonFile(String fileId, Map<String, dynamic> jsonData) async {
@@ -662,15 +687,25 @@ class DriveService {
 
   /// Atualiza um arquivo JSON genérico
   Future<void> _updateJsonFile(String fileId, Map<String, dynamic> jsonData) async {
-    final content = const JsonEncoder.withIndent('  ').convert(jsonData);
-    final contentBytes = utf8.encode(content);
-    final media = drive.Media(
-      Stream.fromIterable([contentBytes]),
-      contentBytes.length,
-      contentType: 'application/json',
-    );
+    print('🔄 [HISTORIAS-LOG] _updateJsonFile chamado para ID: $fileId');
+    
+    try {
+      final content = const JsonEncoder.withIndent('  ').convert(jsonData);
+      final contentBytes = utf8.encode(content);
+      final media = drive.Media(
+        Stream.fromIterable([contentBytes]),
+        contentBytes.length,
+        contentType: 'application/json',
+      );
 
-    await api.files.update(drive.File(), fileId, uploadMedia: media);
+      print('📡 [HISTORIAS-LOG] Enviando requisição _updateJsonFile para o Drive...');
+      await api.files.update(drive.File(), fileId, uploadMedia: media);
+      print('✅ [HISTORIAS-LOG] _updateJsonFile concluído com sucesso');
+    } catch (e) {
+      print('❌ [HISTORIAS-LOG] ERRO em _updateJsonFile: $e');
+      print('🔍 [HISTORIAS-LOG] Tipo do erro em _updateJsonFile: ${e.runtimeType}');
+      rethrow;
+    }
   }
 
   /// Lista arquivos na pasta RANKING por data específica
@@ -762,12 +797,20 @@ class DriveService {
         print('✅ [DriveService] Arquivo atualizado em HISTORIAS/$path: $filename');
         return; // Sucesso, não precisa criar novo
       } catch (e) {
-        print('⚠️ [DriveService] Erro ao atualizar arquivo em HISTORIAS: $e');
-        print('🔄 [DriveService] Criando novo arquivo...');
+        print('❌ [HISTORIAS-LOG] ERRO ao atualizar arquivo em HISTORIAS: $e');
+        print('🔍 [HISTORIAS-LOG] Tipo do erro: ${e.runtimeType}');
+        print('🔍 [HISTORIAS-LOG] Conteúdo completo do erro: ${e.toString()}');
+        
+        // Verificar se é erro 403 especificamente
+        if (e.toString().contains('403')) {
+          print('🚨 [HISTORIAS-LOG] ERRO 403 DETECTADO - Sem permissão para alterar arquivo em $path');
+        }
+        
+        print('🔄 [HISTORIAS-LOG] Criando novo arquivo...');
         // Modifica o nome do arquivo para evitar conflito
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
-        print('📝 [DriveService] Novo nome de arquivo: $filename');
+        print('📝 [HISTORIAS-LOG] Novo nome de arquivo: $filename');
       }
     }
     

@@ -35,7 +35,6 @@ enum TipoHabilidade {
 enum EfeitoHabilidade {
   aumentarVida,
   aumentarEnergia,
-  aumentarAgilidade,
   aumentarAtaque,
   aumentarDefesa,
   curarVida,
@@ -47,8 +46,6 @@ enum EfeitoHabilidade {
         return 'Aumentar Vida';
       case EfeitoHabilidade.aumentarEnergia:
         return 'Aumentar Energia';
-      case EfeitoHabilidade.aumentarAgilidade:
-        return 'Aumentar Agilidade';
       case EfeitoHabilidade.aumentarAtaque:
         return 'Aumentar Ataque';
       case EfeitoHabilidade.aumentarDefesa:
@@ -66,8 +63,6 @@ enum EfeitoHabilidade {
         return 'Aumenta permanentemente a vida máxima durante a luta';
       case EfeitoHabilidade.aumentarEnergia:
         return 'Aumenta permanentemente a energia máxima durante a luta';
-      case EfeitoHabilidade.aumentarAgilidade:
-        return 'Aumenta permanentemente a agilidade durante a luta';
       case EfeitoHabilidade.aumentarAtaque:
         return 'Aumenta permanentemente o ataque durante a luta';
       case EfeitoHabilidade.aumentarDefesa:
@@ -83,7 +78,6 @@ enum EfeitoHabilidade {
     switch (this) {
       case EfeitoHabilidade.aumentarVida:
       case EfeitoHabilidade.aumentarEnergia:
-      case EfeitoHabilidade.aumentarAgilidade:
       case EfeitoHabilidade.aumentarAtaque:
       case EfeitoHabilidade.aumentarDefesa:
       case EfeitoHabilidade.curarVida:

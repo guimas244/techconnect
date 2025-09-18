@@ -146,7 +146,7 @@ class AventuraRepository {
   /// Sorteia 3 monstros únicos para o jogador e já cria a aventura
   Future<HistoriaJogador> sortearMonstrosParaJogador(String email) async {
     final random = Random();
-    final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
+    final tiposDisponiveis = Tipo.values.toList();
     tiposDisponiveis.shuffle(random);
 
     final monstrosSorteados = <MonstroAventura>[];
@@ -154,7 +154,7 @@ class AventuraRepository {
     // Sorteia 3 tipos únicos
     for (int i = 0; i < 3 && i < tiposDisponiveis.length; i++) {
       final tipo = tiposDisponiveis[i];
-      // Sorteia tipo extra diferente do principal (excluindo desconhecido)
+      // Sorteia tipo extra diferente do principal
       final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
@@ -354,7 +354,7 @@ class AventuraRepository {
     
     for (int i = 0; i < 5; i++) {
       // Escolhe um tipo principal aleatório
-      final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
+      final tiposDisponiveis = Tipo.values.toList();
       final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
       
       // Sorteia tipo extra diferente do principal (todos os monstros têm 2 tipos)

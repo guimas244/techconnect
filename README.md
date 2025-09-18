@@ -47,7 +47,7 @@ lib/
 │           └── admin_screen.dart       # Menu administrativo
 ├── shared/                         # Componentes reutilizáveis
 │   ├── models/
-│   │   └── tipo_enum.dart          # Enum dos tipos de criaturas (30 tipos)
+│   │   └── tipo_enum.dart          # Enum dos tipos de criaturas (33 tipos)
 │   ├── widgets/
 │   │   ├── menu_block.dart         # Widget de blocos do menu
 │   │   ├── custom_slider.dart      # Slider customizado para danos
@@ -64,13 +64,13 @@ lib/
 ```
 dados_json/                          # Arquivos JSON de configuração
 ├── tb_normal_defesa.json           # Configurações de defesa por tipo
-├── tb_planta_defesa.json           # (30 arquivos, um para cada tipo)
+├── tb_planta_defesa.json           # (33 arquivos, um para cada tipo)
 └── ...                            # Formato: tb_{tipo}_defesa.json
 
 assets/
 └── tipagens/                       # Ícones dos tipos
     ├── icon_tipo_normal.png        # Ícones padronizados
-    └── ...                         # (30 ícones)
+    └── ...                         # (33 ícones)
 ```
 
 ### 🎯 Padrões Arquiteturais
@@ -160,7 +160,7 @@ Para alterar a versão do app (reflete em todos os pontos):
 
 ### ✅ Implementadas
 - **Autenticação**: Login com email/senha, logout
-- **Sistema de Tipagem**: 30 tipos de criaturas com ícones
+- **Sistema de Tipagem**: 33 tipos de criaturas com ícones
 - **Configuração de Danos**: Sliders para multiplicadores (0.0x a 2.0x)
 - **Persistência**: JSONs salvos localmente com assets como fallback
 - **Navegação**: Estrutura de admin e menus organizados

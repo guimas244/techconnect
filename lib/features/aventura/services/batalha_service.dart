@@ -93,6 +93,13 @@ class BatalhaService {
     
     print('🏆 [Batalha] Vencedor: $vencedor');
     
+    // Restaura energia completa para ambos os monstros ao final da batalha
+    print('⚡ [Batalha] Restaurando energia completa para ambos os monstros');
+    estado = estado.copyWith(
+      energiaAtualJogador: estado.energiaMaximaJogador,
+      energiaAtualInimigo: estado.energiaMaximaInimigo,
+    );
+    
     // Calcula score ganho apenas se o jogador venceu
     int scoreGanho = 0;
     int scoreDepois = scoreAtual;

@@ -62,11 +62,10 @@ class GeradorHabilidades {
       if (isCura) {
         return EfeitoHabilidade.curarVida;
       } else {
-        // Escolhe aleatoriamente entre os efeitos de aumento (REMOVIDO aumentarAgilidade)
+        // Escolhe aleatoriamente entre os efeitos de aumento
         final efeitosAumento = [
           EfeitoHabilidade.aumentarVida,
           EfeitoHabilidade.aumentarEnergia,
-          // EfeitoHabilidade.aumentarAgilidade, // REMOVIDO - não faz sentido
           EfeitoHabilidade.aumentarAtaque,
           EfeitoHabilidade.aumentarDefesa,
         ];
@@ -91,9 +90,6 @@ class GeradorHabilidades {
         return AtributoJogo.habilidadeCura.sortear(_random);
       case EfeitoHabilidade.danoDirecto:
         return AtributoJogo.habilidadeDano.sortear(_random);
-      case EfeitoHabilidade.aumentarAgilidade:
-        // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
-        return 5; // Valor mínimo para não quebrar
     }
   }
 
@@ -124,9 +120,6 @@ class GeradorHabilidades {
         return 'Recupera $valor pontos de vida instantaneamente$sufixoTipo$custoTexto.';
       case EfeitoHabilidade.danoDirecto:
         return 'Causa $valor pontos de dano direto ao oponente$sufixoTipo$custoTexto.';
-      case EfeitoHabilidade.aumentarAgilidade:
-        // REMOVIDO - não deve ser usado mais, mas mantido para compatibilidade
-        return 'Habilidade descontinuada$sufixoTipo$custoTexto.';
     }
   }
 

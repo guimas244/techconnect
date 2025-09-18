@@ -60,7 +60,7 @@ class DriveNotifier extends StateNotifier<DriveState> {
       if (sucesso) {
         state = state.copyWith(
           isLoading: false,
-          successMessage: '☁️ Todos os arquivos sincronizados!\n30 arquivos JSON enviados para o Drive.',
+          successMessage: '☁️ Todos os arquivos sincronizados!\n33 arquivos JSON enviados para o Drive.',
         );
       } else {
         state = state.copyWith(

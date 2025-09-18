@@ -216,8 +216,8 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
 
   /// Gera uma imagem de monstro aleatória baseada no runId
   String _obterImagemMonstroAleatoria(String runId) {
-    // Lista dos 30 tipos disponíveis (excluindo desconhecido)
-    final tiposDisponiveis = Tipo.values.where((t) => t != Tipo.desconhecido).toList();
+    // Lista de todos os tipos disponíveis
+    final tiposDisponiveis = Tipo.values.toList();
     
     // Gera um índice baseado no runId para sempre dar o mesmo resultado
     final hash = runId.hashCode.abs();
