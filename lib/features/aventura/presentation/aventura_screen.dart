@@ -11,6 +11,7 @@ import 'modal_monstro_aventura.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../utils/gerador_habilidades.dart';
 import '../../../shared/models/atributos_jogo_enum.dart';
+import '../data/aventura_repository.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -832,7 +833,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         ),
-        // Botão Conquistas (só aparece se aventura está iniciada)
+        // Botão Recomeçar Aventura (só aparece se aventura está iniciada)
         if (historiaAtual != null && historiaAtual!.aventuraIniciada) ...[
           const SizedBox(height: 16),
           SizedBox(
@@ -841,21 +842,21 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: _podeUsarBotaoConquistas() ? _irParaConquistas : null,
-                splashColor: Colors.amber.shade100,
+                onTap: _podeUsarBotaoConquistas() ? _mostrarModalRecomecarAventura : null,
+                splashColor: Colors.red.shade100,
                 child: Opacity(
                   opacity: _podeUsarBotaoConquistas() ? 1.0 : 0.5,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.amber.shade400, Colors.orange.shade400],
+                        colors: [Colors.red.shade400, Colors.red.shade600],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.amber.withOpacity(0.18),
+                          color: Colors.red.withOpacity(0.18),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -868,9 +869,9 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: 10,
                         children: [
-                          Icon(Icons.emoji_events, color: Colors.white, size: 26),
+                          Icon(Icons.refresh, color: Colors.white, size: 26),
                           Text(
-                            'CONQUISTAS',
+                            'RECOMEÇAR AVENTURA',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -989,8 +990,344 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     );
   }
 
-  void _irParaConquistas() {
-    context.go('/conquistas');
+  Future<void> _mostrarModalRecomecarAventura() async {
+    if (historiaAtual == null) return;
+
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 350, maxHeight: 400),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [Colors.red.withOpacity(0.1), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: const Icon(
+                      Icons.refresh,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'Recomeçar Aventura',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Sua aventura atual será encerrada PERMANENTEMENTE. O score será registrado no ranking, mas você NÃO receberá recompensas.',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Score atual: ${historiaAtual?.score ?? 0} pontos',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Deseja continuar?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey.shade600,
+                        side: BorderSide(color: Colors.grey.shade300, width: 1),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Recomeçar',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (confirmar == true) {
+      await _recomecarAventura();
+    }
+  }
+
+  Future<void> _recomecarAventura() async {
+    if (historiaAtual == null) return;
+
+    try {
+      // Mostra loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Registra score no ranking SEM gerar recompensas
+      await _registrarScoreSemRecompensas(emailJogador, repository);
+
+      // Finaliza aventura atual e inicia nova
+      await _finalizarEIniciarNovaAventura();
+
+      // Fecha loading
+      if (mounted) Navigator.of(context).pop();
+
+      // Atualiza estado local
+      if (mounted) {
+        setState(() {
+          historiaAtual = null;
+        });
+        ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aventura recomeçada! Agora você pode sortear novos monstros.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+    } catch (e) {
+      // Fecha loading se aberto
+      if (mounted) Navigator.of(context).pop();
+
+      // Mostra erro
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao recomeçar aventura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _registrarScoreSemRecompensas(String emailJogador, dynamic repository) async {
+    try {
+      if (historiaAtual != null) {
+        int scoreReal = _calcularScoreReal(historiaAtual!);
+
+        print('🔄 [AventuraScreen] Registrando score sem recompensas');
+        print('🎯 [AventuraScreen] Score calculado: $scoreReal, Tier: ${historiaAtual!.tier}');
+
+        // Atualiza apenas o ranking (sem gerar recompensas)
+        try {
+          await repository.atualizarRankingPorScore(historiaAtual!);
+          print('✅ [AventuraScreen] Score registrado no ranking com sucesso!');
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [AventuraScreen] Erro 401 no ranking, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await repository.atualizarRankingPorScore(historiaAtual!);
+            print('✅ [AventuraScreen] Score registrado após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        print('⚠️ [AventuraScreen] Histórico não encontrado para registro de score');
+      }
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao registrar score: $e');
+      throw e;
+    }
+  }
+
+  Future<void> _finalizarEIniciarNovaAventura() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = AventuraRepository();
+
+      // Carrega o histórico atual para obter o runId
+      print('🔍 [AventuraScreen] Carregando histórico para arquivar...');
+      HistoriaJogador? historiaAtual;
+      try {
+        historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          print('🔄 [AventuraScreen] Erro 401 detectado, renovando autenticação...');
+          await GoogleDriveService().inicializarConexao();
+          historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
+          print('✅ [AventuraScreen] Histórico carregado após renovação da autenticação');
+        } else {
+          throw e;
+        }
+      }
+
+      if (historiaAtual != null && historiaAtual.runId.isNotEmpty) {
+        print('📦 [AventuraScreen] RunID encontrado: ${historiaAtual.runId}, iniciando arquivamento...');
+        // Arquiva o histórico atual renomeando com o runId
+        bool sucessoArquivamento = false;
+        try {
+          sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [AventuraScreen] Erro 401 no arquivamento, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
+            print('✅ [AventuraScreen] Arquivamento realizado após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
+
+        if (sucessoArquivamento) {
+          print('✅ [AventuraScreen] Histórico arquivado com sucesso com RunID: ${historiaAtual.runId}');
+        } else {
+          print('❌ [AventuraScreen] FALHA ao arquivar histórico com RunID: ${historiaAtual.runId}');
+        }
+      } else {
+        print('⚠️ [AventuraScreen] História nula ou sem RunID (${historiaAtual?.runId}), removendo histórico...');
+        // Se não tem runId, remove o histórico (fallback)
+        try {
+          await repository.removerHistoricoJogador(emailJogador);
+          print('✅ [AventuraScreen] Histórico removido (sem RunID)');
+        } catch (e) {
+          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+            print('🔄 [AventuraScreen] Erro 401 na remoção, renovando autenticação...');
+            await GoogleDriveService().inicializarConexao();
+            await repository.removerHistoricoJogador(emailJogador);
+            print('✅ [AventuraScreen] Histórico removido após renovação da autenticação');
+          } else {
+            throw e;
+          }
+        }
+      }
+
+      print('✅ [AventuraScreen] Primeira aventura disponível');
+
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao finalizar e iniciar nova aventura: $e');
+      throw e;
+    }
+  }
+
+  /// Calcula score real baseado no progresso da aventura
+  int _calcularScoreReal(HistoriaJogador historia) {
+    int score = 0;
+
+    // Score APENAS por batalhas realizadas (cada batalha ganha vale 15 pontos)
+    // Só conta se realmente teve batalhas, não só ter iniciado aventura
+    score += historia.historicoBatalhas.length * 15;
+
+    // Score por melhorias dos monstros (só conta se realmente melhoraram)
+    for (var monstro in historia.monstros) {
+      // Score baseado no level do monstro (só se > 1)
+      if (monstro.level > 1) {
+        score += (monstro.level - 1) * 3;
+      }
+
+      // Score por item equipado (se tiver)
+      if (monstro.itemEquipado != null) {
+        score += 5;
+      }
+
+      // Score por habilidades melhoradas (só se level > 1)
+      for (var habilidade in monstro.habilidades) {
+        if (habilidade.level > 1) {
+          score += (habilidade.level - 1) * 2;
+        }
+      }
+    }
+
+    // Score bônus por tier alto (só após ter algum progresso real)
+    if (score > 0) {
+      score += historia.tier * 2; // Reduzido de 10 para 2
+    }
+
+    // Score mínimo é 0 (sem progresso = sem recompensa)
+    score = score.clamp(0, 100);
+
+    print('📊 [AventuraScreen] Score calculado: $score');
+    print('   - Batalhas ganhas: ${historia.historicoBatalhas.length} × 15 = ${historia.historicoBatalhas.length * 15}');
+    print('   - Tier bônus: ${score > 0 ? historia.tier * 2 : 0}');
+    print('   - Monstros: ${historia.monstros.length} (não dá pontos base)');
+    print('   - Levels/itens dos monstros: pontos variáveis');
+
+    return score;
   }
 
   Future<void> _voltarParaHome() async {
@@ -1032,7 +1369,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         title: const Text('Continuar Aventura'),
         content: const Text(
           'Ao continuar, você não poderá mais sortear novos monstros pelo menu de aventura. '
-          'Apenas pela tela de conquistas será possível obter novos monstros. '
+          'Para obter novos monstros, você precisará usar o botão "Recomeçar Aventura". '
           'Tem certeza que deseja continuar?'
         ),
         actions: [
@@ -1093,7 +1430,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
         // Vai para a tela do mapa da aventura
         if (mounted) {
-          context.go('/aventura/mapa');
+          context.go('/aventura/mapa', extra: historiaAtual);
         }
 
         ScaffoldMessenger.of(context).showSnackBar(

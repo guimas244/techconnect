@@ -17,8 +17,6 @@ import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
-import '../services/drops_service.dart';
-import '../models/drop_jogador.dart';
 // Removendo import não usado
 import 'modal_monstro_aventura.dart';
 import 'modal_monstro_inimigo.dart';
@@ -757,7 +755,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
         );
-        // Salva histórico e atualiza ranking (prêmios serão atualizados apenas via "Receber Recompensa")
+        // Salva histórico e atualiza ranking
         await repository.salvarHistoricoEAtualizarRanking(historiaComScore);
         
         print('✅ [BatalhaScreen] Score atualizado, batalha salva no histórico e ranking atualizado!');
@@ -1748,8 +1746,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
         await repository.salvarHistoricoJogador(historiaAtualizada);
         
-        // Magia equipada - drops/prêmios serão salvos apenas via "Receber Recompensa"
-        print('🎯 [BatalhaScreen] Magia equipada - não salvando na pasta drops durante batalha');
+        // Magia equipada com sucesso
+        print('🎯 [BatalhaScreen] Magia equipada em ${monstro.tipo.monsterName}');
         
         print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.monsterName}, substituindo ${habilidadeSubstituida.nome}');
       }
@@ -1770,8 +1768,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // 🎯 EQUIPAR ITEM NO MONSTRO (NÃO É DROP!)
   // ==========================================
   // IMPORTANTE: Esta função EQUIPA o item no monstro
-  // O item NÃO é salvo na pasta "drops/meus prêmios" durante a batalha
-  // Drops/prêmios são salvos APENAS via "Receber Recompensa"
+  // O item é equipado diretamente no monstro durante a batalha
   Future<void> _equiparItemEMonstro(MonstroAventura monstro, Item item) async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
@@ -1796,8 +1793,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await repository.salvarHistoricoJogador(historiaAtualizada);
       debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.monsterName}!');
       
-      // Item equipado - drops/prêmios serão salvos apenas via "Receber Recompensa"
-      print('🎯 [BatalhaScreen] Item equipado - não salvando na pasta drops durante batalha');
+      // Item equipado com sucesso
+      print('🎯 [BatalhaScreen] Item equipado em ${monstro.tipo.monsterName}');
       
       // Após equipar o item, salva tudo e mostra botão para voltar
       await _finalizarBatalhaComSalvamento();
@@ -2784,97 +2781,5 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   // ==========================================
-  // ⚠️ FUNÇÃO DESABILITADA - NÃO USAR!
-  // ==========================================
-  // IMPORTANTE: Esta função está DESABILITADA e NÃO deve ser chamada durante batalhas
-  // Itens equipáveis NÃO devem ser salvos na pasta "drops/meus prêmios"
-  // Apenas itens de "Receber Recompensa" devem ir para a pasta drops
-  /// [DESABILITADA] Salva item na pasta drops usando DropsService
-  Future<void> _salvarItemNaPastaDrops(Item item, String email) async {
-    try {
-      print('🔍 [BatalhaScreen] INÍCIO - Salvando item ${item.nome} na pasta drops para $email');
-      
-      final dropsService = DropsService();
-      final dropsAtual = await dropsService.carregarDrops(email) ?? DropJogador(
-        email: email,
-        itens: [],
-        magias: [],
-        ultimaAtualizacao: DateTime.now(),
-      );
-      
-      // Cria descrição baseada nos atributos do item
-      final atributosList = <String>[];
-      if (item.vida > 0) atributosList.add('+${item.vida} Vida');
-      if (item.ataque > 0) atributosList.add('+${item.ataque} Ataque');
-      if (item.defesa > 0) atributosList.add('+${item.defesa} Defesa');
-      if (item.energia > 0) atributosList.add('+${item.energia} Energia');
-      if (item.agilidade > 0) atributosList.add('+${item.agilidade} Agilidade');
-      
-      final descricao = atributosList.isEmpty 
-          ? 'Item de aventura (Tier ${item.tier})' 
-          : '${atributosList.join(', ')} (Tier ${item.tier})';
-      
-      // Cria DropItem a partir do Item
-      final dropItem = DropItem(
-        nome: item.nome,
-        descricao: descricao,
-        tipo: 'equipamento',
-        quantidade: 1,
-        dataObtencao: DateTime.now(),
-        raridade: item.raridade.nome.toLowerCase(),
-      );
-      
-      // Adiciona o item aos drops existentes
-      final dropsAtualizados = dropsAtual.copyWith(
-        itens: [...dropsAtual.itens, dropItem],
-        ultimaAtualizacao: DateTime.now(),
-      );
-      
-      print('📤 [BatalhaScreen] Chamando dropsService.salvarDrops...');
-      await dropsService.salvarDrops(dropsAtualizados);
-      print('✅ [BatalhaScreen] Item ${item.nome} SALVO COM SUCESSO na pasta drops!');
-      
-    } catch (e) {
-      print('❌ [BatalhaScreen] ERRO CAPTURADO ao salvar item na pasta drops: $e');
-      print('📊 [BatalhaScreen] Stack trace: ${StackTrace.current}');
-      // Não propaga o erro para não quebrar o fluxo principal
-    }
-  }
-
-  // ==========================================
-  // ⚠️ FUNÇÃO DESABILITADA - NÃO USAR!
-  // ==========================================
-  // IMPORTANTE: Esta função está DESABILITADA e NÃO deve ser chamada durante batalhas
-  // Magias equipáveis NÃO devem ser salvas na pasta "drops/meus prêmios"
-  // Apenas magias de "Receber Recompensa" devem ir para a pasta drops
-  /// [DESABILITADA] Salva magia na pasta drops usando DropsService
-  Future<void> _salvarMagiaNaPastaDrops(MagiaDrop magia, String email) async {
-    try {
-      print('🔍 [BatalhaScreen] INÍCIO - Salvando magia ${magia.nome} na pasta drops para $email');
-      
-      final dropsService = DropsService();
-      final dropsAtual = await dropsService.carregarDrops(email) ?? DropJogador(
-        email: email,
-        itens: [],
-        magias: [],
-        ultimaAtualizacao: DateTime.now(),
-      );
-      
-      // Adiciona a magia aos drops existentes
-      final dropsAtualizados = dropsAtual.copyWith(
-        magias: [...dropsAtual.magias, magia],
-        ultimaAtualizacao: DateTime.now(),
-      );
-      
-      print('📤 [BatalhaScreen] Chamando dropsService.salvarDrops para magia...');
-      await dropsService.salvarDrops(dropsAtualizados);
-      print('✅ [BatalhaScreen] Magia ${magia.nome} SALVA COM SUCESSO na pasta drops!');
-      
-    } catch (e) {
-      print('❌ [BatalhaScreen] ERRO CAPTURADO ao salvar magia na pasta drops: $e');
-      print('📊 [BatalhaScreen] Stack trace: ${StackTrace.current}');
-      // Não propaga o erro para não quebrar o fluxo principal
-    }
-  }
 
 }

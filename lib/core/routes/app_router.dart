@@ -10,7 +10,6 @@ import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/monstros/monstros_menu_screen.dart';
 import '../../features/aventura/presentation/aventura_screen.dart';
-import '../../features/aventura/presentation/conquistas_screen.dart';
 import '../../features/aventura/presentation/ranking_screen.dart';
 import '../../features/aventura/presentation/mapa_aventura_screen.dart';
 import '../../features/aventura/models/historia_jogador.dart';
@@ -54,10 +53,6 @@ class AppRouter {
             },
           ),
         ],
-      ),
-      GoRoute(
-        path: AppConstants.conquistasRoute,
-        builder: (context, state) => const ConquistasScreen(),
       ),
       GoRoute(
         path: AppConstants.rankingRoute,

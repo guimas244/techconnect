@@ -28,8 +28,15 @@ class CasaVigaristaModal extends StatefulWidget {
 
 class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   final ItemService _itemService = ItemService();
-  int get custoAposta => 2 * widget.historia.tier;
+  int get custoAposta => 2 * _historiaAtual.tier;
   bool _comprando = false;
+  late HistoriaJogador _historiaAtual;
+
+  @override
+  void initState() {
+    super.initState();
+    _historiaAtual = widget.historia;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +282,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   Widget _buildOpcaoAposta(String titulo, String descricao, IconData icone, Color cor, VoidCallback onTap) {
-    bool podeComprar = widget.historia.score >= custoAposta && !_comprando;
+    bool podeComprar = _historiaAtual.score >= custoAposta && !_comprando;
     
     return Material(
       color: Colors.transparent,
@@ -364,7 +371,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Score Atual: ${widget.historia.score}',
+            'Score Atual: ${_historiaAtual.score}',
             style: TextStyle(
               color: Colors.amber.shade300,
               fontSize: 18,
@@ -384,21 +391,24 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarItem() async {
-    if (_comprando || widget.historia.score < custoAposta) return;
-    
+    if (_comprando || _historiaAtual.score < custoAposta) return;
+
     setState(() { _comprando = true; });
-    
+
     try {
       // Desconta o score primeiro
-      final historiaAtualizada = widget.historia.copyWith(
-        score: widget.historia.score - custoAposta,
+      final historiaAtualizada = _historiaAtual.copyWith(
+        score: _historiaAtual.score - custoAposta,
       );
-      
-      // Salva a historia com score descontado
+
+      // Atualiza história local e salva
+      setState(() {
+        _historiaAtual = historiaAtualizada;
+      });
       widget.onHistoriaAtualizada(historiaAtualizada);
       
       // Gera item aleatório baseado no tier
-      final item = _itemService.gerarItemAleatorio(tierAtual: widget.historia.tier);
+      final item = _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier);
       _mostrarResultadoItem(item, historiaAtualizada);
     } catch (e) {
       _mostrarErro('Erro ao processar aposta: $e');
@@ -408,17 +418,20 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarMagia() async {
-    if (_comprando || widget.historia.score < custoAposta) return;
-    
+    if (_comprando || _historiaAtual.score < custoAposta) return;
+
     setState(() { _comprando = true; });
-    
+
     try {
       // Desconta o score primeiro
-      final historiaAtualizada = widget.historia.copyWith(
-        score: widget.historia.score - custoAposta,
+      final historiaAtualizada = _historiaAtual.copyWith(
+        score: _historiaAtual.score - custoAposta,
       );
-      
-      // Salva a historia com score descontado
+
+      // Atualiza história local e salva
+      setState(() {
+        _historiaAtual = historiaAtualizada;
+      });
       widget.onHistoriaAtualizada(historiaAtualizada);
       
       // Gera habilidade aleatória
@@ -433,17 +446,20 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarCura() async {
-    if (_comprando || widget.historia.score < custoAposta) return;
-    
+    if (_comprando || _historiaAtual.score < custoAposta) return;
+
     setState(() { _comprando = true; });
-    
+
     try {
       // Desconta o score primeiro
-      final historiaAtualizada = widget.historia.copyWith(
-        score: widget.historia.score - custoAposta,
+      final historiaAtualizada = _historiaAtual.copyWith(
+        score: _historiaAtual.score - custoAposta,
       );
-      
-      // Salva a historia com score descontado
+
+      // Atualiza história local e salva
+      setState(() {
+        _historiaAtual = historiaAtualizada;
+      });
       widget.onHistoriaAtualizada(historiaAtualizada);
       
       // Gera cura aleatória (1% a 100%)

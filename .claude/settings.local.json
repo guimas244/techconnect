@@ -20,7 +20,8 @@
       "Read(/\\/**)",
       "Bash(flutter:*)",
       "Read(//d/**)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dir \"D:\\workspace\\techterra\\techterra\\build\\app\\outputs\\flutter-apk\")"
     ],
     "deny": [],
     "ask": []

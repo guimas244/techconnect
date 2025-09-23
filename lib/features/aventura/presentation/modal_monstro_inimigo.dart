@@ -139,36 +139,45 @@ class ModalMonstroInimigo extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            monstro.tipo.monsterName,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: estaMorto ? Colors.grey : monstro.tipo.cor,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                  offset: Offset(1, 1),
-                                ),
-                              ],
+                          Flexible(
+                            child: Text(
+                              monstro.tipo.monsterName,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: estaMorto ? Colors.grey : monstro.tipo.cor,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(1, 1),
+                                  ),
+                                ],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                           if (estaMorto) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
                                 color: Colors.red.shade600,
-                                borderRadius: BorderRadius.circular(12),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: const Text(
-                                'MORTO',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Icon(
+                                Remix.skull_fill,
+                                color: Colors.white,
+                                size: 18,
                               ),
                             ),
                           ],
