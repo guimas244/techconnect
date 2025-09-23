@@ -2086,6 +2086,7 @@ class _RoletaMonstrosWidgetState extends State<_RoletaMonstrosWidget>
                 padding: EdgeInsets.all(20),
                 child: Text(
                   '🎰 SORTEANDO MONSTROS 🎰',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
