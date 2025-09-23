@@ -193,32 +193,13 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   Future<void> _sortearMonstrosComLoading() async {
     if (historiaAtual == null) return;
 
-    // Mostra dialog de loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Sorteando novos monstros...'),
-          ],
-        ),
-      ),
-    );
+    // Gera novos monstros primeiro
+    final novosMonstros = await _gerarNovosMonstrosLocal();
 
     try {
-      // Simula o tempo de processamento
-      await Future.delayed(const Duration(milliseconds: 1000));
-
-      // APENAS sorteia novos monstros SEM salvar no Drive - criando localmente
-      final novosMonstros = await _gerarNovosMonstrosLocal();
-
+      // Mostra animação de roleta
       if (mounted) {
-        // Fecha o dialog de loading
-        Navigator.of(context).pop();
+        await _mostrarAnimacaoRoleta(novosMonstros);
 
         // Atualiza APENAS localmente, NÃO salva no Drive ainda
         setState(() {
@@ -239,9 +220,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       }
     } catch (e) {
       if (mounted) {
-        // Fecha o dialog de loading
-        Navigator.of(context).pop();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao sortear novos monstros: $e'),
@@ -260,6 +238,11 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     try {
       // Sorteia monstros APENAS localmente, sem salvar
       final novosMonstros = await _gerarNovosMonstrosLocal();
+
+      // Mostra animação de roleta
+      if (mounted) {
+        await _mostrarAnimacaoRoleta(novosMonstros);
+      }
 
       // Gera um runId para a nova aventura
       final runId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -1960,7 +1943,321 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     }
   }
 
+  /// Mostra animação de roleta para sorteio de monstros
+  Future<void> _mostrarAnimacaoRoleta(List<dynamic> novosMonstros) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (context) => _RoletaMonstrosWidget(
+        monstrosSorteados: novosMonstros,
+      ),
+    );
+  }
+}
 
+/// Widget de animação da roleta de monstros
+class _RoletaMonstrosWidget extends StatefulWidget {
+  final List<dynamic> monstrosSorteados;
 
+  const _RoletaMonstrosWidget({
+    required this.monstrosSorteados,
+  });
 
+  @override
+  State<_RoletaMonstrosWidget> createState() => _RoletaMonstrosWidgetState();
+}
+
+class _RoletaMonstrosWidgetState extends State<_RoletaMonstrosWidget>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _animations;
+  List<List<String>> _imagensRolando = [[], [], []];
+  bool _animacaoCompleta = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _inicializarAnimacoes();
+    _iniciarRoleta();
+  }
+
+  void _inicializarAnimacoes() {
+    _controllers = List.generate(3, (index) {
+      return AnimationController(
+        duration: Duration(milliseconds: 2000 + (index * 500)), // Cada slot para em tempo diferente
+        vsync: this,
+      );
+    });
+
+    _animations = _controllers.map((controller) {
+      return Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOutCirc),
+      );
+    }).toList();
+
+    // Gera lista de imagens aleatórias para cada slot
+    for (int i = 0; i < 3; i++) {
+      _imagensRolando[i] = _gerarMonstrosParaRoleta(widget.monstrosSorteados[i]);
+    }
+  }
+
+  List<String> _gerarMonstrosParaRoleta(dynamic monstroFinal) {
+    final imagensAleatorias = <String>[];
+
+    // Usar os tipos enum reais para gerar as imagens
+    final tiposDisponiveis = [
+      'fogo', 'agua', 'eletrico', 'gelo', 'vento', 'luz', 'trevas',
+      'psiquico', 'inseto', 'voador', 'planta', 'pedra', 'terrestre',
+      'marinho', 'dragao', 'fantasma', 'mistico', 'alien'
+    ];
+
+    // Adiciona 15 imagens aleatórias antes da imagem final
+    for (int i = 0; i < 15; i++) {
+      tiposDisponiveis.shuffle();
+      imagensAleatorias.add('assets/monstros_aventura/${tiposDisponiveis.first}.png');
+    }
+
+    // Adiciona a imagem do monstro final sorteado
+    imagensAleatorias.add(monstroFinal.imagem);
+
+    return imagensAleatorias;
+  }
+
+  void _iniciarRoleta() async {
+    // Inicia as animações com delay escalonado
+    for (int i = 0; i < 3; i++) {
+      await Future.delayed(Duration(milliseconds: 200));
+      _controllers[i].forward();
+    }
+
+    // Aguarda todas as animações terminarem
+    await Future.delayed(Duration(milliseconds: 3500));
+
+    if (mounted) {
+      setState(() {
+        _animacaoCompleta = true;
+      });
+
+      // Fecha a animação após um tempo
+      await Future.delayed(Duration(milliseconds: 1000));
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: 400,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.purple.shade800, Colors.blue.shade600],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black54,
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Título
+              Container(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  '🎰 SORTEANDO MONSTROS 🎰',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black54,
+                        offset: Offset(2, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Slots da roleta
+              Container(
+                height: 120,
+                margin: EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.yellow, width: 3),
+                ),
+                child: Row(
+                  children: List.generate(3, (index) {
+                    return Expanded(
+                      child: Container(
+                        margin: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade900,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white24, width: 1),
+                        ),
+                        child: _buildSlotRoleta(index),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+
+              // Indicador de progresso
+              Container(
+                padding: EdgeInsets.all(20),
+                child: _animacaoCompleta
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 24),
+                          SizedBox(width: 8),
+                          Text(
+                            'Sorteio Completo!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+                              strokeWidth: 3,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Sorteando...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlotRoleta(int slotIndex) {
+    return AnimatedBuilder(
+      animation: _animations[slotIndex],
+      builder: (context, child) {
+        final progress = _animations[slotIndex].value;
+        final imagens = _imagensRolando[slotIndex];
+
+        // Calcula qual imagem mostrar baseado no progresso
+        final indiceAtual = (progress * (imagens.length - 1)).floor();
+        final proximoIndice = (indiceAtual + 1).clamp(0, imagens.length - 1);
+
+        // Interpolação suave entre imagens (altura aumentada para 100px)
+        final offset = (progress * (imagens.length - 1)) % 1;
+        final alturaSlot = 100.0;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            height: alturaSlot,
+            width: double.infinity,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Imagem atual
+                Transform.translate(
+                  offset: Offset(0, -alturaSlot * offset),
+                  child: SizedBox(
+                    height: alturaSlot,
+                    width: double.infinity,
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: indiceAtual < imagens.length
+                          ? Image.asset(
+                              imagens[indiceAtual],
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.casino, color: Colors.white, size: 40);
+                              },
+                            )
+                          : SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+                // Próxima imagem
+                Transform.translate(
+                  offset: Offset(0, alturaSlot - (alturaSlot * offset)),
+                  child: SizedBox(
+                    height: alturaSlot,
+                    width: double.infinity,
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: proximoIndice < imagens.length
+                          ? Image.asset(
+                              imagens[proximoIndice],
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.casino, color: Colors.white, size: 40);
+                              },
+                            )
+                          : SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+                // Efeito de destaque quando parar
+                if (_animacaoCompleta && _controllers[slotIndex].isCompleted)
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.yellow, width: 3),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.yellow.withOpacity(0.5),
+                          blurRadius: 12,
+                          spreadRadius: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
