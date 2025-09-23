@@ -1049,10 +1049,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      color: Colors.purple.shade600,
-                      size: 20,
+                    Container(
+                      width: 20,
+                      height: 20,
+                      child: Image.asset(
+                        'assets/icons_gerais/magia.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.auto_awesome,
+                            color: Colors.purple.shade600,
+                            size: 20,
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1454,10 +1464,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      color: Colors.purple.shade600,
-                      size: 20,
+                    Container(
+                      width: 20,
+                      height: 20,
+                      child: Image.asset(
+                        'assets/icons_gerais/magia.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.auto_awesome,
+                            color: Colors.purple.shade600,
+                            size: 20,
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
