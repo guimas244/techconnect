@@ -23,6 +23,7 @@ class AventuraScreen extends ConsumerStatefulWidget {
 
 class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   bool _temMudancasNaoSalvas = false;
+  bool _salvandoDrive = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -33,7 +34,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
   String _getTextoBotaoAventura() {
     if (_temMudancasNaoSalvas) {
-      return 'SALVAR';
+      return 'SALVAR LOCALMENTE';
     }
     if (historiaAtual != null && historiaAtual!.monstros.isEmpty) {
       return 'SORTEAR MONSTROS';
@@ -94,35 +95,20 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   Future<void> _verificarEstadoJogador() async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
-      debugPrint('🎮 [AventuraScreen] Iniciando verificação do jogador: $emailJogador');
+      debugPrint('🎮 [AventuraScreen] Iniciando verificação LOCAL do jogador: $emailJogador');
       ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
 
       final repository = ref.read(aventuraRepositoryProvider);
-      debugPrint('🎮 [AventuraScreen] Repository obtido, verificando histórico...');
+      debugPrint('🎮 [AventuraScreen] Repository obtido, verificando histórico LOCAL...');
 
-      bool temHistorico;
-      try {
-        temHistorico = await repository.jogadorTemHistorico(emailJogador);
-      } catch (e) {
-        debugPrint('❌ [AventuraScreen] Erro de autenticação, tentando refresh...');
-        // Tenta refresh do token
-        await GoogleDriveService().inicializarConexao();
-        // Tenta novamente
-        temHistorico = await repository.jogadorTemHistorico(emailJogador);
-      }
-      debugPrint('🎮 [AventuraScreen] Tem histórico: $temHistorico');
+      // Verifica APENAS no HIVE (sem chamadas ao Drive)
+      final temHistorico = await repository.jogadorTemHistorico(emailJogador);
+      debugPrint('🎮 [AventuraScreen] Tem histórico LOCAL: $temHistorico');
 
       if (temHistorico) {
-        debugPrint('🎮 [AventuraScreen] Carregando histórico existente...');
-        HistoriaJogador? historia;
-        try {
-          historia = await repository.carregarHistoricoJogador(emailJogador);
-        } catch (e) {
-          debugPrint('❌ [AventuraScreen] Erro de autenticação ao carregar histórico, tentando refresh...');
-          await GoogleDriveService().inicializarConexao();
-          historia = await repository.carregarHistoricoJogador(emailJogador);
-        }
-        debugPrint('🎮 [AventuraScreen] História carregada: ${historia != null}');
+        debugPrint('🎮 [AventuraScreen] Carregando histórico LOCAL existente...');
+        final historia = await repository.carregarHistoricoJogador(emailJogador);
+        debugPrint('🎮 [AventuraScreen] História LOCAL carregada: ${historia != null}');
 
         if (historia != null) {
           if (mounted) {
@@ -268,31 +254,44 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
   Future<void> _sortearMonstros() async {
     final emailJogador = ref.read(validUserEmailProvider);
-    print('🎲 [AventuraScreen] Iniciando sorteio de monstros...');
+    print('🎲 [AventuraScreen] Iniciando sorteio de monstros LOCAL...');
     ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
-    
+
     try {
-      final repository = ref.read(aventuraRepositoryProvider);
-      print('🎲 [AventuraScreen] Sorteando monstros...');
-      final historia = await repository.sortearMonstrosParaJogador(emailJogador);
-      
-      print('🎲 [AventuraScreen] Monstros sorteados, atualizando estado...');
+      // Sorteia monstros APENAS localmente, sem salvar
+      final novosMonstros = await _gerarNovosMonstrosLocal();
+
+      // Gera um runId para a nova aventura
+      final runId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Cria história local (SEM salvar no HIVE ainda)
+      final historiaLocal = HistoriaJogador(
+        email: emailJogador,
+        monstros: novosMonstros,
+        aventuraIniciada: false,
+        score: 0,
+        tier: 1,
+        runId: runId,
+      );
+
+      print('🎲 [AventuraScreen] Monstros sorteados localmente');
       if (mounted) {
         setState(() {
-          historiaAtual = historia;
+          historiaAtual = historiaLocal;
+          _temMudancasNaoSalvas = true; // Marca como não salvo
         });
-        
-        // Como o sorteio criou os monstros, definimos estado como pode iniciar para mostrar os monstros
+
+        // Define estado como pode iniciar para mostrar os monstros
         ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.podeIniciar;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Aventura criada e salva com sucesso!'),
-            backgroundColor: Colors.green,
+            content: Text('Monstros sorteados! Clique em "SALVAR" para confirmar.'),
+            backgroundColor: Colors.orange,
           ),
         );
       }
-      print('✅ [AventuraScreen] Aventura completa criada com sucesso');
+      print('✅ [AventuraScreen] Monstros sorteados com sucesso (não salvos ainda)');
     } catch (e) {
       print('❌ [AventuraScreen] Erro no sorteio: $e');
       if (mounted) {
@@ -308,14 +307,32 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
   }
 
   Future<void> _botaoPrincipalAction() async {
+    print('🎮 [AventuraScreen] _botaoPrincipalAction chamado');
+    print('🎮 [AventuraScreen] Estado atual:');
+    print('   - _temMudancasNaoSalvas: $_temMudancasNaoSalvas');
+    if (historiaAtual != null) {
+      print('   - historiaAtual.aventuraIniciada: ${historiaAtual!.aventuraIniciada}');
+      print('   - historiaAtual.monstros.length: ${historiaAtual!.monstros.length}');
+      print('   - Texto do botão: ${_getTextoBotaoAventura()}');
+    } else {
+      print('   - historiaAtual: null');
+    }
+
     if (_temMudancasNaoSalvas) {
+      print('🎮 [AventuraScreen] → Executando _salvarEIniciarAventura()');
       await _salvarEIniciarAventura();
+    } else if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
+      print('🎮 [AventuraScreen] → Executando _continuarAventura()');
+      // CONTINUAR AVENTURA: apenas navega para o mapa sem sortear nem salvar
+      await _continuarAventura();
     } else if (historiaAtual != null &&
                historiaAtual!.monstros.isNotEmpty &&
                !historiaAtual!.aventuraIniciada) {
-      // Se tem monstros mas aventura não foi iniciada, mostra aviso
-      await _mostrarModalContinuarAventura();
+      print('🎮 [AventuraScreen] → Executando _iniciarAventura() (tem monstros)');
+      // Se tem monstros mas aventura não foi iniciada, inicia diretamente
+      await _iniciarAventura();
     } else {
+      print('🎮 [AventuraScreen] → Executando _iniciarAventura() (sem monstros)');
       await _iniciarAventura();
     }
   }
@@ -334,7 +351,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Salvando nova aventura...'),
+              Text('Salvando aventura no HIVE...'),
             ],
           ),
         ),
@@ -342,33 +359,25 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
       final repository = ref.read(aventuraRepositoryProvider);
 
-      // Primeiro salva a história atualizada com os novos monstros
+      // Salva APENAS no HIVE (sem iniciar aventura ainda)
       final sucessoSalvamento = await repository.salvarHistoricoJogador(historiaAtual!);
 
-      if (sucessoSalvamento) {
-        // Depois inicia uma nova aventura (sorteia novos inimigos)
-        final aventuraCompleta = await repository.iniciarAventura(historiaAtual!.email);
+      if (sucessoSalvamento && mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
 
-        if (aventuraCompleta != null && mounted) {
-          // Fecha o loading
-          Navigator.of(context).pop();
+        setState(() {
+          _temMudancasNaoSalvas = false;
+        });
 
-          setState(() {
-            historiaAtual = aventuraCompleta;
-            _temMudancasNaoSalvas = false;
-          });
-
-          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nova aventura iniciada com sucesso!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aventura salva no HIVE! Agora você pode iniciar.'),
+            backgroundColor: Colors.green,
+          ),
+        );
       } else {
-        throw Exception('Falha ao salvar histórico no Drive');
+        throw Exception('Falha ao salvar aventura no HIVE');
       }
     } catch (e) {
       if (mounted) {
@@ -377,7 +386,59 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro ao salvar e iniciar aventura: $e'),
+            content: Text('Erro ao salvar aventura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Continua aventura existente sem sortear novos inimigos nem salvar
+  Future<void> _continuarAventura() async {
+    if (historiaAtual == null) return;
+
+    try {
+      print('🔄 [AventuraScreen] Continuando aventura existente...');
+
+      // Valida se tem dados necessários para continuar
+      if (historiaAtual!.mapaAventura == null || historiaAtual!.monstrosInimigos.isEmpty) {
+        print('⚠️ [AventuraScreen] Dados insuficientes para continuar aventura');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Dados da aventura incompletos. Reinicie a aventura.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      print('🗺️ [AventuraScreen] Navegando para mapa: ${historiaAtual!.mapaAventura}');
+      print('👾 [AventuraScreen] Inimigos existentes: ${historiaAtual!.monstrosInimigos.length}');
+
+      // Navega diretamente para o mapa sem loading desnecessário
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MapaAventuraScreen(
+            mapaPath: historiaAtual!.mapaAventura!,
+            monstrosInimigos: historiaAtual!.monstrosInimigos,
+          ),
+        ),
+      );
+
+      // Atualiza estado quando voltar da aventura
+      if (mounted) {
+        await _verificarEstadoJogador();
+      }
+
+      print('✅ [AventuraScreen] Retorno da aventura continuada');
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao continuar aventura: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao continuar aventura: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -389,27 +450,52 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     final emailJogador = ref.read(validUserEmailProvider);
     print('🚀 [AventuraScreen] Iniciando aventura...');
     ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.carregando;
-    
+
     try {
       final repository = ref.read(aventuraRepositoryProvider);
       debugPrint('🚀 [AventuraScreen] Chamando iniciarAventura no repository...');
+      debugPrint('🚀 [AventuraScreen] Dados atuais antes de iniciar:');
+      if (historiaAtual != null) {
+        debugPrint('   - Monstros jogador: ${historiaAtual!.monstros.length}');
+        debugPrint('   - Aventura iniciada: ${historiaAtual!.aventuraIniciada}');
+        debugPrint('   - Inimigos: ${historiaAtual!.monstrosInimigos.length}');
+      }
 
       final historiaAtualizada = await repository.iniciarAventura(emailJogador);
 
       if (historiaAtualizada != null) {
         debugPrint('🚀 [AventuraScreen] Aventura processada com sucesso!');
+        debugPrint('💾 [AventuraScreen] Salvamento no HIVE e Drive concluído');
+
         if (mounted) {
           setState(() {
             historiaAtual = historiaAtualizada;
           });
+
+          // Remove o loading ANTES de navegar
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
         } else {
           debugPrint('⚠️ [AventuraScreen] Widget não está montado ao tentar atualizar estado');
         }
 
         // Determina se é aventura nova ou continuada
-        final isAventuraNova = historiaAtualizada.aventuraIniciada && 
+        final isAventuraNova = historiaAtualizada.aventuraIniciada &&
                                historiaAtualizada.monstrosInimigos.isNotEmpty &&
                                historiaAtualizada.mapaAventura != null;
+
+        // Mensagem de sucesso
+        final mensagem = isAventuraNova
+            ? 'Aventura iniciada! Boa sorte na jornada!'
+            : 'Aventura continuada! Bem-vindo de volta!';
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(mensagem),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
 
         // Navegar para o mapa de aventura e aguardar retorno
         await Navigator.push(
@@ -425,23 +511,6 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         // Atualizar estado quando voltar da aventura
         if (mounted) {
           await _verificarEstadoJogador();
-        }
-
-        // Verifica se widget ainda está montado antes de usar ref
-        if (mounted) {
-          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.aventuraIniciada;
-
-          // Mensagem diferente baseada no tipo de aventura
-          final mensagem = isAventuraNova 
-              ? 'Aventura iniciada! Boa sorte na jornada!'
-              : 'Aventura continuada! Bem-vindo de volta!';
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(mensagem),
-              backgroundColor: Colors.green,
-            ),
-          );
         }
       } else {
         throw Exception('Falha ao iniciar aventura');
@@ -481,6 +550,29 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           },
         ),
         actions: [
+          // Botão temporário para deletar do HIVE
+          IconButton(
+            icon: const Icon(Icons.delete_forever, color: Colors.red),
+            onPressed: _deletarDoHive,
+            tooltip: 'Deletar aventura do HIVE (temporário)',
+          ),
+          // Botão para listar arquivos na pasta do Drive
+          // Botão para salvar no Drive
+          if (historiaAtual != null)
+            IconButton(
+              icon: _salvandoDrive
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.save, color: Colors.white),
+              onPressed: _salvandoDrive ? null : _uploadParaDrive,
+              tooltip: _salvandoDrive ? 'Salvando...' : 'Salvar aventura no Drive + Ranking',
+            ),
           if (historiaAtual != null)
             IconButton(
               icon: Icon(
@@ -500,13 +592,15 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/background/templo.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/background/templo.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -542,6 +636,31 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             ),
           ),
         ),
+          ),
+          // Overlay de loading durante salvamento
+          if (_salvandoDrive)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(
+                          'Salvando aventura no Drive...',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -567,7 +686,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Conectando com Google Drive',
+                'Verificando dados locais',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white70,
@@ -671,6 +790,56 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                                           'SORTEAR MONSTROS',
                                           style: TextStyle(
                                             fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          // Botão de sincronização com Drive
+                          SizedBox(
+                            width: double.infinity,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: _sincronizarComDrive,
+                                splashColor: Colors.blue.shade100,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.blue.shade400, Colors.cyan.shade400],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.blue.withOpacity(0.18),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                  child: Center(
+                                    child: Wrap(
+                                      alignment: WrapAlignment.center,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 10,
+                                      children: [
+                                        Icon(Icons.cloud_download, color: Colors.white, size: 26),
+                                        Text(
+                                          'SINCRONIZAR COM DRIVE',
+                                          style: TextStyle(
+                                            fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                             letterSpacing: 1.1,
@@ -1387,7 +1556,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     );
 
     if (confirmar == true) {
-      await _iniciarAventuraComFlag();
+      await _iniciarAventura();
     }
   }
 
@@ -1457,6 +1626,94 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     }
   }
 
+  Future<void> _salvarNoDrive() async {
+    if (_salvandoDrive) return; // Evita múltiplos cliques
+
+    final emailJogador = ref.read(validUserEmailProvider);
+    final repository = ref.read(aventuraRepositoryProvider);
+
+    setState(() {
+      _salvandoDrive = true;
+    });
+
+    try {
+      print('💾 [AventuraScreen] Iniciando salvamento manual no Drive...');
+
+      // Carrega a aventura atual do HIVE
+      final aventuraAtual = await repository.carregarHistoricoJogador(emailJogador);
+
+      if (aventuraAtual == null) {
+        _mostrarSnackBar('Nenhuma aventura encontrada para salvar', Colors.orange);
+        return;
+      }
+
+      // Força salvamento no Drive usando o método de upload manual
+      final sucesso = await repository.salvarNoDriveManual(emailJogador);
+
+      if (sucesso) {
+        _mostrarSnackBar('Aventura salva no Drive com sucesso!', Colors.green);
+        print('✅ [AventuraScreen] Salvamento no Drive concluído');
+      } else {
+        _mostrarSnackBar('Erro ao salvar no Drive', Colors.red);
+        print('❌ [AventuraScreen] Falha no salvamento no Drive');
+      }
+    } catch (e) {
+      _mostrarSnackBar('Erro ao salvar: $e', Colors.red);
+      print('❌ [AventuraScreen] Exceção durante salvamento: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _salvandoDrive = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _listarArquivosDrive() async {
+    final emailJogador = ref.read(validUserEmailProvider);
+    final driveService = GoogleDriveService();
+
+    try {
+      print('📂 [AventuraScreen] Listando arquivos na pasta do Drive...');
+
+      // Cria o caminho com data atual e email do jogador
+      final hoje = DateTime.now().subtract(const Duration(hours: 3));
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$emailJogador';
+
+      print('📁 [AventuraScreen] Caminho: $caminhoCompleto');
+
+      // Lista arquivos na pasta específica
+      final arquivos = await driveService.listarArquivosDaPasta(caminhoCompleto);
+
+      if (arquivos.isEmpty) {
+        print('📭 [AventuraScreen] Nenhum arquivo encontrado na pasta');
+        _mostrarSnackBar('Nenhum arquivo encontrado na pasta', Colors.orange);
+      } else {
+        print('📋 [AventuraScreen] Arquivos encontrados:');
+        for (int i = 0; i < arquivos.length; i++) {
+          print('   ${i + 1}. ${arquivos[i]}');
+        }
+        _mostrarSnackBar('${arquivos.length} arquivo(s) encontrado(s). Ver logs.', Colors.blue);
+      }
+    } catch (e) {
+      print('❌ [AventuraScreen] Erro ao listar arquivos: $e');
+      _mostrarSnackBar('Erro ao listar arquivos: $e', Colors.red);
+    }
+  }
+
+  void _mostrarSnackBar(String mensagem, Color cor) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensagem),
+          backgroundColor: cor,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _mostrarModalReiniciarAventura() async {
     final confirmar = await showDialog<bool>(
       context: context,
@@ -1482,6 +1739,224 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
     if (confirmar == true) {
       await _sortearMonstrosComLoading();
+    }
+  }
+
+  /// MÉTODO TEMPORÁRIO: Deleta aventura do HIVE
+  Future<void> _deletarDoHive() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Deletar do HIVE'),
+        content: const Text(
+          'Isso irá remover a aventura do armazenamento local (HIVE). '
+          'Tem certeza que deseja continuar?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Deletar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      // Mostra loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Removendo do HIVE...'),
+            ],
+          ),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Remove do HIVE
+      final sucesso = await repository.removerHistoricoJogador(emailJogador);
+
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        if (sucesso) {
+          // Atualiza estado local
+          setState(() {
+            historiaAtual = null;
+          });
+          ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Aventura removida do HIVE com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erro ao remover aventura do HIVE.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Sincroniza aventura local com o Drive
+  /// Baixa aventura do Drive diretamente
+  Future<void> _sincronizarComDrive() async {
+    _baixarDoDrive();
+  }
+
+  /// Baixa aventura do Drive para local
+  Future<void> _baixarDoDrive() async {
+    try {
+      // Mostra dialog de loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Baixando do Drive...'),
+            ],
+          ),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Baixa do Drive
+      final resultado = await repository.sincronizarComDrive(emailJogador);
+
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        if (resultado['sucesso']) {
+          // Recarrega a tela
+          await _verificarEstadoJogador();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(resultado['mensagem']),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Mostra mensagem de erro/não encontrado
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Download'),
+              content: Text(resultado['mensagem']),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o loading se ainda estiver aberto
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao baixar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Faz upload da aventura atual para Drive e atualiza ranking
+  Future<void> _uploadParaDrive() async {
+    try {
+      // Mostra dialog de loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Salvando no Drive e atualizando ranking...'),
+            ],
+          ),
+        ),
+      );
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Faz upload para Drive com ranking
+      final resultado = await repository.uploadParaDriveComRanking(emailJogador);
+
+      if (mounted) {
+        // Fecha o loading
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(resultado['mensagem']),
+            backgroundColor: resultado['sucesso'] ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fecha o loading se ainda estiver aberto
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

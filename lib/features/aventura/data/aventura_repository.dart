@@ -11,6 +11,7 @@ import '../models/habilidade.dart';
 import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
 import '../services/ranking_service.dart';
+import '../services/aventura_hive_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
@@ -18,127 +19,324 @@ class AventuraRepository {
   final TipagemRepository _tipagemRepository = TipagemRepository();
   final ItemService _itemService = ItemService();
   final RankingService _rankingService = RankingService();
+  final AventuraHiveService _hiveService = AventuraHiveService();
 
-  /// Verifica se o jogador já tem um histórico no Drive
+  /// Inicializa o repository (deve ser chamado no início do app)
+  Future<void> init() async {
+    await _hiveService.init();
+  }
+
+  /// Verifica se o jogador já tem um histórico local (HIVE)
   Future<bool> jogadorTemHistorico(String email) async {
     try {
-      print('🔍 [Repository] Verificando histórico para: $email');
-      
-      // Usa o mesmo padrão de caminho que o carregamento e salvamento
-      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
-      final caminhoCompleto = 'historias/$dataFormatada/$email';
-      final nomeArquivo = 'historico_$email.json';
-      
-      print('🔍 [Repository] Buscando em: $caminhoCompleto/$nomeArquivo');
-      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
-      final temHistorico = conteudo.isNotEmpty;
-      print('🔍 [Repository] Tem histórico: $temHistorico');
-      return temHistorico;
+      print('🔍 [Repository] Verificando histórico LOCAL (HIVE) para: $email');
+
+      // Primeiro verifica no HIVE (prioridade)
+      final temHistoricoLocal = await _hiveService.temAventura(email);
+      print('🔍 [Repository] Tem histórico LOCAL: $temHistoricoLocal');
+      return temHistoricoLocal;
     } catch (e) {
-      print('❌ [Repository] Erro ao verificar histórico: $e');
+      print('❌ [Repository] Erro ao verificar histórico local: $e');
       return false;
     }
   }
 
-  /// Carrega o histórico do jogador do Drive
+  /// Carrega o histórico do jogador (HIVE prioritário)
   Future<HistoriaJogador?> carregarHistoricoJogador(String email) async {
     try {
-      print('📥 [Repository] Carregando histórico para: $email');
-      
-      // Cria o caminho com data atual e email do jogador
-      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
-      final caminhoCompleto = 'historias/$dataFormatada/$email';
-      final nomeArquivo = 'historico_$email.json';
-      
-      print('📂 [Repository] Buscando em: $caminhoCompleto/$nomeArquivo');
-      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
-      
-      // Se não encontrou no dia atual, busca nos últimos 7 dias
-      if (conteudo.isEmpty) {
-        print('📥 [Repository] Não encontrado no dia atual, buscando nos últimos dias...');
-        for (int i = 1; i <= 7; i++) {
-          final dataAnterior = hoje.subtract(Duration(days: i));
-          final dataAnteriorFormatada = '${dataAnterior.year.toString().padLeft(4, '0')}-${dataAnterior.month.toString().padLeft(2, '0')}-${dataAnterior.day.toString().padLeft(2, '0')}';
-          final caminhoAnterior = 'historias/$dataAnteriorFormatada/$email';
-          
-          print('📂 [Repository] Tentando: $caminhoAnterior/$nomeArquivo');
-          final conteudoAnterior = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoAnterior);
-          
-          if (conteudoAnterior.isNotEmpty) {
-            print('✅ [Repository] Encontrado histórico em $dataAnteriorFormatada');
-            final json = jsonDecode(conteudoAnterior);
-            final historia = HistoriaJogador.fromJson(json);
-            print('📥 [Repository] História processada: ${historia.monstros.length} monstros');
-            return historia;
-          }
-        }
-        
-        print('📥 [Repository] Nenhum histórico encontrado nos últimos 7 dias');
-        return null;
+      print('📥 [Repository] Carregando histórico LOCAL (HIVE) para: $email');
+
+      // Carrega do HIVE (prioridade)
+      final historia = await _hiveService.carregarAventura(email);
+
+      if (historia != null) {
+        print('✅ [Repository] História carregada do HIVE: ${historia.monstros.length} monstros');
+        return historia;
       }
-      
-      print('📥 [Repository] Conteúdo carregado: ${conteudo.length} caracteres');
-      final json = jsonDecode(conteudo);
-      final historia = HistoriaJogador.fromJson(json);
-      print('📥 [Repository] História processada: ${historia.monstros.length} monstros');
-      return historia;
+
+      print('📭 [Repository] Nenhum histórico encontrado no HIVE');
+      return null;
     } catch (e) {
-      print('❌ [Repository] Erro ao carregar histórico: $e');
+      print('❌ [Repository] Erro ao carregar histórico local: $e');
       return null;
     }
   }
 
-  /// Salva o histórico do jogador no Drive
+  /// Salva o histórico do jogador no HIVE (local) e sincroniza com Drive
   Future<bool> salvarHistoricoJogador(HistoriaJogador historia) async {
     try {
-      print('💾 [Repository] Salvando histórico para: ${historia.email}');
+      print('💾 [Repository] Salvando histórico LOCAL (HIVE) para: ${historia.email}');
       print('💾 [Repository] Dados da história:');
       print('   - Email: ${historia.email}');
       print('   - Monstros: ${historia.monstros.length}');
       print('   - Aventura iniciada: ${historia.aventuraIniciada}');
       print('   - Mapa: ${historia.mapaAventura}');
       print('   - Inimigos: ${historia.monstrosInimigos.length}');
-      
+
+      // Salva no HIVE (prioridade)
+      print('💾 [Repository] Dados a serem salvos no HIVE:');
+      print('   - Email: ${historia.email}');
+      print('   - Monstros jogador: ${historia.monstros.length}');
+      print('   - Aventura iniciada: ${historia.aventuraIniciada}');
+      print('   - Mapa: ${historia.mapaAventura ?? "null"}');
+      print('   - Inimigos: ${historia.monstrosInimigos.length}');
+
+      final sucessoLocal = await _hiveService.salvarAventura(historia);
+
+      if (sucessoLocal) {
+        print('✅ [Repository] Histórico salvo localmente (HIVE)');
+
+        // Só salva no Drive quando aventura for INICIADA (botão iniciar aventura)
+        if (historia.aventuraIniciada) {
+          print('🌐 [Repository] Aventura iniciada, sincronizando com Drive...');
+          final sucessoDrive = await _salvarNoDrive(historia);
+          if (sucessoDrive) {
+            print('✅ [Repository] Histórico também salvo no Drive');
+          } else {
+            print('⚠️ [Repository] Falha no Drive, mas dados salvos localmente');
+          }
+        } else {
+          print('📝 [Repository] Aventura não iniciada, mantendo apenas local');
+        }
+
+        return true;
+      } else {
+        print('❌ [Repository] FALHA ao salvar localmente');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print('❌ [Repository] EXCEÇÃO ao salvar histórico: $e');
+      print('❌ [Repository] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Método privado para salvar no Drive (usado apenas quando necessário)
+  Future<bool> _salvarNoDrive(HistoriaJogador historia) async {
+    try {
       // Cria o caminho com data atual e email do jogador
       final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
       final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
       final caminhoCompleto = 'historias/$dataFormatada/${historia.email}';
       final nomeArquivo = 'historico_${historia.email}.json';
-      
-      print('💾 [Repository] Nome do arquivo: $nomeArquivo');
-      print('📂 [Repository] Salvando em: $caminhoCompleto/$nomeArquivo');
-      
-      // Tenta serializar JSON com try-catch específico
-      String json;
-      try {
-        final jsonData = historia.toJson();
-        print('💾 [Repository] Dados convertidos para Map com sucesso');
-        json = jsonEncode(jsonData);
-        print('💾 [Repository] JSON gerado: ${json.length} caracteres');
-      } catch (jsonError, jsonStackTrace) {
-        print('❌ [Repository] ERRO na serialização JSON: $jsonError');
-        print('❌ [Repository] Stack trace JSON: $jsonStackTrace');
+
+      print('📅 [Repository] Data atual formatada: $dataFormatada');
+      print('📁 [Repository] Caminho completo: $caminhoCompleto');
+      print('📄 [Repository] Nome do arquivo: $nomeArquivo');
+
+      // Serializa JSON
+      final jsonData = historia.toJson();
+      final json = jsonEncode(jsonData);
+
+      print('💾 [Repository] Salvando no Drive...');
+      // Salva no Drive
+      final sucesso = await _driveService.salvarArquivoEmPasta(nomeArquivo, json, caminhoCompleto);
+
+      if (sucesso) {
+        print('✅ [Repository] Arquivo salvo com sucesso no Drive em: $caminhoCompleto/$nomeArquivo');
+      } else {
+        print('❌ [Repository] Falha ao salvar arquivo no Drive');
+      }
+
+      return sucesso;
+    } catch (e) {
+      print('❌ [Repository] Erro ao salvar no Drive: $e');
+      return false;
+    }
+  }
+
+  /// Sincroniza dados com Drive (DOWNLOAD - baixa do Drive para HIVE local)
+  Future<Map<String, dynamic>> sincronizarComDrive(String email) async {
+    try {
+      print('🌐 [Repository] Iniciando sincronização (download) do Drive para: $email');
+      print('📝 [Repository] Buscando arquivo: historico_$email.json');
+
+      // Cria o caminho com data atual e email do jogador
+      final hoje = DateTime.now().subtract(const Duration(hours: 3));
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$email';
+      final nomeArquivo = 'historico_$email.json';
+
+      print('📁 [Repository] Caminho completo: $caminhoCompleto/$nomeArquivo');
+
+      // Tenta baixar do Drive
+      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
+
+      if (conteudo.isEmpty) {
+        print('📭 [Repository] Arquivo não encontrado no Drive');
+        return {
+          'sucesso': false,
+          'mensagem': 'Nenhuma aventura encontrada no Drive para hoje ($dataFormatada).\n\nQue tal iniciar uma nova aventura?',
+          'dados': null
+        };
+      }
+
+      // Parse do JSON
+      final jsonData = jsonDecode(conteudo);
+      final historiaDownload = HistoriaJogador.fromJson(jsonData);
+
+      // Salva no HIVE local
+      final sucessoLocal = await _hiveService.salvarAventura(historiaDownload);
+
+      if (sucessoLocal) {
+        print('✅ [Repository] Sincronização concluída - dados baixados do Drive');
+        return {
+          'sucesso': true,
+          'mensagem': 'Aventura sincronizada com sucesso do Drive!',
+          'dados': historiaDownload
+        };
+      } else {
+        print('❌ [Repository] Falha ao salvar no HIVE local');
+        return {
+          'sucesso': false,
+          'mensagem': 'Erro ao salvar dados localmente',
+          'dados': null
+        };
+      }
+    } catch (e) {
+      print('❌ [Repository] Erro na sincronização: $e');
+      return {
+        'sucesso': false,
+        'mensagem': 'Erro ao sincronizar com Drive: $e',
+        'dados': null
+      };
+    }
+  }
+
+  /// Salva aventura local no Drive (método para botão de salvar)
+  Future<bool> salvarNoDriveManual(String email) async {
+    try {
+      print('🌐 [Repository] Iniciando upload manual para Drive para: $email');
+      print('📝 [Repository] Nome do arquivo que será salvo: historico_$email.json');
+
+      // Carrega aventura local do HIVE
+      final aventuraLocal = await _hiveService.carregarAventura(email);
+      if (aventuraLocal == null) {
+        print('📭 [Repository] Nenhuma aventura local encontrada no HIVE');
         return false;
       }
-      
-      print('💾 [Repository] Primeiros 300 chars do JSON: ${json.substring(0, json.length > 300 ? 300 : json.length)}...');
-      
-      print('💾 [Repository] Chamando DriveService.salvarArquivoEmPasta...');
-      final sucesso = await _driveService.salvarArquivoEmPasta(nomeArquivo, json, caminhoCompleto);
-      print('💾 [Repository] Resultado do salvamento: $sucesso');
-      
-      if (sucesso) {
-        print('✅ [Repository] Histórico salvo com sucesso no Drive');
+
+      print('📤 [Repository] Enviando aventura local para o Drive...');
+      // Salva no Drive
+      final sucessoDrive = await _salvarNoDrive(aventuraLocal);
+      if (sucessoDrive) {
+        print('✅ [Repository] Upload para Drive concluído com sucesso');
+        return true;
       } else {
-        print('❌ [Repository] FALHA ao salvar no Drive');
+        print('❌ [Repository] Falha no upload para Drive');
+        return false;
       }
-      
-      return sucesso;
+    } catch (e) {
+      print('❌ [Repository] Erro no upload manual: $e');
+      return false;
+    }
+  }
+
+  /// Salva histórico apenas no HIVE (para atualizações durante batalha)
+  Future<bool> salvarHistoricoJogadorLocal(HistoriaJogador historia) async {
+    try {
+      print('💾 [Repository] Salvando histórico APENAS NO HIVE (batalha)');
+      print('💾 [Repository] Dados da batalha:');
+      print('   - Email: ${historia.email}');
+      print('   - Monstros jogador: ${historia.monstros.length}');
+      print('   - Aventura iniciada: ${historia.aventuraIniciada}');
+      print('   - Batalhas: ${historia.historicoBatalhas.length}');
+      print('   - Score: ${historia.score}');
+
+      // Salva APENAS no HIVE (sem Drive)
+      final sucessoLocal = await _hiveService.salvarAventura(historia);
+
+      if (sucessoLocal) {
+        print('✅ [Repository] Histórico de batalha salvo localmente (HIVE)');
+        return true;
+      } else {
+        print('❌ [Repository] FALHA ao salvar histórico de batalha localmente');
+        return false;
+      }
     } catch (e, stackTrace) {
-      print('❌ [Repository] EXCEÇÃO ao salvar histórico: $e');
+      print('❌ [Repository] EXCEÇÃO ao salvar histórico de batalha: $e');
       print('❌ [Repository] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Faz upload da aventura atual para Drive e atualiza ranking
+  Future<Map<String, dynamic>> uploadParaDriveComRanking(String email) async {
+    try {
+      print('🌐 [Repository] Iniciando upload para Drive com ranking para: $email');
+
+      // Carrega a aventura atual do HIVE
+      final historiaAtual = await carregarHistoricoJogador(email);
+
+      if (historiaAtual == null) {
+        return {
+          'sucesso': false,
+          'mensagem': 'Nenhuma aventura encontrada localmente para fazer upload.',
+          'dados': null
+        };
+      }
+
+      // Salva no Drive e atualiza ranking
+      final sucessoUpload = await salvarHistoricoEAtualizarRanking(historiaAtual);
+
+      if (sucessoUpload) {
+        print('✅ [Repository] Upload e ranking atualizados com sucesso');
+        return {
+          'sucesso': true,
+          'mensagem': 'Aventura salva no Drive e ranking atualizado com sucesso!',
+          'dados': historiaAtual
+        };
+      } else {
+        return {
+          'sucesso': false,
+          'mensagem': 'Falha ao salvar no Drive ou atualizar ranking.',
+          'dados': null
+        };
+      }
+
+    } catch (e) {
+      print('❌ [Repository] Erro no upload com ranking: $e');
+      return {
+        'sucesso': false,
+        'mensagem': 'Erro ao salvar: $e',
+        'dados': null
+      };
+    }
+  }
+
+  /// Baixa aventura do Drive para HIVE (para botão de sincronização)
+  Future<bool> baixarDoDrive(String email) async {
+    try {
+      print('📥 [Repository] Baixando aventura do Drive para: $email');
+
+      // Cria o caminho com data atual e email do jogador
+      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
+      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final caminhoCompleto = 'historias/$dataFormatada/$email';
+      final nomeArquivo = 'historico_$email.json';
+
+      final conteudo = await _driveService.baixarArquivoDaPasta(nomeArquivo, caminhoCompleto);
+
+      if (conteudo.isEmpty) {
+        print('📭 [Repository] Nenhuma aventura encontrada no Drive');
+        return false;
+      }
+
+      // Converte para objeto
+      final json = jsonDecode(conteudo);
+      final historia = HistoriaJogador.fromJson(json);
+
+      // Salva no HIVE
+      final sucessoLocal = await _hiveService.salvarAventura(historia);
+      if (sucessoLocal) {
+        print('✅ [Repository] Aventura baixada e salva localmente');
+        return true;
+      } else {
+        print('❌ [Repository] Falha ao salvar localmente após download');
+        return false;
+      }
+    } catch (e) {
+      print('❌ [Repository] Erro ao baixar do Drive: $e');
       return false;
     }
   }
@@ -206,28 +404,14 @@ class AventuraRepository {
       runId: runId,
     );
     
-    // Salva automaticamente no Drive
-    print('💾 [Repository] Tentando salvar aventura completa no Drive...');
+    // Salva localmente no HIVE (não no Drive ainda)
+    print('💾 [Repository] Salvando aventura localmente...');
     final sucessoSalvamento = await salvarHistoricoJogador(historia);
     if (sucessoSalvamento) {
-      print('✅ [Repository] Aventura completa criada e salva com ${monstrosSorteados.length} monstros do jogador e ${monstrosInimigos.length} inimigos');
-      
-      // Registra a nova aventura no ranking com score inicial 0
-      print('🏆 [Repository] Registrando nova aventura no ranking...');
-      try {
-        await _rankingService.atualizarRanking(
-          runId: runId,
-          email: email,
-          score: 0, // Score inicial é 0 quando cria a aventura
-        );
-        print('✅ [Repository] Aventura registrada no ranking com sucesso');
-      } catch (e) {
-        print('⚠️ [Repository] Erro ao registrar no ranking: $e (continuando normalmente)');
-        // Não interrompe o fluxo se falhar o registro no ranking
-      }
+      print('✅ [Repository] Aventura completa criada e salva localmente com ${monstrosSorteados.length} monstros do jogador e ${monstrosInimigos.length} inimigos');
     } else {
-      print('❌ [Repository] ERRO: Falha ao salvar aventura no Drive!');
-      throw Exception('Falha ao salvar aventura no Drive');
+      print('❌ [Repository] ERRO: Falha ao salvar aventura localmente!');
+      throw Exception('Falha ao salvar aventura localmente');
     }
     
     return historia;
@@ -278,9 +462,19 @@ class AventuraRepository {
     try {
       print('🚀 [Repository] Iniciando aventura para: $email');
       
-      // Carrega o histórico atual
+      // Carrega o histórico atual do HIVE
       HistoriaJogador? historiaAtual = await carregarHistoricoJogador(email);
-      
+      print('📥 [Repository] Histórico carregado do HIVE:');
+      if (historiaAtual != null) {
+        print('   - Email: ${historiaAtual.email}');
+        print('   - Monstros jogador: ${historiaAtual.monstros.length}');
+        print('   - Aventura iniciada: ${historiaAtual.aventuraIniciada}');
+        print('   - Mapa: ${historiaAtual.mapaAventura ?? "null"}');
+        print('   - Inimigos: ${historiaAtual.monstrosInimigos.length}');
+      } else {
+        print('   - Histórico é NULL');
+      }
+
       // Se não há histórico, cria um novo
       if (historiaAtual == null) {
         print('📝 [Repository] Histórico não encontrado, criando novo histórico...');
@@ -502,19 +696,23 @@ class AventuraRepository {
     }
   }
 
-  /// Remove completamente o histórico do jogador do Drive
+  /// Remove completamente o histórico do jogador (local)
   Future<bool> removerHistoricoJogador(String email) async {
     try {
-      print('🗑️ [Repository] Removendo histórico para: $email');
-      final nomeArquivo = 'historico_$email.json';
-      
-      // Remove o arquivo do Drive
-      await _driveService.excluirArquivoDaPasta(nomeArquivo, 'historias');
-      
-      print('✅ [Repository] Histórico removido com sucesso');
-      return true;
+      print('🗑️ [Repository] Removendo histórico LOCAL para: $email');
+
+      // Remove do HIVE
+      final sucessoLocal = await _hiveService.removerAventura(email);
+
+      if (sucessoLocal) {
+        print('✅ [Repository] Histórico local removido com sucesso');
+        return true;
+      } else {
+        print('❌ [Repository] Falha ao remover histórico local');
+        return false;
+      }
     } catch (e) {
-      print('❌ [Repository] Erro ao remover histórico: $e');
+      print('❌ [Repository] Erro ao remover histórico local: $e');
       return false;
     }
   }

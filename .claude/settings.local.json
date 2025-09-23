@@ -21,7 +21,9 @@
       "Bash(flutter:*)",
       "Read(//d/**)",
       "Bash(git checkout:*)",
-      "Bash(dir \"D:\\workspace\\techterra\\techterra\\build\\app\\outputs\\flutter-apk\")"
+      "Bash(dir \"D:\\workspace\\techterra\\techterra\\build\\app\\outputs\\flutter-apk\")",
+      "Bash(cd:*)",
+      "WebFetch(domain:drive.google.com)"
     ],
     "deny": [],
     "ask": []

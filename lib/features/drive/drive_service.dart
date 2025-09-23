@@ -56,14 +56,25 @@ class DriveService {
   Future<String?> criarPastaHistorias() async {
     try {
       print('📁 [DEBUG] Verificando se pasta HISTORIAS existe dentro da pasta principal...');
-      
+      print('🆔 [DEBUG] FOLDER_ID configurado: $folderId');
+
+      // Buscar informações da pasta pai para debug
+      try {
+        final pastaPai = await api.files.get(folderId, $fields: 'id,name') as drive.File;
+        print('📂 [DEBUG] Pasta pai: ${pastaPai.name} (ID: ${pastaPai.id})');
+      } catch (e) {
+        print('❌ [DEBUG] Erro ao obter pasta pai: $e');
+      }
+
       // Procurar por pasta HISTORIAS dentro da pasta configurada (FOLDER_ID)
       final res = await api.files.list(
-        q: "name = 'historias' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and '$folderId' in parents",
+        q: "name = 'HISTORIAS' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and '$folderId' in parents",
         spaces: "drive",
         $fields: "files(id,name)",
         pageSize: 10,
       );
+
+      print('🔍 [DEBUG] Query executada: name = HISTORIAS dentro de $folderId');
       
       if (res.files != null && res.files!.isNotEmpty) {
         final pastaExistente = res.files!.first;
@@ -675,9 +686,16 @@ class DriveService {
   Future<List<drive.File>> _listFilesInFolder(String folderId) async {
     try {
       final response = await api.files.list(
-        q: "parents in '$folderId'",
+        q: "parents in '$folderId' and trashed=false",
         $fields: 'files(id, name, createdTime)',
       );
+
+      print('📋 [DEBUG] Arquivos encontrados na pasta $folderId: ${response.files?.length ?? 0}');
+      if (response.files != null) {
+        for (final arquivo in response.files!) {
+          print('   - ${arquivo.name} (ID: ${arquivo.id})');
+        }
+      }
       return response.files ?? [];
     } catch (e) {
       print('❌ [DEBUG] Erro ao listar arquivos na pasta $folderId: $e');
@@ -764,7 +782,7 @@ class DriveService {
   }
 
   /// Cria arquivo JSON na pasta HISTORIAS com caminho específico (data/jogador)
-  Future<void> createJsonFileInHistoriasWithPath(String filename, Map<String, dynamic> jsonData, String path) async {
+  Future<String?> createJsonFileInHistoriasWithPath(String filename, Map<String, dynamic> jsonData, String path) async {
     final pastaHistoriasId = await criarPastaHistorias();
     if (pastaHistoriasId == null) {
       throw Exception('Não foi possível acessar pasta HISTORIAS');
@@ -783,35 +801,31 @@ class DriveService {
       pastaAtualId = subpastaId;
     }
 
-    // Verificar se arquivo já existe na pasta final
+    // Verificar e limpar TODOS os arquivos relacionados (com e sem timestamp)
     final arquivos = await _listFilesInFolder(pastaAtualId);
-    final arquivoExistente = arquivos.firstWhere(
-      (file) => file.name == filename,
-      orElse: () => drive.File(),
-    );
+    final baseFilename = filename.replaceAll('.json', '');
 
-    if (arquivoExistente.id != null) {
-      // Tentar atualizar arquivo existente
-      try {
-        await _updateJsonFile(arquivoExistente.id!, jsonData);
-        print('✅ [DriveService] Arquivo atualizado em HISTORIAS/$path: $filename');
-        return; // Sucesso, não precisa criar novo
-      } catch (e) {
-        print('❌ [HISTORIAS-LOG] ERRO ao atualizar arquivo em HISTORIAS: $e');
-        print('🔍 [HISTORIAS-LOG] Tipo do erro: ${e.runtimeType}');
-        print('🔍 [HISTORIAS-LOG] Conteúdo completo do erro: ${e.toString()}');
-        
-        // Verificar se é erro 403 especificamente
-        if (e.toString().contains('403')) {
-          print('🚨 [HISTORIAS-LOG] ERRO 403 DETECTADO - Sem permissão para alterar arquivo em $path');
+    // Encontrar todos os arquivos que começam com o nome base (ex: historico_email)
+    final arquivosParaDeletar = arquivos.where((file) =>
+      file.name != null && file.name!.startsWith(baseFilename)
+    ).toList();
+
+    if (arquivosParaDeletar.isNotEmpty) {
+      print('🗑️ [HISTORIAS-LOG] Encontrados ${arquivosParaDeletar.length} arquivos para deletar:');
+
+      for (final arquivo in arquivosParaDeletar) {
+        try {
+          print('   - Deletando: ${arquivo.name} (ID: ${arquivo.id})');
+          await api.files.delete(arquivo.id!);
+          print('   ✅ Deletado com sucesso');
+        } catch (e) {
+          print('   ❌ Erro ao deletar ${arquivo.name}: $e');
+          // Continue mesmo se não conseguir deletar
         }
-        
-        print('🔄 [HISTORIAS-LOG] Criando novo arquivo...');
-        // Modifica o nome do arquivo para evitar conflito
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
-        print('📝 [HISTORIAS-LOG] Novo nome de arquivo: $filename');
       }
+      print('✅ [HISTORIAS-LOG] Limpeza de arquivos concluída');
+    } else {
+      print('📭 [HISTORIAS-LOG] Nenhum arquivo anterior encontrado para deletar');
     }
     
     // Criar novo arquivo na pasta final
@@ -827,8 +841,9 @@ class DriveService {
       contentType: 'application/json',
     );
 
-    await api.files.create(file, uploadMedia: media);
+    final response = await api.files.create(file, uploadMedia: media);
     print('✅ [DriveService] Novo arquivo criado em HISTORIAS/$path: $filename');
+    return response.id; // Retorna ID do arquivo criado
   }
 
   Future<String> downloadFileFromRanking(String filename) async {

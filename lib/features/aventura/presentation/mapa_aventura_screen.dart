@@ -508,8 +508,14 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             // Salva no repositório
             try {
               final repository = ref.read(aventuraRepositoryProvider);
-              await repository.salvarHistoricoJogador(historiaAtualizada);
-              print('💾 [MapaAventura] História atualizada após compra na Casa do Vigarista');
+              // Salva localmente primeiro
+              await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+              // Salva no Drive e atualiza ranking após compra na loja
+              print('💾 [MapaAventura] Salvando compra no Drive e atualizando ranking...');
+              await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
+
+              print('💾 [MapaAventura] História atualizada após compra na Casa do Vigarista (HIVE + Drive)');
             } catch (e) {
               print('❌ [MapaAventura] Erro ao salvar história: $e');
             }
@@ -609,7 +615,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       );
       
       // Salva no repositório
-      await repository.salvarHistoricoJogador(historiaAtualizada);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       
       // Atualiza o estado local
       setState(() {

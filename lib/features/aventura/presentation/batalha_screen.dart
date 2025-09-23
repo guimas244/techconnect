@@ -700,7 +700,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     } else {
       // Se perdeu, salva batalha no histórico sem dar score
       _salvarBatalhaDerrota().then((_) {
-        _salvarResultadoNoDrive().then((_) {
+        _salvarResultadoLocal().then((_) {
           if (mounted) {
             setState(() {
               processandoDerrota = false; // Desativa o loading
@@ -755,10 +755,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
         );
-        // Salva histórico e atualiza ranking
-        await repository.salvarHistoricoEAtualizarRanking(historiaComScore);
+        // Salva histórico apenas no HIVE (SEM atualizar ranking em vitórias)
+        await repository.salvarHistoricoJogadorLocal(historiaComScore);
         
-        print('✅ [BatalhaScreen] Score atualizado, batalha salva no histórico e ranking atualizado!');
+        print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
@@ -828,7 +828,31 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           
           // Salva a história com o monstro atualizado
           final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-          await repository.salvarHistoricoJogador(historiaAtualizada);
+
+          // Mostra loading durante salvamento
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Salvando evolução...'),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+          // Fecha loading
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
         }
         
         // Cria informações para o modal de habilidade
@@ -859,7 +883,31 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       
       // Salva a história com o monstro evoluído
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-      await repository.salvarHistoricoJogador(historiaAtualizada);
+
+      // Mostra loading durante salvamento
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Salvando evolução...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+      // Fecha loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
       
       // Cria informações da evolução para exibir
       final infoEvolucao = evolucaoService.criarInfoEvolucaoCompleta(monstroAntes, resultadoEvolucao);
@@ -1593,9 +1641,38 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final historiaComBatalha = historia.copyWith(
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
         );
-        await repository.salvarHistoricoJogador(historiaComBatalha);
-        
-        print('✅ [BatalhaScreen] Batalha de derrota salva no histórico!');
+
+        // Mostra loading durante salvamento da derrota
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Salvando derrota...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Salva localmente primeiro
+        await repository.salvarHistoricoJogadorLocal(historiaComBatalha);
+
+        // Em caso de derrota, salva no Drive e atualiza ranking
+        print('💾 [BatalhaScreen] Salvando derrota no Drive e atualizando ranking...');
+        await repository.salvarHistoricoEAtualizarRanking(historiaComBatalha);
+
+        // Fecha loading
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+
+        print('✅ [BatalhaScreen] Batalha de derrota salva no histórico (HIVE + Drive)!');
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao salvar batalha de derrota: $e');
@@ -1744,7 +1821,31 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         }).toList();
         
         final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-        await repository.salvarHistoricoJogador(historiaAtualizada);
+
+        // Mostra loading durante salvamento
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Equipando magia...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+        // Fecha loading
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
         
         // Magia equipada com sucesso
         print('🎯 [BatalhaScreen] Magia equipada em ${monstro.tipo.monsterName}');
@@ -1790,7 +1891,32 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       debugPrint('🟢 [BatalhaScreen] Monstro após equipar: ${monstroLog.toJson()}');
       // Salva a história com o item equipado imediatamente
       final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-      await repository.salvarHistoricoJogador(historiaAtualizada);
+
+      // Mostra loading durante salvamento
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Equipando item...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+      // Fecha loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
       debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.monsterName}!');
       
       // Item equipado com sucesso
@@ -1805,8 +1931,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   /// Finaliza a batalha salvando tudo e mostrando o botão para voltar
   Future<void> _finalizarBatalhaComSalvamento() async {
-    print('🔄 [BatalhaScreen] Finalizando batalha e salvando resultado final no drive...');
-    await _salvarResultadoNoDrive();
+    print('🔄 [BatalhaScreen] Finalizando batalha e salvando resultado final...');
+    await _salvarResultadoLocal();
     print('✅ [BatalhaScreen] Resultado final salvo com sucesso!');
     
     // Mostra botão para voltar manualmente
@@ -1819,7 +1945,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
-  Future<void> _salvarResultadoNoDrive() async {
+  Future<void> _salvarResultadoLocal() async {
     if (salvandoResultado || estadoAtual == null) return;
     
     if (mounted) {
@@ -1887,7 +2013,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
       
       // Salva a história atualizada
-      await repository.salvarHistoricoJogador(historiaAtualizada);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       
       print('✅ [BatalhaScreen] Resultado salvo com sucesso!');
       
@@ -2004,7 +2130,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         monstros: monstrosAtualizados,
         monstrosInimigos: inimigosAtualizados,
       );
-      await repository.salvarHistoricoJogador(historiaAtualizada);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       
       print('✅ [BatalhaScreen] Estado da batalha salvo!');
       

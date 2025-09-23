@@ -137,7 +137,7 @@ class RankingService {
     try {
       final dataSemHora = DateTime(data.year, data.month, data.day);
       final nomeArquivo = _getNomeArquivoRanking(dataSemHora, email);
-      
+
       print('📊 [RankingService] Carregando ranking individual para $email no dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
 
       // Carrega da pasta rankings com subpasta por data
@@ -145,7 +145,7 @@ class RankingService {
       final pastaComData = 'rankings/$dataFormatada';
       print('🎯 [RankingService] Carregando da pasta: $pastaComData/$nomeArquivo');
       final conteudoJson = await _driveService.baixarArquivoDaPasta(nomeArquivo, pastaComData);
-      
+
       if (conteudoJson.isEmpty) {
         // Se não existe, cria ranking vazio para o email no dia
         print('📊 [RankingService] Ranking individual não encontrado para $email, criando novo');
@@ -157,10 +157,10 @@ class RankingService {
 
       final dados = json.decode(conteudoJson) as Map<String, dynamic>;
       final ranking = RankingDiario.fromJson(dados);
-      
+
       print('✅ [RankingService] Ranking individual carregado para $email: ${ranking.entradas.length} entradas');
       return ranking;
-      
+
     } catch (e) {
       print('❌ [RankingService] Erro ao carregar ranking individual para $email: $e');
       // Em caso de erro, retorna ranking vazio
@@ -176,24 +176,24 @@ class RankingService {
   Future<RankingDiario> carregarRankingDia(DateTime data) async {
     try {
       final dataSemHora = DateTime(data.year, data.month, data.day);
-      
+
       print('📊 [RankingService] Carregando ranking consolidado do dia: ${_formatarDataParaNomeArquivo(dataSemHora)}');
 
       // Lista todos os arquivos da pasta da data
       final dataFormatada = _folderManager.formatarDataParaPasta(dataSemHora);
       final pastaComData = 'rankings/$dataFormatada';
-      
+
       // Usar método para listar arquivos por data (precisa implementar)
       final arquivos = await _listarArquivosRankingPorData(dataSemHora);
-      
+
       if (arquivos.isEmpty) {
         print('📊 [RankingService] Nenhum arquivo de ranking encontrado para o dia');
         return RankingDiario(data: dataSemHora, entradas: []);
       }
-      
+
       // Consolida todas as entradas de todos os emails
       final List<RankingEntry> todasEntradas = [];
-      
+
       for (final arquivo in arquivos) {
         try {
           final conteudoJson = await _driveService.baixarArquivoDaPasta(arquivo, pastaComData);
@@ -206,15 +206,15 @@ class RankingService {
           print('⚠️ [RankingService] Erro ao processar arquivo $arquivo: $e');
         }
       }
-      
+
       final rankingConsolidado = RankingDiario(
         data: dataSemHora,
         entradas: todasEntradas,
       );
-      
+
       print('✅ [RankingService] Ranking consolidado carregado: ${todasEntradas.length} entradas de ${arquivos.length} arquivos');
       return rankingConsolidado;
-      
+
     } catch (e) {
       print('❌ [RankingService] Erro ao carregar ranking consolidado: $e');
       final dataSemHora = DateTime(data.year, data.month, data.day);
@@ -300,17 +300,17 @@ class RankingService {
     try {
       final nomeArquivo = _getNomeArquivoRanking(ranking.data, email);
       final dadosJson = ranking.toJson();
-      
+
       print('💾 [RankingService] Salvando ranking do dia: ${_formatarDataParaNomeArquivo(ranking.data)} para $email');
-      
+
       // Salva na pasta rankings com subpasta por data
       final dataFormatada = _folderManager.formatarDataParaPasta(ranking.data);
       final pastaComData = 'rankings/$dataFormatada';
       print('🎯 [RankingService] Salvando na pasta: $pastaComData/$nomeArquivo');
       await _driveService.salvarArquivoEmPasta(nomeArquivo, json.encode(dadosJson), pastaComData);
-      
+
       print('✅ [RankingService] Ranking salvo com sucesso para $email');
-      
+
     } catch (e) {
       print('❌ [RankingService] Erro ao salvar ranking: $e');
       throw Exception('Erro ao salvar ranking: $e');

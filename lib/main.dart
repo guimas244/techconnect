@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/google_drive_service.dart';
+import 'features/aventura/data/aventura_repository.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -18,12 +19,16 @@ Future<void> main() async {
     
     // Inicializar Hive para armazenamento local
     await Hive.initFlutter();
-    
+
     // Criar container do Riverpod
     final container = ProviderContainer();
-    
+
     // Configurar container global para o GoogleDriveService
     GoogleDriveService.setContainer(container);
+
+    // Inicializar AventuraRepository com HIVE
+    final aventuraRepository = AventuraRepository();
+    await aventuraRepository.init();
     
     runApp(UncontrolledProviderScope(
       container: container,

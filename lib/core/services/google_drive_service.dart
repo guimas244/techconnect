@@ -362,6 +362,9 @@ class GoogleDriveService {
 
       final conteudo = await _driveService!.downloadFileContent(arquivo.id!);
       print('✅ Arquivo baixado com sucesso da pasta $pasta: $nomeArquivo');
+      print('🆔 [DEBUG] ID do arquivo baixado: ${arquivo.id}');
+      print('📊 [DEBUG] Tamanho do conteúdo: ${conteudo.length} caracteres');
+      print('📄 [DEBUG] Início do conteúdo: ${conteudo.length > 100 ? conteudo.substring(0, 100) + "..." : conteudo}');
       return conteudo;
     }
 
@@ -415,7 +418,9 @@ class GoogleDriveService {
           if (pasta.startsWith('historias/') && pasta.length > 10) {
             final subpasta = pasta.substring(10); // Remove "historias/"
             print('📅 [GoogleDriveService] Salvando na subpasta de historias: $subpasta');
-            await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+            final fileId = await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+            print('🆔 [GoogleDriveService] ID do arquivo salvo: $fileId');
+            print('🔗 [GoogleDriveService] URL direta: https://drive.google.com/file/d/$fileId/view');
           } else {
             await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
           }
@@ -449,7 +454,9 @@ class GoogleDriveService {
           if (pasta.startsWith('historias/') && pasta.length > 10) {
             final subpasta = pasta.substring(10); // Remove "historias/"
             print('📅 [GoogleDriveService] Salvando na subpasta de historias: $subpasta');
-            await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+            final fileId = await _driveService!.createJsonFileInHistoriasWithPath(nomeArquivo, dadosJson, subpasta);
+            print('🆔 [GoogleDriveService] ID do arquivo salvo: $fileId');
+            print('🔗 [GoogleDriveService] URL direta: https://drive.google.com/file/d/$fileId/view');
           } else {
             await _driveService!.createJsonFileInHistorias(nomeArquivo, dadosJson);
           }
