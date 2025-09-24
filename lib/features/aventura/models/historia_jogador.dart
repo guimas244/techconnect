@@ -12,8 +12,9 @@ class HistoriaJogador {
   final int score;
   final List<RegistroBatalha> historicoBatalhas;
   final String runId; // ID único para cada run/aventura
+  final DateTime dataCriacao; // Data de criação da aventura
 
-  const HistoriaJogador({
+  HistoriaJogador({
     required this.email,
     required this.monstros,
     this.aventuraIniciada = false,
@@ -23,7 +24,9 @@ class HistoriaJogador {
     this.score = 0,
     this.historicoBatalhas = const [],
     String? runId,
-  }) : runId = runId ?? '';
+    DateTime? dataCriacao,
+  }) : runId = runId ?? '',
+       dataCriacao = dataCriacao ?? DateTime.utc(2000); // Default para aventuras antigas
 
   factory HistoriaJogador.fromJson(Map<String, dynamic> json) {
     return HistoriaJogador(
@@ -42,6 +45,9 @@ class HistoriaJogador {
           ?.map((b) => RegistroBatalha.fromJson(b as Map<String, dynamic>))
           .toList() ?? [],
       runId: json['runId'] ?? '',
+      dataCriacao: json['dataCriacao'] != null
+          ? DateTime.parse(json['dataCriacao'])
+          : DateTime.utc(2000), // Default para aventuras antigas sem data
     );
   }
 
@@ -56,6 +62,7 @@ class HistoriaJogador {
       'score': score,
       'historicoBatalhas': historicoBatalhas.map((b) => b.toJson()).toList(),
       'runId': runId,
+      'dataCriacao': dataCriacao.toIso8601String(),
     };
   }
 
@@ -69,6 +76,7 @@ class HistoriaJogador {
     int? score,
     List<RegistroBatalha>? historicoBatalhas,
     String? runId,
+    DateTime? dataCriacao,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -80,6 +88,22 @@ class HistoriaJogador {
       score: score ?? this.score,
       historicoBatalhas: historicoBatalhas ?? this.historicoBatalhas,
       runId: runId ?? this.runId,
+      dataCriacao: dataCriacao ?? this.dataCriacao,
     );
+  }
+
+  /// Verifica se a aventura expirou (passou da meia-noite do horário de Brasília)
+  bool get aventuraExpirada {
+    // Horário atual de Brasília (UTC-3)
+    final agora = DateTime.now().toUtc().subtract(const Duration(hours: 3));
+
+    // Data de criação convertida para horário de Brasília
+    final dataCriacaoBrasilia = dataCriacao.toUtc().subtract(const Duration(hours: 3));
+
+    // Verifica se estamos em dias diferentes
+    final agoraData = DateTime(agora.year, agora.month, agora.day);
+    final criacaoData = DateTime(dataCriacaoBrasilia.year, dataCriacaoBrasilia.month, dataCriacaoBrasilia.day);
+
+    return agoraData.isAfter(criacaoData);
   }
 }

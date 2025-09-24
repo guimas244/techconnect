@@ -111,6 +111,23 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         debugPrint('🎮 [AventuraScreen] História LOCAL carregada: ${historia != null}');
 
         if (historia != null) {
+          // Verifica se a aventura expirou
+          if (historia.aventuraExpirada) {
+            debugPrint('⏰ [AventuraScreen] Aventura expirada, removendo do Hive...');
+            await repository.removerHistoricoJogador(emailJogador);
+
+            if (mounted) {
+              // Mostra modal de aventura expirada
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _mostrarModalAventuraExpirada();
+              });
+
+              ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.semHistorico;
+              debugPrint('📝 [AventuraScreen] Estado: SEM HISTÓRICO (aventura expirada)');
+            }
+            return;
+          }
+
           if (mounted) {
             debugPrint('🟢 [AventuraScreen] Atualizando estado com história carregada');
             setState(() {
@@ -207,6 +224,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
             monstros: novosMonstros,
             aventuraIniciada: false,
             score: 0,
+            dataCriacao: DateTime.now(), // Atualiza data de criação para agora
           );
           _temMudancasNaoSalvas = true;
         });
@@ -247,7 +265,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       // Gera um runId para a nova aventura
       final runId = DateTime.now().millisecondsSinceEpoch.toString();
 
-      // Cria história local (SEM salvar no HIVE ainda)
+      // Cria história local (SEM salvar no HIVE ainda) com data atual
       final historiaLocal = HistoriaJogador(
         email: emailJogador,
         monstros: novosMonstros,
@@ -255,6 +273,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         score: 0,
         tier: 1,
         runId: runId,
+        dataCriacao: DateTime.now(), // Data de criação no horário atual do telefone
       );
 
       print('🎲 [AventuraScreen] Monstros sorteados localmente');
@@ -297,8 +316,16 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       print('   - historiaAtual.aventuraIniciada: ${historiaAtual!.aventuraIniciada}');
       print('   - historiaAtual.monstros.length: ${historiaAtual!.monstros.length}');
       print('   - Texto do botão: ${_getTextoBotaoAventura()}');
+      print('   - Aventura expirada: ${historiaAtual!.aventuraExpirada}');
     } else {
       print('   - historiaAtual: null');
+    }
+
+    // Verifica se a aventura expirou antes de qualquer ação
+    if (historiaAtual != null && historiaAtual!.aventuraExpirada) {
+      print('⏰ [AventuraScreen] Aventura expirada! Mostrando modal...');
+      await _mostrarModalAventuraExpirada();
+      return;
     }
 
     if (_temMudancasNaoSalvas) {
@@ -1894,6 +1921,13 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
   /// Faz upload da aventura atual para Drive e atualiza ranking
   Future<void> _uploadParaDrive() async {
+    // Verifica se a aventura expirou antes de salvar
+    if (historiaAtual != null && historiaAtual!.aventuraExpirada) {
+      print('⏰ [AventuraScreen] Tentativa de salvar aventura expirada!');
+      await _mostrarModalAventuraExpirada();
+      return;
+    }
+
     try {
       // Mostra dialog de loading
       showDialog(
@@ -1951,6 +1985,120 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       barrierColor: Colors.black87,
       builder: (context) => _RoletaMonstrosWidget(
         monstrosSorteados: novosMonstros,
+      ),
+    );
+  }
+
+  /// Mostra modal de aventura expirada
+  Future<void> _mostrarModalAventuraExpirada() async {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 350, maxHeight: 400),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [Colors.orange.withOpacity(0.1), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ícone de aventura expirada
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: const Icon(
+                  Icons.access_time,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Título
+              const Text(
+                'Aventura Expirada',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Mensagem explicativa
+              const Text(
+                'Sua aventura expirou após a meia-noite (horário de Brasília). Para continuar jogando, você precisa sortear novos monstros e começar uma nova aventura.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Container de informação adicional
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Aventuras são válidas apenas durante o dia em que foram criadas.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Botão OK
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Entendi',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

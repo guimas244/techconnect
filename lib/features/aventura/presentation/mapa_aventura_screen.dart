@@ -57,10 +57,24 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       
       if (historia != null) {
         print('🗺️ [MapaAventura] História encontrada - Aventura iniciada: ${historia.aventuraIniciada}');
-        
+
+        // Verifica se a aventura expirou
+        if (historia.aventuraExpirada) {
+          print('⏰ [MapaAventura] Aventura expirada ao carregar mapa!');
+          setState(() {
+            isLoading = false;
+          });
+
+          // Mostra modal e volta para tela de aventura
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _mostrarModalAventuraExpirada();
+          });
+          return;
+        }
+
         setState(() {
           historiaAtual = historia;
-          
+
           if (historia.aventuraIniciada && historia.mapaAventura != null) {
             // Se há aventura iniciada, usa o mapa salvo
             mapaEscolhido = historia.mapaAventura!;
@@ -71,7 +85,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
             print('🗺️ [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
           }
-          
+
           isLoading = false;
         });
       } else {
@@ -581,6 +595,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   void _iniciarBatalha(MonstroInimigo monstroInimigo) {
+    // Verifica se a aventura expirou antes de iniciar batalha
+    if (historiaAtual != null && historiaAtual!.aventuraExpirada) {
+      print('⏰ [MapaAventura] Tentativa de batalhar com aventura expirada!');
+      _mostrarModalAventuraExpirada();
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -741,6 +762,123 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           ],
         );
       },
+    );
+  }
+
+  /// Mostra modal de aventura expirada
+  Future<void> _mostrarModalAventuraExpirada() async {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 350, maxHeight: 400),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [Colors.orange.withOpacity(0.1), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ícone de aventura expirada
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: const Icon(
+                  Icons.access_time,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Título
+              const Text(
+                'Aventura Expirada',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Mensagem explicativa
+              const Text(
+                'Sua aventura expirou após a meia-noite (horário de Brasília). Para continuar jogando, você precisa sortear novos monstros e começar uma nova aventura.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // Container de informação adicional
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Aventuras são válidas apenas durante o dia em que foram criadas.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Botão para voltar à tela de aventura
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Fecha o modal
+                    Navigator.of(context).pop(); // Volta para a tela de aventura
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Voltar para Aventura',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
