@@ -130,7 +130,9 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
 
             // Opções da loja em carousel
             Expanded(
-              child: _buildShopCarousel(),
+              child: SingleChildScrollView(
+                child: _buildShopCarousel(),
+              ),
             ),
 
             const SizedBox(height: 15),
@@ -548,11 +550,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     return AnimationLimiter(
       child: GridView.count(
         crossAxisCount: 2,
-        mainAxisSpacing: 15,
-        crossAxisSpacing: 15,
-        childAspectRatio: 1.0,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
         shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         children: [
           // Item Aleatório
           AnimationConfiguration.staggeredGrid(
@@ -621,6 +623,25 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
                   icon: Icons.store,
                   colors: [Color(0xFFFF8C00), Color(0xFFFFD700)],
                   onTap: () => _mostrarConfirmacaoFeirao(),
+                  isIcon: true,
+                ),
+              ),
+            ),
+          ),
+
+          // Biblioteca do Vigarista (novo)
+          AnimationConfiguration.staggeredGrid(
+            position: 4,
+            duration: const Duration(milliseconds: 600),
+            columnCount: 2,
+            child: ScaleAnimation(
+              child: FadeInAnimation(
+                child: _buildMagicalShopItem(
+                  title: 'BIBLIOTECA',
+                  subtitle: 'do Vigarista',
+                  icon: Icons.library_books,
+                  colors: [Color(0xFF6A0DAD), Color(0xFF8B008B)],
+                  onTap: () => _mostrarConfirmacaoBiblioteca(),
                   isIcon: true,
                 ),
               ),
@@ -711,10 +732,10 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
                 children: [
                   // Ícone central
                   Flexible(
-                    flex: 3,
+                    flex: 2,
                     child: Container(
-                      width: 50,
-                      height: 50,
+                      width: 45,
+                      height: 45,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         gradient: podeComprar
@@ -761,7 +782,7 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
 
                   // Texto com efeito shimmer
                   Flexible(
-                    flex: 2,
+                    flex: 1,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -1139,6 +1160,213 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     );
   }
 
+  void _mostrarConfirmacaoBiblioteca() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 350,
+            height: 480,
+            borderRadius: 25,
+            blur: 20,
+            alignment: Alignment.center,
+            border: 3,
+            linearGradient: LinearGradient(
+              colors: [
+                const Color(0xFF1A1A2E).withOpacity(0.9),
+                const Color(0xFF16213E).withOpacity(0.9),
+              ],
+            ),
+            borderGradient: LinearGradient(
+              colors: [
+                const Color(0xFF6A0DAD),
+                const Color(0xFF8B008B),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Ícone especial da biblioteca
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF6A0DAD),
+                          const Color(0xFF8B008B),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6A0DAD).withOpacity(0.5),
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.library_books,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ).animate()
+                    .scale(duration: 600.ms, curve: Curves.elasticOut)
+                    .then()
+                    .animate(onPlay: (controller) => controller.repeat())
+                    .rotate(duration: 3000.ms),
+
+                  const SizedBox(height: 25),
+
+                  // Título da biblioteca
+                  Shimmer.fromColors(
+                    baseColor: const Color(0xFF8B008B),
+                    highlightColor: Colors.white,
+                    child: AutoSizeText(
+                      'BIBLIOTECA DO VIGARISTA',
+                      style: GoogleFonts.cinzel(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF8B008B),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      minFontSize: 14,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Descrição da biblioteca
+                  AutoSizeText(
+                    'Se você deseja brincar com a sorte pague $custoFeirao e tenha acesso a 3 magias únicas',
+                    style: GoogleFonts.philosopher(
+                      fontSize: 14,
+                      color: const Color(0xFF8B008B),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    minFontSize: 10,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  AutoSizeText(
+                    'Cada magia custará $custoAposta moedas',
+                    style: GoogleFonts.philosopher(
+                      fontSize: 12,
+                      color: const Color(0xFF8B8B8B),
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // Botões
+                  Row(
+                    children: [
+                      // Cancelar
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.grey.shade700,
+                                  Colors.grey.shade500,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Center(
+                              child: AutoSizeText(
+                                'CANCELAR',
+                                style: GoogleFonts.orbitron(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                minFontSize: 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      // Abrir Biblioteca
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: _historiaAtual.score >= custoFeirao ? () {
+                            Navigator.of(context).pop();
+                            _abrirBiblioteca();
+                          } : null,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: _historiaAtual.score >= custoFeirao
+                                  ? LinearGradient(
+                                      colors: [
+                                        const Color(0xFF6A0DAD),
+                                        const Color(0xFF8B008B),
+                                      ],
+                                    )
+                                  : LinearGradient(
+                                      colors: [
+                                        Colors.grey.shade600,
+                                        Colors.grey.shade400,
+                                      ],
+                                    ),
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: _historiaAtual.score >= custoFeirao
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF6A0DAD).withOpacity(0.3),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Center(
+                              child: AutoSizeText(
+                                'ABRIR',
+                                style: GoogleFonts.orbitron(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                minFontSize: 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate()
+          .scale(duration: 400.ms, curve: Curves.elasticOut)
+          .fadeIn(duration: 300.ms);
+      },
+    );
+  }
+
   void _mostrarConfirmacaoFeirao() {
     showDialog(
       context: context,
@@ -1422,6 +1650,74 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     setState(() { _comprando = false; });
   }
 
+  Widget _buildMagiaPreview(String nome, Color cor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: cor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cor.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cor,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: AutoSizeText(
+              nome,
+              style: GoogleFonts.philosopher(
+                fontSize: 12,
+                color: cor,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              minFontSize: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _abrirBiblioteca() async {
+    if (_comprando || _historiaAtual.score < custoFeirao) return;
+
+    setState(() { _comprando = true; });
+
+    try {
+      final historiaAtualizada = _historiaAtual.copyWith(
+        score: _historiaAtual.score - custoFeirao,
+      );
+
+      setState(() {
+        _historiaAtual = historiaAtualizada;
+      });
+      widget.onHistoriaAtualizada(historiaAtualizada);
+
+      // Gerar 3 magias aleatórias
+      List<Habilidade> magiasBiblioteca = [];
+      for (int i = 0; i < 3; i++) {
+        final magia = _gerarHabilidadeAleatoria();
+        magiasBiblioteca.add(magia);
+      }
+
+      _mostrarModalBiblioteca(magiasBiblioteca, historiaAtualizada);
+
+    } catch (e) {
+      _mostrarErro('Erro ao abrir biblioteca: $e');
+    }
+
+    setState(() { _comprando = false; });
+  }
+
   void _abrirFeirao() async {
     if (_comprando || _historiaAtual.score < custoFeirao) return;
 
@@ -1454,22 +1750,32 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
 
   Habilidade _gerarHabilidadeAleatoria() {
     final random = Random();
-    final tipos = Tipo.values;
-    final tipoAleatorio = tipos[random.nextInt(tipos.length)];
     final tierAtual = widget.historia.tier;
 
-    final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipoAleatorio, null, levelCustomizado: tierAtual);
+    // Gerar habilidade base com tipo normal (sem tipagem específica)
+    final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(Tipo.normal, null, levelCustomizado: tierAtual);
 
     if (habilidades.isNotEmpty) {
-      return habilidades.first;
+      final habilidadeBase = habilidades.first;
+      // Criar nova habilidade com tipo normal para indicar que não tem tipagem especial
+      return Habilidade(
+        nome: habilidadeBase.nome,
+        descricao: '${habilidadeBase.descricao} (obtida na Biblioteca do Vigarista)',
+        tipo: habilidadeBase.tipo,
+        efeito: habilidadeBase.efeito,
+        tipoElemental: Tipo.normal, // Tipo neutro, sem vantagens/desvantagens
+        valor: habilidadeBase.valor,
+        custoEnergia: habilidadeBase.custoEnergia,
+        level: tierAtual,
+      );
     }
 
     return Habilidade(
       nome: 'Habilidade Misteriosa',
-      descricao: 'Uma habilidade obtida na Casa do Vigarista',
+      descricao: 'Uma habilidade obtida na Biblioteca do Vigarista',
       tipo: TipoHabilidade.ofensiva,
       efeito: EfeitoHabilidade.danoDirecto,
-      tipoElemental: tipoAleatorio,
+      tipoElemental: Tipo.normal, // Tipo neutro, sem vantagens/desvantagens
       valor: 10 * tierAtual,
       custoEnergia: (5 * tierAtual).clamp(5, 50),
       level: tierAtual,
@@ -1579,6 +1885,139 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
           _mostrarMensagemSucesso('${monstro.tipo.displayName} foi curado em $porcentagemCura%!');
         },
       ),
+    );
+  }
+
+  void _mostrarModalBiblioteca(List<Habilidade> magias, HistoriaJogador historia) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: GlassmorphicContainer(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.8,
+          borderRadius: 25,
+          blur: 20,
+          alignment: Alignment.center,
+          border: 3,
+          linearGradient: LinearGradient(
+            colors: [
+              const Color(0xFF1A1A2E).withOpacity(0.9),
+              const Color(0xFF16213E).withOpacity(0.9),
+            ],
+          ),
+          borderGradient: LinearGradient(
+            colors: [
+              const Color(0xFF6A0DAD),
+              const Color(0xFF8B008B),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header da biblioteca
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFF6A0DAD),
+                            const Color(0xFF8B008B),
+                          ],
+                        ),
+                      ),
+                      child: Icon(Icons.library_books, color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Shimmer.fromColors(
+                        baseColor: const Color(0xFF8B008B),
+                        highlightColor: Colors.white,
+                        child: AutoSizeText(
+                          'BIBLIOTECA DO VIGARISTA',
+                          style: GoogleFonts.cinzel(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF8B008B),
+                          ),
+                          maxLines: 2,
+                          minFontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Lista de magias
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: magias.length,
+                  itemBuilder: (context, index) {
+                    return _buildBibliotecaItem(magias[index], historia, index);
+                  },
+                ),
+              ),
+
+              // Footer
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.diamond, color: const Color(0xFF8B8B8B)),
+                        const SizedBox(width: 8),
+                        AutoSizeText(
+                          '${_historiaAtual.score} OURO',
+                          style: GoogleFonts.orbitron(
+                            color: const Color(0xFF8B8B8B),
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.grey.shade700,
+                              Colors.grey.shade500,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: AutoSizeText(
+                          'SAIR',
+                          style: GoogleFonts.orbitron(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ).animate()
+        .scale(duration: 600.ms, curve: Curves.elasticOut)
+        .fadeIn(duration: 400.ms),
     );
   }
 
@@ -1951,6 +2390,242 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     );
   }
 
+  Widget _buildBibliotecaItem(Habilidade habilidade, HistoriaJogador historia, int index) {
+    bool podeComprar = _historiaAtual.score >= custoAposta && !_comprando;
+
+    // Definir dados baseados no tipo da habilidade
+    String iconPath;
+    List<Color> cores;
+
+    String tipoTexto;
+
+    switch (habilidade.tipo) {
+      case TipoHabilidade.ofensiva:
+        iconPath = 'assets/icons_gerais/magia_ofensiva.png';
+        cores = [Colors.red.withOpacity(0.6), Colors.redAccent.withOpacity(0.4)];
+        tipoTexto = 'MAGIA OFENSIVA';
+        break;
+      case TipoHabilidade.suporte:
+        iconPath = 'assets/icons_gerais/magia_suporte.png';
+        cores = [Colors.blue.withOpacity(0.6), Colors.blueAccent.withOpacity(0.4)];
+        tipoTexto = 'MAGIA DEFENSIVA';
+        break;
+      default:
+        iconPath = 'assets/icons_gerais/magia.png';
+        cores = [Colors.purple.withOpacity(0.6), Colors.purpleAccent.withOpacity(0.4)];
+        tipoTexto = 'MAGIA ESPECIAL';
+        break;
+    }
+
+    // Se a habilidade tem efeito de cura, usar ícone de cura
+    if (habilidade.efeito == EfeitoHabilidade.curarVida) {
+      iconPath = 'assets/icons_gerais/magia_cura.png';
+      cores = [Colors.green.withOpacity(0.6), Colors.greenAccent.withOpacity(0.4)];
+      tipoTexto = 'MAGIA DE CURA';
+    }
+
+    return AnimationConfiguration.staggeredList(
+      position: index,
+      duration: const Duration(milliseconds: 400),
+      child: SlideAnimation(
+        verticalOffset: 50.0,
+        child: FadeInAnimation(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            child: GlassmorphicContainer(
+              width: double.infinity,
+              height: 110,
+              borderRadius: 15,
+              blur: 10,
+              border: 2,
+              linearGradient: LinearGradient(
+                colors: [
+                  cores[0].withOpacity(0.15),
+                  const Color(0xFF16213E).withOpacity(0.3),
+                ],
+              ),
+              borderGradient: LinearGradient(
+                colors: [
+                  cores[0],
+                  cores[1],
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    // Ícone da magia
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            cores[0],
+                            cores[1],
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: cores[0].withOpacity(0.5),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          iconPath,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 15),
+
+                    // Informações da magia
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Nome da magia com scroll
+                          AutoSizeText(
+                            habilidade.nome,
+                            style: GoogleFonts.cinzel(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            minFontSize: 12,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // Descrição
+                          Flexible(
+                            child: AutoSizeText(
+                              habilidade.descricao,
+                              style: GoogleFonts.philosopher(
+                                fontSize: 12,
+                                color: cores[0],
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 2,
+                              minFontSize: 9,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Preço e botão
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: cores[0].withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: cores[0]),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.auto_awesome,
+                                      color: cores[0],
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: AutoSizeText(
+                                        tipoTexto,
+                                        style: GoogleFonts.orbitron(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                          color: cores[0].withOpacity(0.9),
+                                        ),
+                                        maxLines: 1,
+                                        minFontSize: 6,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: podeComprar ? () => _comprarMagiaBiblioteca(habilidade, historia) : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    gradient: podeComprar
+                                        ? LinearGradient(
+                                            colors: [
+                                              const Color(0xFF6A0DAD),
+                                              const Color(0xFF8B008B),
+                                            ],
+                                          )
+                                        : LinearGradient(
+                                            colors: [
+                                              Colors.grey.shade600,
+                                              Colors.grey.shade400,
+                                            ],
+                                          ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: podeComprar
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF6A0DAD).withOpacity(0.3),
+                                              blurRadius: 6,
+                                              spreadRadius: 1,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.monetization_on,
+                                        color: Colors.white,
+                                        size: 12,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      AutoSizeText(
+                                        '$custoAposta',
+                                        style: GoogleFonts.orbitron(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                        maxLines: 1,
+                                        minFontSize: 8,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _comprarItemFeirao(Item item, HistoriaJogador historia) async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
@@ -1986,6 +2661,32 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       ),
     );
   }
+
+  void _comprarMagiaBiblioteca(Habilidade habilidade, HistoriaJogador historia) async {
+    if (_comprando || _historiaAtual.score < custoAposta) return;
+
+    setState(() { _comprando = true; });
+
+    try {
+      final historiaAtualizada = _historiaAtual.copyWith(
+        score: _historiaAtual.score - custoAposta,
+      );
+
+      setState(() {
+        _historiaAtual = historiaAtualizada;
+      });
+      widget.onHistoriaAtualizada(historiaAtualizada);
+
+      Navigator.of(context).pop();
+      _mostrarResultadoMagia(habilidade, historiaAtualizada);
+
+    } catch (e) {
+      _mostrarErro('Erro ao comprar magia: $e');
+    }
+
+    setState(() { _comprando = false; });
+  }
+
 
   void _mostrarErro(String mensagem) {
     ScaffoldMessenger.of(context).showSnackBar(
