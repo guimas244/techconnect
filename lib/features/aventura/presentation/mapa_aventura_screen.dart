@@ -9,7 +9,7 @@ import '../../../core/providers/user_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
-import '../presentation/casa_vigarista_modal.dart';
+import '../presentation/casa_vigarista_modal_v2.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -497,7 +497,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return CasaVigaristaModal(
+        return CasaVigaristaModalV2(
           historia: historiaAtual!,
           onHistoriaAtualizada: (historiaAtualizada) async {
             // Atualiza o estado local
