@@ -47,10 +47,10 @@ class MonstroInimigo {
             )
           : null,
       imagem: json['imagem'] ?? '',
-      vida: json['vida'] ?? 50,
+      vida: json['vida'] ?? 75,
       vidaAtual: (() {
         final vidaAtualJson = json['vidaAtual'];
-        final vidaJson = json['vida'] ?? 50;
+        final vidaJson = json['vida'] ?? 75;
         final resultado = vidaAtualJson ?? vidaJson;
         print('🏥 [DEBUG] MonstroInimigo.fromJson - vidaAtual: $vidaAtualJson, vida: $vidaJson, resultado: $resultado');
         return resultado;

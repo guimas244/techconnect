@@ -32,7 +32,7 @@ class EvolucaoService {
   /// Regras:
   /// - +1 level
   /// - +5 pontos em 1 atributo aleatório (ataque, defesa ou agilidade)
-  /// - +5 pontos em vida e energia (sempre)
+  /// - +25 pontos em vida e +1 ponto em energia (sempre)
   /// - +1 level em 1 habilidade aleatória
   MonstroAventura evoluirMonstro(MonstroAventura monstro) {
     print('🌟 [Evolução] ${monstro.tipo.monsterName} está evoluindo do level ${monstro.level} para ${monstro.level + 1}!');
@@ -41,12 +41,12 @@ class EvolucaoService {
     final atributosDisponiveis = ['ataque', 'defesa', 'agilidade'];
     final atributoSorteado = atributosDisponiveis[_random.nextInt(atributosDisponiveis.length)];
     
-    // Calcula os novos atributos
+    // Calcula os novos atributos usando valores do enum
     int novoAtaque = monstro.ataque;
     int novaDefesa = monstro.defesa;
     int novaAgilidade = monstro.agilidade;
-    int novaVida = monstro.vida + 5; // Sempre ganha +5 vida
-    int novaEnergia = monstro.energia + 5; // Sempre ganha +5 energia
+    int novaVida = monstro.vida + AtributoJogo.evolucaoGanhoVida.min; // Ganha +25 vida
+    int novaEnergia = monstro.energia + AtributoJogo.evolucaoGanhoEnergia.min; // Ganha +1 energia
     
     // Aplica +5 no atributo sorteado
     switch (atributoSorteado) {
@@ -62,7 +62,7 @@ class EvolucaoService {
     }
     
     print('🎯 [Evolução] Atributo sorteado: $atributoSorteado (+5)');
-    print('📈 [Evolução] Ganhos: +5 vida, +5 energia, +5 $atributoSorteado');
+    print('📈 [Evolução] Ganhos: +${AtributoJogo.evolucaoGanhoVida.min} vida, +${AtributoJogo.evolucaoGanhoEnergia.min} energia, +5 $atributoSorteado');
     
     // Sistema de recuperação de vida na evolução
     int novaVidaAtual = _calcularRecuperacaoVida(monstro.vidaAtual, novaVida);
@@ -73,8 +73,8 @@ class EvolucaoService {
       // Se estava com energia cheia, continua com energia cheia
       novaEnergiaAtual = novaEnergia;
     } else {
-      // Se não estava com energia cheia, ganha +5 na energia atual também
-      novaEnergiaAtual = (monstro.energiaAtual + 5).clamp(0, novaEnergia);
+      // Se não estava com energia cheia, ganha os pontos de energia na energia atual também
+      novaEnergiaAtual = (monstro.energiaAtual + AtributoJogo.evolucaoGanhoEnergia.min).clamp(0, novaEnergia);
     }
     
     // Nota: O levelInimigoDerrrotado será passado pelo método que chama evoluirMonstro

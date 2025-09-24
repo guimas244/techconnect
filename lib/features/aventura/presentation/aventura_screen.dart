@@ -10,7 +10,7 @@ import 'mapa_aventura_screen.dart';
 import 'modal_monstro_aventura.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../utils/gerador_habilidades.dart';
-import '../../../shared/models/atributos_jogo_enum.dart';
+import '../../../core/models/atributo_jogo_enum.dart';
 import '../data/aventura_repository.dart';
 import 'dart:math';
 
@@ -189,15 +189,28 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
 
       // Sorteia atributos usando os ranges definidos
+      final vidaSorteada = AtributoJogo.vida.sortear(random);
+      final energiaSorteada = AtributoJogo.energia.sortear(random);
+      final agilidadeSorteada = AtributoJogo.agilidade.sortear(random);
+      final ataqueSorteado = AtributoJogo.ataque.sortear(random);
+      final defesaSorteada = AtributoJogo.defesa.sortear(random);
+
+      print('🎲 [AventuraScreen] Sorteando monstro ${tipo.name}:');
+      print('   - Vida: $vidaSorteada (range: ${AtributoJogo.vida.rangeTexto})');
+      print('   - Energia: $energiaSorteada (range: ${AtributoJogo.energia.rangeTexto})');
+      print('   - Agilidade: $agilidadeSorteada (range: ${AtributoJogo.agilidade.rangeTexto})');
+      print('   - Ataque: $ataqueSorteado (range: ${AtributoJogo.ataque.rangeTexto})');
+      print('   - Defesa: $defesaSorteada (range: ${AtributoJogo.defesa.rangeTexto})');
+
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
-        vida: AtributoJogo.vida.sortearValor(random),
-        energia: AtributoJogo.energia.sortearValor(random),
-        agilidade: AtributoJogo.agilidade.sortearValor(random),
-        ataque: AtributoJogo.ataque.sortearValor(random),
-        defesa: AtributoJogo.defesa.sortearValor(random),
+        vida: vidaSorteada,
+        energia: energiaSorteada,
+        agilidade: agilidadeSorteada,
+        ataque: ataqueSorteado,
+        defesa: defesaSorteada,
         habilidades: habilidades,
         itemEquipado: null, // Sem item inicial
       );

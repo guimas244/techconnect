@@ -343,6 +343,23 @@ class AventuraRepository {
 
   /// Sorteia 3 monstros únicos para o jogador e já cria a aventura
   Future<HistoriaJogador> sortearMonstrosParaJogador(String email) async {
+    // Verifica se já existe uma aventura e arquiva antes de criar uma nova
+    print('🔍 [Repository] Verificando aventura existente antes de sortear novos monstros...');
+    final aventuraExistente = await carregarHistoricoJogador(email);
+
+    if (aventuraExistente != null && aventuraExistente.runId.isNotEmpty) {
+      print('📦 [Repository] Aventura existente encontrada (RunID: ${aventuraExistente.runId}), arquivando antes de criar nova...');
+      final sucessoArquivamento = await arquivarHistoricoJogador(email, aventuraExistente.runId);
+
+      if (sucessoArquivamento) {
+        print('✅ [Repository] Aventura anterior arquivada com sucesso');
+      } else {
+        print('❌ [Repository] Falha ao arquivar aventura anterior, mas continuando...');
+      }
+    } else if (aventuraExistente != null) {
+      print('⚠️ [Repository] Aventura existente sem RunID, removendo antes de criar nova...');
+      await removerHistoricoJogador(email);
+    }
     final random = Random();
     final tiposDisponiveis = Tipo.values.toList();
     tiposDisponiveis.shuffle(random);
@@ -361,15 +378,28 @@ class AventuraRepository {
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
       
       // Sorteia atributos usando os ranges definidos
+      final vidaSorteada = AtributoJogo.vida.sortear(random);
+      final energiaSorteada = AtributoJogo.energia.sortear(random);
+      final agilidadeSorteada = AtributoJogo.agilidade.sortear(random);
+      final ataqueSorteado = AtributoJogo.ataque.sortear(random);
+      final defesaSorteada = AtributoJogo.defesa.sortear(random);
+
+      print('🎲 [Repository] Sorteando monstro ${tipo.name}:');
+      print('   - Vida: $vidaSorteada (range: ${AtributoJogo.vida.rangeTexto})');
+      print('   - Energia: $energiaSorteada (range: ${AtributoJogo.energia.rangeTexto})');
+      print('   - Agilidade: $agilidadeSorteada (range: ${AtributoJogo.agilidade.rangeTexto})');
+      print('   - Ataque: $ataqueSorteado (range: ${AtributoJogo.ataque.rangeTexto})');
+      print('   - Defesa: $defesaSorteada (range: ${AtributoJogo.defesa.rangeTexto})');
+
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
-        vida: AtributoJogo.vida.sortear(random),
-        energia: AtributoJogo.energia.sortear(random),
-        agilidade: AtributoJogo.agilidade.sortear(random),
-        ataque: AtributoJogo.ataque.sortear(random),
-        defesa: AtributoJogo.defesa.sortear(random),
+        vida: vidaSorteada,
+        energia: energiaSorteada,
+        agilidade: agilidadeSorteada,
+        ataque: ataqueSorteado,
+        defesa: defesaSorteada,
         habilidades: habilidades,
         itemEquipado: null, // Sem item inicial
       );
@@ -583,14 +613,34 @@ class AventuraRepository {
         print('🎯 [Repository] Monstro tier 1 não recebe itens');
       }
 
-      // Cria monstro inimigo com atributos sorteados
-      // Level do inimigo = tier atual do mapa
+      // Sorteia nível de evolução do monstro (1 evolução por andar)
+      final niveisEvolucao = tierAtual;
+      print('📈 [Repository] Monstro tier $tierAtual terá $niveisEvolucao evoluções');
+
+      // Cria monstro inimigo com atributos base + evoluções + bônus por tier
+      final vidaBase = AtributoJogo.vida.sortear(random);
+      final energiaBase = AtributoJogo.energia.sortear(random);
+
+      // Aplica ganhos de evolução (por tier)
+      final vidaComEvolucao = vidaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoVida.min);
+
+      // Aplica bônus de vida por dezenas de andares (+20% a cada 10 tiers)
+      final bonusPercentual = AtributoJogo.calcularBonusVidaInimigo(tierAtual);
+      final vidaFinal = (vidaComEvolucao * (1.0 + bonusPercentual)).round();
+      final energiaFinal = energiaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min);
+
+      print('📊 [Repository] Monstro tier $tierAtual:');
+      print('   - Vida base: $vidaBase');
+      print('   - Evolução: +${niveisEvolucao * AtributoJogo.evolucaoGanhoVida.min} = $vidaComEvolucao');
+      print('   - Bônus tier (+${(bonusPercentual * 100).toStringAsFixed(0)}%): $vidaFinal');
+      print('   - Energia: $energiaBase+${niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min}=$energiaFinal');
+
       final monstro = MonstroInimigo(
         tipo: tipo,
         tipoExtra: tipoExtra,
         imagem: 'assets/monstros_aventura/${tipo.name}.png',
-        vida: AtributoJogo.vida.sortear(random),
-        energia: AtributoJogo.energia.sortear(random),
+        vida: vidaFinal,
+        energia: energiaFinal,
         agilidade: AtributoJogo.agilidade.sortear(random),
         ataque: AtributoJogo.ataque.sortear(random),
         defesa: AtributoJogo.defesa.sortear(random),

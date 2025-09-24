@@ -46,8 +46,8 @@ class MonstroAventura {
         orElse: () => Tipo.normal,
       ),
       imagem: json['imagem'] ?? '',
-      vida: json['vida'] ?? 50,
-      vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 50, // Se não tem vidaAtual, usa vida
+      vida: json['vida'] ?? 75,
+      vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 75, // Se não tem vidaAtual, usa vida
       energia: json['energia'] ?? 20,
       energiaAtual: json['energiaAtual'] ?? json['energia'] ?? 20, // Se não tem energiaAtual, usa energia
       agilidade: json['agilidade'] ?? 10,
