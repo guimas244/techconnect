@@ -252,6 +252,7 @@ class MonstroAventuraRepository {
             isBloqueado: false,
           );
           _cache.add(monstroInicial);
+          print('✅ Monstro inicial criado: ${monstroInicial.nome} (${tipo.name})');
         } catch (e) {
           print('⚠️ Erro ao gerar monstro inicial ${tipo.name}: $e');
         }
@@ -270,6 +271,7 @@ class MonstroAventuraRepository {
             isBloqueado: true,
           );
           _cache.add(monstroNostalgico);
+          print('✅ Monstro nostálgico criado: ${monstroNostalgico.nome} (${tipo.name})');
         } catch (e) {
           print('⚠️ Erro ao gerar monstro nostálgico ${tipo.name}: $e');
         }

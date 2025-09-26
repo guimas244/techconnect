@@ -304,8 +304,8 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                             // Busca o monstro pela tag expandida (formato: colecao_nomeArquivo)
                             final partesTag = monstroExpandido!.split('_');
                             if (partesTag.length >= 2) {
-                              final colecao = partesTag[0];
-                              final nomeArquivo = partesTag[1];
+                              final colecao = partesTag[0] == 'colecao' ? 'colecao_${partesTag[1]}' : partesTag[0];
+                              final nomeArquivo = partesTag.length > 2 ? partesTag.sublist(2).join('_') : partesTag[1];
 
                               final monstro = monstros.firstWhere(
                                 (m) => m.colecao == colecao && m.tipo1.name == nomeArquivo,
@@ -319,6 +319,9 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                                   isBloqueado: false,
                                 ),
                               );
+
+                              // Use o nome do tipo como nome do arquivo (não as partes da tag)
+                              final nomeArquivoCorreto = monstro.tipo1.name;
 
                               return Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -338,7 +341,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                                           0, 0, 0, 1, 0,  // Alpha = unchanged
                                         ]),
                                     child: Image.asset(
-                                      'assets/monstros_aventura/${monstro.colecao}/$nomeArquivo.png',
+                                      'assets/monstros_aventura/${monstro.colecao}/$nomeArquivoCorreto.png',
                                       fit: BoxFit.contain,
                                       height: MediaQuery.of(context).size.height * 0.6,
                                     ),
