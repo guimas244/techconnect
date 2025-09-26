@@ -668,7 +668,7 @@ class AventuraRepository {
     for (final habilidade in habilidadesBase) {
       final chance = random.nextInt(100);
       int novoLevel = 1; // Level padrão
-      
+
       if (chance < 20) {
         // 20% chance: level = tier do andar
         novoLevel = tierAtual;
@@ -678,10 +678,16 @@ class AventuraRepository {
         novoLevel = (tierAtual - 1).clamp(1, tierAtual);
         print('✨ [Repository] Habilidade ${habilidade.nome} evoluiu para level $novoLevel (tier-1 - 20% chance)');
       } else {
-        // 60% chance: permanece level 1
-        print('📝 [Repository] Habilidade ${habilidade.nome} permanece level 1 (60% chance)');
+        // 60% chance: permanece level 1 PORÉM...
+        if (tierAtual >= 5) {
+          // A partir do tier 5: level = 50% do tier (nunca menor que 1)
+          novoLevel = (tierAtual * 0.5).round().clamp(1, tierAtual);
+          print('✨ [Repository] Habilidade ${habilidade.nome} evoluiu para level $novoLevel (tier 5+ - 50% do tier $tierAtual)');
+        } else {
+          print('📝 [Repository] Habilidade ${habilidade.nome} permanece level 1 (60% chance)');
+        }
       }
-      
+
       // Cria nova habilidade com o level calculado
       final habilidadeEvoluida = Habilidade(
         nome: habilidade.nome,
@@ -689,7 +695,7 @@ class AventuraRepository {
         tipo: habilidade.tipo,
         efeito: habilidade.efeito,
         tipoElemental: habilidade.tipoElemental,
-        valor: habilidade.valor,
+        valor: habilidade.valor, // Valor original
         custoEnergia: habilidade.custoEnergia,
         level: novoLevel,
       );
