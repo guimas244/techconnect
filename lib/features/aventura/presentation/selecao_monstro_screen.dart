@@ -8,6 +8,8 @@ import '../../../core/providers/user_provider.dart';
 import '../presentation/batalha_screen.dart';
 import 'modal_monstro_aventura.dart';
 import 'modal_monstro_inimigo.dart';
+import '../services/matchup_service.dart';
+import '../../../shared/models/tipo_enum.dart';
 import 'package:remixicon/remixicon.dart';
 
 class SelecaoMonstroScreen extends ConsumerWidget {
@@ -345,6 +347,24 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                           _buildStatChip(Icons.speed, '${monstro.agilidade}', Colors.green),
                         ],
                       ),
+                      const SizedBox(height: 6),
+                      // 3ª linha: Dano que EU causo NO inimigo
+                      Row(
+                        children: [
+                          Icon(Remix.sword_fill, size: 16, color: Colors.orange),
+                          const SizedBox(width: 6),
+                          _buildDanoOfensivoIndicators(context, monstro, ref),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // 4ª linha: Dano que EU recebo DO inimigo
+                      Row(
+                        children: [
+                          Icon(Icons.shield, size: 16, color: Colors.blue),
+                          const SizedBox(width: 6),
+                          _buildDanoDefensivoIndicators(context, monstro, ref),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -358,6 +378,146 @@ class SelecaoMonstroScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // 3ª linha: Dano que MEU monstro causa NO inimigo
+  Widget _buildDanoOfensivoIndicators(BuildContext context, MonstroAventura monstro, WidgetRef ref) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Dano do tipo principal do meu monstro no inimigo
+        _buildSingleDanoOfensivoIndicator(monstro.tipo, ref),
+        const SizedBox(width: 4),
+        // Dano do tipo extra do meu monstro no inimigo
+        _buildSingleDanoOfensivoIndicator(monstro.tipoExtra, ref),
+      ],
+    );
+  }
+
+  // 4ª linha: Dano que EU recebo DO inimigo
+  Widget _buildDanoDefensivoIndicators(BuildContext context, MonstroAventura monstro, WidgetRef ref) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Dano que o tipo principal do inimigo causa no meu tipo principal
+        _buildSingleDanoDefensivoIndicator(monstroInimigo.tipo, monstro.tipo, ref),
+        const SizedBox(width: 4),
+        // Dano que o tipo principal do inimigo causa no meu tipo extra
+        _buildSingleDanoDefensivoIndicator(monstroInimigo.tipo, monstro.tipoExtra, ref),
+      ],
+    );
+  }
+
+  // Indicador ofensivo: MEU tipo vs INIMIGO
+  Widget _buildSingleDanoOfensivoIndicator(Tipo meuTipo, WidgetRef ref) {
+    return FutureBuilder<MatchupResult>(
+      future: _calcularDanoOfensivo(meuTipo, ref),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(width: 16, height: 16);
+        }
+
+        final resultado = snapshot.data!;
+
+        String iconAsset;
+        if (resultado.temVantagem) {
+          iconAsset = 'assets/icons_gerais/tabela_vantagem.png';
+        } else if (resultado.temDesvantagem) {
+          iconAsset = 'assets/icons_gerais/tabela_desvantagem.png';
+        } else {
+          iconAsset = 'assets/icons_gerais/tabela_igual.png';
+        }
+
+        return Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Image.asset(
+            iconAsset,
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
+          ),
+        );
+      },
+    );
+  }
+
+  // Indicador defensivo: INIMIGO vs MEU tipo
+  Widget _buildSingleDanoDefensivoIndicator(Tipo tipoInimigo, Tipo meuTipo, WidgetRef ref) {
+    return FutureBuilder<MatchupResult>(
+      future: _calcularDanoDefensivo(tipoInimigo, meuTipo, ref),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(width: 16, height: 16);
+        }
+
+        final resultado = snapshot.data!;
+
+        String iconAsset;
+        if (resultado.temVantagem) {
+          iconAsset = 'assets/icons_gerais/tabela_desvantagem.png'; // Inverso: se inimigo tem vantagem, eu levo mais dano
+        } else if (resultado.temDesvantagem) {
+          iconAsset = 'assets/icons_gerais/tabela_vantagem.png'; // Inverso: se inimigo tem desvantagem, eu levo menos dano
+        } else {
+          iconAsset = 'assets/icons_gerais/tabela_igual.png';
+        }
+
+        return Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Image.asset(
+            iconAsset,
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
+          ),
+        );
+      },
+    );
+  }
+
+  // Calcula dano ofensivo: MEU tipo ataca INIMIGO
+  Future<MatchupResult> _calcularDanoOfensivo(Tipo meuTipo, WidgetRef ref) async {
+    try {
+      final matchupService = ref.read(matchupServiceProvider);
+
+      // MEU tipo ataca o tipo principal do INIMIGO
+      return await matchupService.calcularMatchup(
+        tipoAtacantePrincipal: meuTipo,
+        tipoAtacanteExtra: null, // Apenas um tipo por vez
+        tipoDefensorPrincipal: monstroInimigo.tipo, // Apenas tipo principal do inimigo
+        tipoDefensorExtra: null, // Ignora tipo extra do inimigo conforme solicitado
+        mixOfensivo: 1.0, // 100% do meu tipo
+      );
+    } catch (e) {
+      print('❌ Erro ao calcular dano ofensivo: $e');
+      return MatchupResult.neutro();
+    }
+  }
+
+  // Calcula dano defensivo: INIMIGO ataca MEU tipo
+  Future<MatchupResult> _calcularDanoDefensivo(Tipo tipoInimigo, Tipo meuTipo, WidgetRef ref) async {
+    try {
+      final matchupService = ref.read(matchupServiceProvider);
+
+      // Tipo principal do INIMIGO ataca MEU tipo
+      return await matchupService.calcularMatchup(
+        tipoAtacantePrincipal: tipoInimigo, // Apenas tipo principal do inimigo
+        tipoAtacanteExtra: null, // Apenas um tipo por vez
+        tipoDefensorPrincipal: meuTipo, // MEU tipo defendendo
+        tipoDefensorExtra: null, // Apenas um tipo por vez
+        mixOfensivo: 1.0, // 100% do tipo do inimigo
+      );
+    } catch (e) {
+      print('❌ Erro ao calcular dano defensivo: $e');
+      return MatchupResult.neutro();
+    }
   }
 
   Widget _buildStatChip(IconData icon, String value, Color color) {

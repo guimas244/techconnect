@@ -24,7 +24,8 @@
       "Bash(dir \"D:\\workspace\\techterra\\techterra\\build\\app\\outputs\\flutter-apk\")",
       "Bash(cd:*)",
       "WebFetch(domain:drive.google.com)",
-      "Read(//c/Users/guima/Documents/**)"
+      "Read(//c/Users/guima/Documents/**)",
+      "Bash(start.bat)"
     ],
     "deny": [],
     "ask": []

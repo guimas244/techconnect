@@ -3,6 +3,7 @@ import '../data/aventura_repository.dart';
 import '../models/historia_jogador.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
+import '../services/matchup_service.dart';
 
 // Provider para o repository
 final aventuraRepositoryProvider = Provider<AventuraRepository>((ref) {
@@ -99,4 +100,15 @@ final sortearMonstrosProvider = FutureProvider.family<HistoriaJogador?, String>(
     ref.read(aventuraEstadoProvider.notifier).state = AventuraEstado.erro;
     return null;
   }
+});
+
+// Provider para o TipagemRepository
+final tipagemRepositoryProvider = Provider<TipagemRepository>((ref) {
+  return TipagemRepository();
+});
+
+// Provider para o MatchupService
+final matchupServiceProvider = Provider<MatchupService>((ref) {
+  final tipagemRepository = ref.watch(tipagemRepositoryProvider);
+  return MatchupService(tipagemRepository);
 });

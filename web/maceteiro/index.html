@@ -67,7 +67,11 @@
         <input type="file" id="fileAventura" accept="application/json" class="fileAventura" />
       </label>
       <select id="tierSelect" class="tierSelect" title="Selecione um tier" style="display:none"></select>
-      <span id="aventuraStatus" class="tiny">Nenhuma aventura carregada.</span>
+      <button class="btn" id="btnLoginGoogle">Login Google</button>
+      <button class="btn primary" id="btnBuscarAventuras" style="display:none">Buscar Minha História</button>
+      <button class="btn" id="btnRefreshHistoria" style="display:none">🔄 Refresh</button>
+      <span id="aventuraStatus" class="tiny">Faça login no Google para acessar aventuras.</span>
+      <span id="userInfo" class="tiny" style="display:none"></span>
     </div>
   </header>
 
@@ -197,8 +201,26 @@
     </section>
   </main>
 
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
   <script src="tipagens_data.js"></script>
   <script>
+    // ===== CONFIGURAÇÕES GOOGLE DRIVE =====
+    const GOOGLE_CONFIG = {
+      CLIENT_ID: '163239542287-3c3rq1k6j9k1s5fmfauvo2p6q157nbpq.apps.googleusercontent.com',
+      DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+      SCOPES: 'https://www.googleapis.com/auth/drive.readonly',
+      TECH_CONNECT_FOLDER_ID: '1R_WQTo21NNQyZIj3rMPaaUKj1-eGJPfV'
+    };
+
+    // ===== ESTADO GLOBAL =====
+    let isGoogleApiLoaded = false;
+    let isUserSignedIn = false;
+    let currentUser = null;
+    let driveFiles = [];
+    let currentUserEmail = '';
+    let currentHistoriaData = null;
+
     // ===== Tipos =====
     const TYPES=['normal','planta','inseto','venenoso','fera','zumbi','marinho','voador','subterraneo','terrestre','fogo','gelo','agua','vento','eletrico','pedra','luz','trevas','nostalgico','mistico','dragao','alien','docrates','fantasma','psiquico','magico','tecnologia','tempo','desconhecido','deus'];
     const DISPLAY={normal:'Normal',planta:'Planta',inseto:'Inseto',venenoso:'Venenoso',fera:'Fera',zumbi:'Zumbi',marinho:'Marinho',voador:'Voador',subterraneo:'Subterrâneo',terrestre:'Terrestre',fogo:'Fogo',gelo:'Gelo',agua:'Água',vento:'Vento',eletrico:'Elétrico',pedra:'Pedra',luz:'Luz',trevas:'Trevas',nostalgico:'Nostálgico',mistico:'Místico',dragao:'Dragão',alien:'Alien',docrates:'Dócrates',fantasma:'Fantasma',psiquico:'Psíquico',magico:'Mágico',tecnologia:'Tecnologia',tempo:'Tempo',desconhecido:'Desconhecido',deus:'Deus'};
@@ -213,6 +235,375 @@
 
     const statusGrid=document.getElementById('statusGrid');
     function renderStatus(){ statusGrid.innerHTML=''; TYPES.forEach(t=>{ const chip=document.createElement('div'); chip.className='chip '+(hasCustom(t)?'ready':'missing'); chip.textContent=DISPLAY[t]; statusGrid.appendChild(chip); }); }
+
+    // ===== GOOGLE DRIVE API =====
+
+    // Obter data atual de Brasília via API online
+    async function getDataBrasilia() {
+      try {
+        // Usa API de timezone para obter horário de Brasília
+        const response = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo');
+        const data = await response.json();
+        const dataBrasilia = new Date(data.datetime);
+        const dataStr = dataBrasilia.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        console.log('📅 Data de Brasília (internet):', dataStr);
+        return dataStr;
+      } catch (error) {
+        console.warn('⚠️ Erro ao obter horário de Brasília da internet, usando horário local:', error);
+        // Fallback para horário local
+        const agora = new Date();
+        return agora.toISOString().split('T')[0];
+      }
+    }
+
+    // Inicialização do Google API
+    async function initializeGoogleApi() {
+      try {
+        console.log('🔧 Inicializando Google API...');
+
+        await new Promise((resolve) => {
+          gapi.load('client:auth2', resolve);
+        });
+
+        await gapi.client.init({
+          apiKey: '', // Não necessário para OAuth
+          clientId: GOOGLE_CONFIG.CLIENT_ID,
+          discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC],
+          scope: GOOGLE_CONFIG.SCOPES
+        });
+
+        isGoogleApiLoaded = true;
+        console.log('✅ Google API inicializada');
+
+        // Verifica se já está logado
+        const authInstance = gapi.auth2.getAuthInstance();
+        if (authInstance.isSignedIn.get()) {
+          await handleSignInStatus(true);
+        } else {
+          updateUI();
+        }
+
+        // Garante que o botão de login esteja sempre visível
+        document.getElementById('btnLoginGoogle').style.display = '';
+
+      } catch (error) {
+        console.error('❌ Erro ao inicializar Google API:', error);
+        updateAventuraStatus('Erro ao carregar Google API');
+      }
+    }
+
+    // Gerenciar status de login
+    async function handleSignInStatus(isSignedIn) {
+      isUserSignedIn = isSignedIn;
+
+      if (isSignedIn) {
+        const authInstance = gapi.auth2.getAuthInstance();
+        currentUser = authInstance.currentUser.get();
+        const profile = currentUser.getBasicProfile();
+
+        currentUserEmail = profile.getEmail();
+        console.log('✅ Usuário logado:', currentUserEmail);
+        updateUserInfo(profile.getName(), currentUserEmail);
+        updateAventuraStatus('Logado! Busque sua história do dia');
+
+      } else {
+        currentUser = null;
+        currentUserEmail = '';
+        currentHistoriaData = null;
+        console.log('❌ Usuário não logado');
+        updateUserInfo('', '');
+        updateAventuraStatus('Faça login no Google para acessar aventuras');
+      }
+
+      updateUI();
+    }
+
+    // Login/Logout
+    async function toggleGoogleAuth() {
+      if (!isGoogleApiLoaded) {
+        updateAventuraStatus('Google API ainda carregando...');
+        return;
+      }
+
+      const authInstance = gapi.auth2.getAuthInstance();
+
+      if (isUserSignedIn) {
+        // Logout
+        await authInstance.signOut();
+        await handleSignInStatus(false);
+      } else {
+        // Login
+        try {
+          updateAventuraStatus('Fazendo login...');
+          await authInstance.signIn();
+          await handleSignInStatus(true);
+        } catch (error) {
+          console.error('❌ Erro no login:', error);
+          updateAventuraStatus('Erro no login: ' + error.error);
+        }
+      }
+    }
+
+    // Buscar aventuras do Drive (história do usuário)
+    async function buscarAventurasNoDrive() {
+      if (!isUserSignedIn || !currentUserEmail) {
+        updateAventuraStatus('Faça login primeiro');
+        return;
+      }
+
+      try {
+        updateAventuraStatus('Buscando sua história de hoje...');
+
+        // Obter data de Brasília da internet
+        const today = await getDataBrasilia();
+        const historiasFolder = await findHistoriasFolder(today);
+
+        if (!historiasFolder) {
+          updateAventuraStatus(`Nenhuma pasta de histórias encontrada para ${today}`);
+          return;
+        }
+
+        // Busca especificamente a história do usuário logado
+        const minhaHistoria = await findMinhaHistoria(historiasFolder.id, currentUserEmail);
+
+        if (!minhaHistoria) {
+          updateAventuraStatus(`Sua história não foi encontrada para ${today}`);
+          return;
+        }
+
+        // Carrega a história do usuário
+        await carregarAventuraFromDrive(minhaHistoria);
+
+      } catch (error) {
+        console.error('❌ Erro ao buscar sua história:', error);
+        updateAventuraStatus('Erro ao buscar sua história: ' + error.message);
+      }
+    }
+
+    // Função específica para refresh (recarregar a mesma história)
+    async function refreshMinhaHistoria() {
+      if (!currentHistoriaData || !currentUserEmail) {
+        // Se não há história carregada, busca do zero
+        await buscarAventurasNoDrive();
+        return;
+      }
+
+      try {
+        updateAventuraStatus('Atualizando sua história...');
+
+        // Obter data de Brasília da internet
+        const today = await getDataBrasilia();
+        const historiasFolder = await findHistoriasFolder(today);
+
+        if (!historiasFolder) {
+          updateAventuraStatus(`Pasta de histórias não encontrada para ${today}`);
+          return;
+        }
+
+        // Busca novamente a história do usuário
+        const minhaHistoria = await findMinhaHistoria(historiasFolder.id, currentUserEmail);
+
+        if (!minhaHistoria) {
+          updateAventuraStatus(`Sua história não foi encontrada para ${today}`);
+          return;
+        }
+
+        // Recarrega a história
+        await carregarAventuraFromDrive(minhaHistoria);
+
+      } catch (error) {
+        console.error('❌ Erro ao atualizar sua história:', error);
+        updateAventuraStatus('Erro ao atualizar: ' + error.message);
+      }
+    }
+
+    // Encontrar pasta de histórias do dia
+    async function findHistoriasFolder(dateStr) {
+      try {
+        // Busca pasta HISTORIAS na pasta TECH CONNECT
+        const historiasResponse = await gapi.client.drive.files.list({
+          q: `'${GOOGLE_CONFIG.TECH_CONNECT_FOLDER_ID}' in parents and name = 'HISTORIAS' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+          fields: 'files(id, name)'
+        });
+
+        if (historiasResponse.result.files.length === 0) {
+          console.log('❌ Pasta HISTORIAS não encontrada');
+          return null;
+        }
+
+        const historiasId = historiasResponse.result.files[0].id;
+        console.log('📁 Pasta HISTORIAS encontrada:', historiasId);
+
+        // Busca pasta da data dentro de HISTORIAS
+        const dateResponse = await gapi.client.drive.files.list({
+          q: `'${historiasId}' in parents and name = '${dateStr}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+          fields: 'files(id, name)'
+        });
+
+        if (dateResponse.result.files.length === 0) {
+          console.log(`❌ Pasta da data ${dateStr} não encontrada`);
+          return null;
+        }
+
+        const dateFolder = dateResponse.result.files[0];
+        console.log('📅 Pasta da data encontrada:', dateFolder);
+        return dateFolder;
+
+      } catch (error) {
+        console.error('❌ Erro ao buscar pasta de histórias:', error);
+        return null;
+      }
+    }
+
+    // Encontrar especificamente a história do usuário logado
+    async function findMinhaHistoria(folderId, userEmail) {
+      try {
+        console.log(`🔍 Procurando história de ${userEmail} na pasta ${folderId}`);
+
+        const response = await gapi.client.drive.files.list({
+          q: `'${folderId}' in parents and name contains '${userEmail}' and name contains '.json' and trashed = false`,
+          fields: 'files(id, name, modifiedTime)',
+          orderBy: 'modifiedTime desc'
+        });
+
+        const historias = response.result.files;
+        console.log(`📋 ${historias.length} arquivos encontrados para ${userEmail}`);
+
+        if (historias.length === 0) {
+          console.log(`❌ Nenhuma história encontrada para ${userEmail}`);
+          return null;
+        }
+
+        // Pega a história mais recente do usuário
+        const minhaHistoria = historias[0];
+        console.log(`✅ História encontrada: ${minhaHistoria.name}`);
+        return minhaHistoria;
+
+      } catch (error) {
+        console.error('❌ Erro ao procurar história do usuário:', error);
+        return null;
+      }
+    }
+
+    // Listar aventuras em uma pasta (função legacy para outras funcionalidades)
+    async function listAventurasInFolder(folderId) {
+      try {
+        const response = await gapi.client.drive.files.list({
+          q: `'${folderId}' in parents and name contains '.json' and trashed = false`,
+          fields: 'files(id, name, modifiedTime)',
+          orderBy: 'modifiedTime desc'
+        });
+
+        const aventuras = response.result.files.filter(file =>
+          file.name.includes('@') || // Arquivos de usuário (email)
+          file.name.toLowerCase().includes('aventura') ||
+          file.name.toLowerCase().includes('historia')
+        );
+
+        console.log(`📋 ${aventuras.length} aventuras encontradas`);
+        return aventuras;
+
+      } catch (error) {
+        console.error('❌ Erro ao listar aventuras:', error);
+        return [];
+      }
+    }
+
+    // Carregar aventura específica do Drive
+    async function carregarAventuraFromDrive(arquivo) {
+      try {
+        updateAventuraStatus(`Carregando ${arquivo.name}...`);
+
+        const response = await gapi.client.drive.files.get({
+          fileId: arquivo.id,
+          alt: 'media'
+        });
+
+        const aventuraData = JSON.parse(response.body);
+        processarAventura(aventuraData, arquivo.name);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar aventura:', error);
+        updateAventuraStatus('Erro ao carregar aventura: ' + error.message);
+      }
+    }
+
+    // Mostrar seletor de aventuras
+    function mostrarSeletorAventurasDrive(aventuras) {
+      const seletor = document.createElement('select');
+      seletor.className = 'tierSelect';
+      seletor.innerHTML = '<option value="">Selecione uma aventura...</option>';
+
+      aventuras.forEach(av => {
+        const option = document.createElement('option');
+        option.value = av.id;
+        option.textContent = av.name;
+        seletor.appendChild(option);
+      });
+
+      seletor.addEventListener('change', async (e) => {
+        if (e.target.value) {
+          const arquivo = aventuras.find(a => a.id === e.target.value);
+          await carregarAventuraFromDrive(arquivo);
+          seletor.remove();
+        }
+      });
+
+      // Adiciona o seletor na área de aventuras
+      const aventuraActions = document.querySelector('.header-actions');
+      aventuraActions.appendChild(seletor);
+
+      updateAventuraStatus(`${aventuras.length} aventuras encontradas. Selecione uma.`);
+    }
+
+    // Processar dados da aventura (reutiliza lógica existente)
+    function processarAventura(aventuraData, nomeArquivo) {
+      // Salva os dados da história atual
+      currentHistoriaData = aventuraData;
+
+      updateAventuraStatus(`História carregada: ${nomeArquivo.replace('.json', '')}`);
+
+      fillAlliesFromAventura(aventuraData);
+      const tiersMap = groupEnemiesByTier(aventuraData);
+      const currentTier = setupTierSelect(tiersMap);
+      fillEnemiesFromTier(aventuraData, currentTier, tiersMap);
+
+      const sel = document.getElementById('tierSelect');
+      sel.onchange = () => fillEnemiesFromTier(aventuraData, Number(sel.value), tiersMap);
+
+      // Mostra o botão de refresh após carregar uma história
+      updateUI();
+    }
+
+    // Funções de UI
+    function updateUI() {
+      const btnLogin = document.getElementById('btnLoginGoogle');
+      const btnBuscar = document.getElementById('btnBuscarAventuras');
+      const btnRefresh = document.getElementById('btnRefreshHistoria');
+
+      // Botão de login sempre visível
+      btnLogin.style.display = '';
+      btnLogin.textContent = isUserSignedIn ? 'Logout' : 'Login Google';
+
+      // Botões de história só aparecem quando logado
+      btnBuscar.style.display = isUserSignedIn ? '' : 'none';
+      btnRefresh.style.display = (isUserSignedIn && currentHistoriaData) ? '' : 'none';
+    }
+
+    function updateAventuraStatus(message) {
+      document.getElementById('aventuraStatus').textContent = message;
+    }
+
+    function updateUserInfo(name, email) {
+      const userInfo = document.getElementById('userInfo');
+      if (name && email) {
+        userInfo.textContent = `${name} (${email})`;
+        userInfo.style.display = '';
+      } else {
+        userInfo.style.display = 'none';
+      }
+    }
 
     const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
     dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover');});
@@ -261,10 +652,16 @@
         (erros.length > 0 ? `<div style="color: var(--warn); font-size: 11px; margin-top: 4px;">Erros: ${erros.length}</div>` : '');
     }
 
+    // ===== Event Listeners =====
     document.getElementById('btnReset').addEventListener('click',()=>{ for(const d of TYPES) for(const a of TYPES) defenseData[d][a]=1.0; renderStatus(); document.getElementById('resultBox').textContent='Base restaurada.'; });
     document.getElementById('btnCarregarEmbarcado').addEventListener('click', carregarTipagensEmbarcadas);
     document.getElementById('btnCarregarLocal').addEventListener('click', carregarTipagensLocais);
     document.getElementById('btnDemo').addEventListener('click',()=>{ const demo={ marinho:{fogo:0.5,eletrico:2.0,planta:2.0}, fantasma:{normal:0.0,luz:2.0,trevas:0.5}, pedra:{fogo:0.5,agua:2.0,planta:2.0}, alien:{tecnologia:0.5,luz:2.0} }; for(const d in demo){ for(const a in demo[d]) defenseData[d][a]=demo[d][a]; } renderStatus(); document.getElementById('resultBox').textContent='Demo aplicada.'; });
+
+    // Google Drive Events
+    document.getElementById('btnLoginGoogle').addEventListener('click', toggleGoogleAuth);
+    document.getElementById('btnBuscarAventuras').addEventListener('click', buscarAventurasNoDrive);
+    document.getElementById('btnRefreshHistoria').addEventListener('click', refreshMinhaHistoria);
 
     // ===== Helpers =====
     function effectiveness(atk,def){ return (defenseData[def]&&defenseData[def][atk])||1.0; }
@@ -445,8 +842,41 @@
       });
     }
 
-    // init
-    populateSelects(); renderStatus(); wireUp();
+    // ===== Inicialização =====
+    async function init() {
+      populateSelects();
+      renderStatus();
+      wireUp();
+
+      // Garante que o botão de login apareça desde o início
+      updateUI();
+
+      // Inicializa Google API quando disponível
+      if (typeof gapi !== 'undefined') {
+        await initializeGoogleApi();
+      } else {
+        // Aguarda Google API carregar
+        const checkGapi = setInterval(() => {
+          if (typeof gapi !== 'undefined') {
+            clearInterval(checkGapi);
+            initializeGoogleApi();
+          }
+        }, 100);
+
+        // Timeout após 10 segundos
+        setTimeout(() => {
+          clearInterval(checkGapi);
+          if (!isGoogleApiLoaded) {
+            updateAventuraStatus('Erro: Google API não carregou');
+            // Mesmo com erro, mantém o botão de login visível
+            document.getElementById('btnLoginGoogle').style.display = '';
+          }
+        }, 10000);
+      }
+    }
+
+    // Inicia a aplicação
+    init();
   </script>
 </body>
 </html>
