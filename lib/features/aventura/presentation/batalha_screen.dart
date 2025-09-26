@@ -577,17 +577,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<EstadoBatalha> _aplicarHabilidadeDano(EstadoBatalha estado, Habilidade habilidade, bool isJogador) async {
     String atacante = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
 
-    // Determina tipo do ataque (tipoElemental da habilidade ou tipo principal do monstro no ataque básico)
-    Tipo tipoAtaque;
-    if (habilidade.tipo == TipoHabilidade.ofensiva) {
-      tipoAtaque = Tipo.values.firstWhere(
-        (t) => t.name == habilidade.tipoElemental,
-        orElse: () => isJogador ? estado.jogador.tipo : estado.inimigo.tipo,
-      );
-    } else {
-      // Suporte não causa dano, mas se for ataque básico, usa tipo principal
-      tipoAtaque = isJogador ? estado.jogador.tipo : estado.inimigo.tipo;
-    }
+    // CORREÇÃO: Sempre usa o tipo elemental da habilidade
+    Tipo tipoAtaque = habilidade.tipoElemental;
     Tipo tipoDefensor = isJogador ? estado.inimigo.tipo : estado.jogador.tipo;
 
     // Calcula dano base
