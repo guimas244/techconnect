@@ -1,0 +1,125 @@
+{
+  "tipo": "normal",
+  "defesa": [
+    {
+      "tipo": "normal",
+      "valor": 1.0
+    },
+    {
+      "tipo": "planta",
+      "valor": 0.5
+    },
+    {
+      "tipo": "inseto",
+      "valor": 0.5
+    },
+    {
+      "tipo": "venenoso",
+      "valor": 1.5
+    },
+    {
+      "tipo": "fera",
+      "valor": 1.0
+    },
+    {
+      "tipo": "zumbi",
+      "valor": 2.0
+    },
+    {
+      "tipo": "marinho",
+      "valor": 1.0
+    },
+    {
+      "tipo": "voador",
+      "valor": 1.2
+    },
+    {
+      "tipo": "subterraneo",
+      "valor": 1.0
+    },
+    {
+      "tipo": "terrestre",
+      "valor": 1.0
+    },
+    {
+      "tipo": "fogo",
+      "valor": 1.0
+    },
+    {
+      "tipo": "gelo",
+      "valor": 1.0
+    },
+    {
+      "tipo": "agua",
+      "valor": 1.0
+    },
+    {
+      "tipo": "vento",
+      "valor": 1.0
+    },
+    {
+      "tipo": "eletrico",
+      "valor": 1.0
+    },
+    {
+      "tipo": "pedra",
+      "valor": 1.0
+    },
+    {
+      "tipo": "luz",
+      "valor": 0.5
+    },
+    {
+      "tipo": "trevas",
+      "valor": 0.5
+    },
+    {
+      "tipo": "nostalgico",
+      "valor": 1.0
+    },
+    {
+      "tipo": "mistico",
+      "valor": 1.0
+    },
+    {
+      "tipo": "dragao",
+      "valor": 1.0
+    },
+    {
+      "tipo": "alien",
+      "valor": 1.0
+    },
+    {
+      "tipo": "docrates",
+      "valor": 1.0
+    },
+    {
+      "tipo": "fantasma",
+      "valor": 1.5
+    },
+    {
+      "tipo": "psiquico",
+      "valor": 1.2
+    },
+    {
+      "tipo": "magico",
+      "valor": 1.0
+    },
+    {
+      "tipo": "tecnologia",
+      "valor": 0.5
+    },
+    {
+      "tipo": "tempo",
+      "valor": 2.0
+    },
+    {
+      "tipo": "desconhecido",
+      "valor": 0.5
+    },
+    {
+      "tipo": "deus",
+      "valor": 2.0
+    }
+  ]
+}

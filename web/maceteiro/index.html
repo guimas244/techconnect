@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meu maceteiro – Matchup</title>
+  <style>
+    :root { --bg-1:#0b1226; --bg-2:#101a3a; --accent:#57d2ff; --bad:#ff6b6b; --ok:#2ee59d; --warn:#ffd166; --muted:#a9b1d6; --text:#e6e8f5; --shadow:rgba(0,0,0,.45); }
+    body{margin:0;font-family:system-ui, sans-serif;background:linear-gradient(160deg,var(--bg-1),var(--bg-2));color:var(--text);}
+    header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(16,26,58,0.9);position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(255,255,255,0.06)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .subtle{color:var(--muted);font-size:12px}
+    .pokeball{width:32px;height:32px;border-radius:50%;background:conic-gradient(from 0deg,#ff3b3b 0 180deg,#fff 180deg);}
+    .header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .tiny{font-size:12px;color:var(--muted)}
+    .tierSelect, .fileAventura{padding:8px 10px;border-radius:10px;background:#0c1431;color:var(--text);border:1px solid rgba(255,255,255,0.16)}
+    .fileAventura{padding:6px 10px}
+
+    main{display:grid;grid-template-columns:340px 1fr 460px;gap:16px;padding:16px;}
+    .panel{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:clip;box-shadow:0 10px 25px var(--shadow);}
+    .panel>.title{padding:12px 14px;font-weight:700;background:rgba(87,210,255,0.12);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center}
+
+    .stack{display:grid;gap:10px;padding:12px;}
+    .btn{padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);cursor:pointer;color:var(--text);transition:.12s}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(87,210,255,.2)}
+    .btn.primary{border-color:rgba(87,210,255,0.6);background:linear-gradient(180deg, rgba(87,210,255,0.35), rgba(87,210,255,0.1));}
+    .dropzone{border:1.5px dashed rgba(255,255,255,0.25);border-radius:14px;padding:14px;text-align:center;background:rgba(255,255,255,0.03)}
+    .dropzone.dragover{border-color:var(--accent);background:rgba(87,210,255,0.06)}
+    input[type="file"]{background:#0c1431;color:var(--text);border:1px solid rgba(255,255,255,0.12);padding:10px 12px;border-radius:12px;}
+    #fileInput{width:100%}
+    .status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .chip{padding:6px 8px;border-radius:10px;font-size:11px;text-transform:capitalize;text-align:center;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03)}
+    .chip.ready{border-color:rgba(46,229,157,0.6);background:rgba(46,229,157,0.12)}
+    .chip.missing{border-color:rgba(255,106,106,0.6);background:rgba(255,106,106,0.1)}
+
+    .teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;}
+    .card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;display:grid;gap:8px;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease}
+    .card:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.35)}
+    .enemy .card{border-color:rgba(255,106,106,0.25);} .ally .card{border-color:rgba(87,210,255,0.25);}
+    .slot-title{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);}
+    select{width:100%;padding:10px;border-radius:12px;background:#0c1431;color:var(--text);border:1px solid rgba(255,255,255,0.16)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mix{display:grid;gap:6px}
+    .mix small{color:var(--muted)}
+    .range{appearance:none;width:100%}
+    .range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+    .deathCheck{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;user-select:none}
+    .deathCheck input{transform:translateY(1px)}
+
+    .result{padding:12px;display:grid;gap:8px}
+    .badge{padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);font-size:11px;text-transform:capitalize}
+    .b-pos{background:rgba(46,229,157,0.15);border-color:rgba(46,229,157,0.5)}
+    .b-neg{background:rgba(255,106,106,0.15);border-color:rgba(255,106,106,0.5)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="pokeball"></div>
+      <div>
+        <h1 style="margin:0">Meu maceteiro</h1>
+        <div class="subtle">Multi-tipagem: Tipo 1 defende; Tipo 1+2 atacam com mistura automática (ou ajustável).</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="tiny">Aventura:
+        <input type="file" id="fileAventura" accept="application/json" class="fileAventura" />
+      </label>
+      <select id="tierSelect" class="tierSelect" title="Selecione um tier" style="display:none"></select>
+      <span id="aventuraStatus" class="tiny">Nenhuma aventura carregada.</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Painel Base de Tipos (tb_<tipo>_defesa.json) -->
+    <section class="panel" id="uploadPanel">
+      <div class="title">Base de tipos <button class="btn" id="btnReset">Limpar</button></div>
+      <div class="stack">
+        <div class="dropzone" id="dropzone">Arraste os <b>tb_&lt;tipo&gt;_defesa.json</b> ou escolha abaixo</div>
+        <input type="file" id="fileInput" accept="application/json" multiple />
+        <div class="subtle">Esperados: 30 (ex.: <i>tb_zumbi_defesa.json</i>)</div>
+        <div class="status-grid" id="statusGrid"></div>
+        <button class="btn primary" id="btnCarregarEmbarcado">Carregar Tipagens</button>
+        <button class="btn" id="btnCarregarLocal">Carregar do Drive (CORS)</button>
+        <button class="btn primary" id="btnDemo">Preencher demo</button>
+      </div>
+    </section>
+
+    <!-- Times -->
+    <section class="panel">
+      <div class="title">Times</div>
+      <div class="teams">
+        <div class="ally">
+          <div class="card" id="allyCardA">
+            <div class="slot-title"><b>Seu Monstro A</b></div>
+            <div class="row">
+              <select id="allyA1"></select>
+              <select id="allyA2"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo A: <span id="allyAInfo">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="allyAWeight" />
+            </div>
+          </div>
+          <div class="card" id="allyCardB">
+            <div class="slot-title"><b>Seu Monstro B</b></div>
+            <div class="row">
+              <select id="allyB1"></select>
+              <select id="allyB2"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo B: <span id="allyBInfo">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="allyBWeight" />
+            </div>
+          </div>
+          <div class="card" id="allyCardC">
+            <div class="slot-title"><b>Seu Monstro C</b></div>
+            <div class="row">
+              <select id="allyC1"></select>
+              <select id="allyC2"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo C: <span id="allyCInfo">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="allyCWeight" />
+            </div>
+          </div>
+        </div>
+        <div class="enemy" id="enemyContainer">
+          <div class="card" id="foeCard1">
+            <div class="slot-title"><b>Inimigo 1</b></div>
+            <div class="row">
+              <select id="foe11"></select>
+              <select id="foe12"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo inimigo 1: <span id="foe1Info">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="foe1Weight" />
+            </div>
+            <label class="deathCheck"><input type="checkbox" id="dead1">Morto</label>
+          </div>
+          <div class="card" id="foeCard2">
+            <div class="slot-title"><b>Inimigo 2</b></div>
+            <div class="row">
+              <select id="foe21"></select>
+              <select id="foe22"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo inimigo 2: <span id="foe2Info">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="foe2Weight" />
+            </div>
+            <label class="deathCheck"><input type="checkbox" id="dead2">Morto</label>
+          </div>
+          <div class="card" id="foeCard3">
+            <div class="slot-title"><b>Inimigo 3</b></div>
+            <div class="row">
+              <select id="foe31"></select>
+              <select id="foe32"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo inimigo 3: <span id="foe3Info">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="foe3Weight" />
+            </div>
+            <label class="deathCheck"><input type="checkbox" id="dead3">Morto</label>
+          </div>
+          <div class="card" id="foeCard4">
+            <div class="slot-title"><b>Inimigo 4</b></div>
+            <div class="row">
+              <select id="foe41"></select>
+              <select id="foe42"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo inimigo 4: <span id="foe4Info">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="foe4Weight" />
+            </div>
+            <label class="deathCheck"><input type="checkbox" id="dead4">Morto</label>
+          </div>
+          <div class="card" id="foeCard5">
+            <div class="slot-title"><b>Inimigo 5</b></div>
+            <div class="row">
+              <select id="foe51"></select>
+              <select id="foe52"></select>
+            </div>
+            <div class="mix" onclick="event.stopPropagation()">
+              <small>Mix ofensivo inimigo 5: <span id="foe5Info">100% / 0%</span></small>
+              <input class="range" type="range" min="0" max="100" step="25" value="100" id="foe5Weight" />
+            </div>
+            <label class="deathCheck"><input type="checkbox" id="dead5">Morto</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resultado -->
+    <section class="panel">
+      <div class="title">Resultado</div>
+      <div class="result" id="resultBox">Clique em um card para analisar. Ofensiva: mistura Tipo1/Tipo2. Defesa: apenas Tipo1.</div>
+    </section>
+  </main>
+
+  <script src="tipagens_data.js"></script>
+  <script>
+    // ===== Tipos =====
+    const TYPES=['normal','planta','inseto','venenoso','fera','zumbi','marinho','voador','subterraneo','terrestre','fogo','gelo','agua','vento','eletrico','pedra','luz','trevas','nostalgico','mistico','dragao','alien','docrates','fantasma','psiquico','magico','tecnologia','tempo','desconhecido','deus'];
+    const DISPLAY={normal:'Normal',planta:'Planta',inseto:'Inseto',venenoso:'Venenoso',fera:'Fera',zumbi:'Zumbi',marinho:'Marinho',voador:'Voador',subterraneo:'Subterrâneo',terrestre:'Terrestre',fogo:'Fogo',gelo:'Gelo',agua:'Água',vento:'Vento',eletrico:'Elétrico',pedra:'Pedra',luz:'Luz',trevas:'Trevas',nostalgico:'Nostálgico',mistico:'Místico',dragao:'Dragão',alien:'Alien',docrates:'Dócrates',fantasma:'Fantasma',psiquico:'Psíquico',magico:'Mágico',tecnologia:'Tecnologia',tempo:'Tempo',desconhecido:'Desconhecido',deus:'Deus'};
+
+    // defenseData[defensor][atacante]
+    const defenseData=Object.fromEntries(TYPES.map(t=>[t,Object.fromEntries(TYPES.map(a=>[a,1.0]))]));
+
+    // ===== Upload Base de tipos =====
+    function normalizeSlug(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z]/g,'');}
+    function applyDefenseJSON(json){ if(!json||!json.tipo||!Array.isArray(json.defesa)) return; const defSlug=normalizeSlug(json.tipo); if(!TYPES.includes(defSlug)) return; json.defesa.forEach(d=>{ const atk=normalizeSlug(d.tipo); if(TYPES.includes(atk) && typeof d.valor==='number') defenseData[defSlug][atk]=d.valor;}); }
+    function hasCustom(type){ return TYPES.some(a=>defenseData[type][a]!==1.0); }
+
+    const statusGrid=document.getElementById('statusGrid');
+    function renderStatus(){ statusGrid.innerHTML=''; TYPES.forEach(t=>{ const chip=document.createElement('div'); chip.className='chip '+(hasCustom(t)?'ready':'missing'); chip.textContent=DISPLAY[t]; statusGrid.appendChild(chip); }); }
+
+    const dropzone=document.getElementById('dropzone'); const fileInput=document.getElementById('fileInput');
+    dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover');});
+    dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('dragover');handleFiles(Array.from(e.dataTransfer.files||[]));});
+    fileInput.addEventListener('change',e=>handleFiles(Array.from(e.target.files)));
+    async function handleFiles(files){ for(const f of files){ try{ const json=JSON.parse(await f.text()); applyDefenseJSON(json);}catch(err){ console.warn('Falha ao ler', f?.name, err);} } renderStatus(); }
+
+    // ===== Carregamento Local =====
+    async function carregarTipagensLocais() {
+      document.getElementById('resultBox').textContent='Carregando tipagens da pasta local...';
+      let sucessos = 0;
+      let erros = [];
+
+      console.log('Iniciando carregamento de tipagens...');
+
+      for (const tipo of TYPES) {
+        try {
+          const url = `./tipagens/tb_${tipo}_defesa.json`;
+          console.log(`Tentando carregar: ${url}`);
+
+          const response = await fetch(url);
+          console.log(`Resposta para ${tipo}:`, response.status, response.statusText);
+
+          if (response.ok) {
+            const json = await response.json();
+            console.log(`JSON carregado para ${tipo}:`, json);
+            applyDefenseJSON(json);
+            sucessos++;
+          } else {
+            erros.push(`${tipo}: ${response.status} ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error(`Erro ao carregar tb_${tipo}_defesa.json:`, error);
+          erros.push(`${tipo}: ${error.message}`);
+        }
+      }
+
+      console.log(`Carregamento concluído. Sucessos: ${sucessos}, Erros: ${erros.length}`);
+      if (erros.length > 0) {
+        console.log('Erros encontrados:', erros);
+      }
+
+      renderStatus();
+      document.getElementById('resultBox').innerHTML=`<div>${sucessos} tipagens carregadas da pasta local.</div>` +
+        (erros.length > 0 ? `<div style="color: var(--warn); font-size: 11px; margin-top: 4px;">Erros: ${erros.length}</div>` : '');
+    }
+
+    document.getElementById('btnReset').addEventListener('click',()=>{ for(const d of TYPES) for(const a of TYPES) defenseData[d][a]=1.0; renderStatus(); document.getElementById('resultBox').textContent='Base restaurada.'; });
+    document.getElementById('btnCarregarEmbarcado').addEventListener('click', carregarTipagensEmbarcadas);
+    document.getElementById('btnCarregarLocal').addEventListener('click', carregarTipagensLocais);
+    document.getElementById('btnDemo').addEventListener('click',()=>{ const demo={ marinho:{fogo:0.5,eletrico:2.0,planta:2.0}, fantasma:{normal:0.0,luz:2.0,trevas:0.5}, pedra:{fogo:0.5,agua:2.0,planta:2.0}, alien:{tecnologia:0.5,luz:2.0} }; for(const d in demo){ for(const a in demo[d]) defenseData[d][a]=demo[d][a]; } renderStatus(); document.getElementById('resultBox').textContent='Demo aplicada.'; });
+
+    // ===== Helpers =====
+    function effectiveness(atk,def){ return (defenseData[def]&&defenseData[def][atk])||1.0; }
+    function weightPair(v){ const w1=Math.max(0,Math.min(100,Number(v)||0)); const w2=100-w1; return [w1/100,w2/100]; }
+    function setWeightLabel(idPrefix, val){ const el=document.getElementById(idPrefix+'Info'); if(el) el.textContent = `${val}% / ${100-val}%`; }
+
+    // ===== Populate selects =====
+    const selectIds=['allyA1','allyA2','allyB1','allyB2','allyC1','allyC2','foe11','foe12','foe21','foe22','foe31','foe32','foe41','foe42','foe51','foe52'];
+    function populateSelects(){
+      selectIds.forEach(id=>{ const sel=document.getElementById(id); sel.innerHTML=''; TYPES.forEach(t=>{ const opt=document.createElement('option'); opt.value=t; opt.textContent=DISPLAY[t]; sel.appendChild(opt); }); });
+      // Defaults
+      document.getElementById('allyA1').value='fogo'; document.getElementById('allyA2').value='gelo'; setWeightLabel('allyA', 100);
+      document.getElementById('allyB1').value='agua'; document.getElementById('allyB2').value='vento'; setWeightLabel('allyB', 100);
+      document.getElementById('allyC1').value='eletrico'; document.getElementById('allyC2').value='pedra'; setWeightLabel('allyC', 100);
+      document.getElementById('foe11').value='zumbi'; document.getElementById('foe12').value='trevas'; setWeightLabel('foe1', 100);
+      document.getElementById('foe21').value='marinho'; document.getElementById('foe22').value='planta'; setWeightLabel('foe2', 100);
+      document.getElementById('foe31').value='fantasma'; document.getElementById('foe32').value='luz'; setWeightLabel('foe3', 100);
+      document.getElementById('foe41').value='pedra'; document.getElementById('foe42').value='fogo'; setWeightLabel('foe4', 100);
+      document.getElementById('foe51').value='alien'; document.getElementById('foe52').value='tecnologia'; setWeightLabel('foe5', 100);
+    }
+
+    // ===== Análises =====
+    function analyzeEnemy(i){
+      const dead=document.getElementById('dead'+i)?.checked; if(dead){ document.getElementById('resultBox').innerHTML=`<div class="subtle">Inimigo ${i} está morto, ignorado.</div>`; return; }
+      const defType=document.getElementById('foe'+i+'1').value;
+      const attackers=[
+        {name:'A', t1:document.getElementById('allyA1').value, t2:document.getElementById('allyA2').value, w:weightPair(document.getElementById('allyAWeight').value)},
+        {name:'B', t1:document.getElementById('allyB1').value, t2:document.getElementById('allyB2').value, w:weightPair(document.getElementById('allyBWeight').value)},
+        {name:'C', t1:document.getElementById('allyC1').value, t2:document.getElementById('allyC2').value, w:weightPair(document.getElementById('allyCWeight').value)},
+      ];
+      const scores=attackers.map(a=>({
+        name:a.name,
+        mult: a.w[0]*effectiveness(a.t1,defType) + a.w[1]*effectiveness(a.t2,defType),
+        parts:[{t:a.t1,w:a.w[0],m:effectiveness(a.t1,defType)},{t:a.t2,w:a.w[1],m:effectiveness(a.t2,defType)}]
+      })).sort((x,y)=>y.mult-x.mult);
+      const html=[`<b>Alvo: Inimigo ${i} (DEF ${DISPLAY[defType]})</b>`,`<ul>`]
+        .concat(scores.map(s=>`<li><span class="badge b-pos">Seu ${s.name}</span> ${s.mult.toFixed(2)}x <small>(${(s.parts[0].w*100)|0}% ${DISPLAY[s.parts[0].t]}→${s.parts[0].m.toFixed(2)} + ${(s.parts[1].w*100)|0}% ${DISPLAY[s.parts[1].t]}→${s.parts[1].m.toFixed(2)})</small></li>`))
+        .concat(['</ul>']).join('');
+      document.getElementById('resultBox').innerHTML=html;
+    }
+
+    function aliveEnemies(){
+      const arr=[]; for(let i=1;i<=5;i++){ if(!document.getElementById('dead'+i).checked){ arr.push({id:i,t1:document.getElementById('foe'+i+'1').value,t2:document.getElementById('foe'+i+'2').value,w:weightPair(document.getElementById('foe'+i+'Weight').value)}); } } return arr;
+    }
+
+    function analyzeAlly(slot){
+      const map={A:'allyA1',B:'allyB1',C:'allyC1'}; const defType=document.getElementById(map[slot]).value;
+      const foes=aliveEnemies(); if(!foes.length){ document.getElementById('resultBox').innerHTML='<div class="subtle">Nenhum inimigo vivo selecionado.</div>'; return; }
+      const scores=foes.map(f=>({
+        name:'Inimigo '+f.id,
+        mult:f.w[0]*effectiveness(f.t1,defType) + f.w[1]*effectiveness(f.t2,defType),
+        parts:[{t:f.t1,w:f.w[0],m:effectiveness(f.t1,defType)},{t:f.t2,w:f.w[1],m:effectiveness(f.t2,defType)}]
+      })).sort((a,b)=>b.mult-a.mult);
+      const html=[`<b>Dano recebido por Seu ${slot} (DEF ${DISPLAY[defType]})</b>`,`<ul>`]
+        .concat(scores.map(s=>`<li>${s.name}: ${s.mult.toFixed(2)}x <small>(${(s.parts[0].w*100)|0}% ${DISPLAY[s.parts[0].t]}→${s.parts[0].m.toFixed(2)} + ${(s.parts[1].w*100)|0}% ${DISPLAY[s.parts[1].t]}→${s.parts[1].m.toFixed(2)})</small> ${s.mult===0?'(imune)': s.mult>1?'(muito dano)': s.mult<1?'(resiste)':''}</li>`))
+        .concat(['</ul>']).join('');
+      document.getElementById('resultBox').innerHTML=html;
+    }
+
+    // ===== Aventura =====
+    let aventuraData=null;
+    function groupEnemiesByTier(av){
+      const tiersMap=new Map();
+      if(Array.isArray(av?.monstrosInimigosTiers)){
+        av.monstrosInimigosTiers.forEach((arr,idx)=>{ const t=(idx+1); tiersMap.set(t, arr||[]); });
+      }else if(av?.monstrosInimigos && Array.isArray(av.monstrosInimigos)){
+        let hasPerItemTier=false; av.monstrosInimigos.forEach(m=>{ if(typeof m.tier==='number') hasPerItemTier=true; });
+        if(hasPerItemTier){ av.monstrosInimigos.forEach(m=>{ const t=m.tier||1; if(!tiersMap.has(t)) tiersMap.set(t,[]); tiersMap.get(t).push(m); }); }
+        else{ const t = typeof av.tier==='number' ? av.tier : 1; tiersMap.set(t, av.monstrosInimigos); }
+      }
+      if(tiersMap.size===0){ tiersMap.set(1,[]); }
+      return tiersMap;
+    }
+
+    function calcOffenseMixFromAbilities(monstro){
+      const map=new Map();
+      (monstro?.habilidades||[]).forEach(h=>{
+        const isAtk=String(h?.tipo||'').toLowerCase()==='ofensiva';
+        const elem=normalizeSlug(h?.tipoElemental||'');
+        const val=Number(h?.valor||0);
+        if(isAtk && TYPES.includes(elem) && val>0){ map.set(elem,(map.get(elem)||0)+val); }
+      });
+      const t1=normalizeSlug(monstro?.tipo||'');
+      const t2=normalizeSlug(monstro?.tipoExtra||'');
+      let w1=100; let w2=0; const total=Array.from(map.values()).reduce((a,b)=>a+b,0);
+      if(total>0){
+        const p1=(map.get(t1)||0)/total; const p2=t2&&TYPES.includes(t2)?(map.get(t2)||0)/total:0;
+        w1=Math.round(p1*100); w2=100-w1;
+      }
+      const steps=[0,25,50,75,100];
+      const snap=steps.reduce((p,c)=>Math.abs(c-w1)<Math.abs(p-w1)?c:p,steps[0]);
+      return {t1, t2: TYPES.includes(t2)?t2:t1, w1:snap};
+    }
+
+    function applyAllyFromMonstro(m, prefix){
+      const s1=document.getElementById(`ally${prefix}1`);
+      const s2=document.getElementById(`ally${prefix}2`);
+      const w=document.getElementById(`ally${prefix}Weight`);
+      const info=document.getElementById(`ally${prefix}Info`);
+      const mix=calcOffenseMixFromAbilities(m);
+      s1.value=TYPES.includes(mix.t1)?mix.t1:'normal';
+      s2.value=TYPES.includes(mix.t2)?mix.t2:mix.t1;
+      w.value=mix.w1; info.textContent=`${mix.w1}% / ${100-mix.w1}%`;
+    }
+
+    function applyEnemyFromMonstro(m, idx){
+      const s1=document.getElementById(`foe${idx}1`);
+      const s2=document.getElementById(`foe${idx}2`);
+      const w=document.getElementById(`foe${idx}Weight`);
+      const info=document.getElementById(`foe${idx}Info`);
+      const dead=document.getElementById(`dead${idx}`);
+      const mix=calcOffenseMixFromAbilities(m);
+      s1.value=TYPES.includes(mix.t1)?mix.t1:'normal';
+      s2.value=TYPES.includes(mix.t2)?mix.t2:mix.t1;
+      w.value=mix.w1; info.textContent=`${mix.w1}% / ${100-mix.w1}%`;
+      dead.checked=(Number(m?.vidaAtual||0)<=0); setDeadStyle(idx);
+    }
+
+    function fillAlliesFromAventura(av){
+      const arr=Array.isArray(av?.monstros)? av.monstros.slice(0,3):[];
+      const defs=['A','B','C']; defs.forEach((slot,i)=>{ if(arr[i]) applyAllyFromMonstro(arr[i], slot); });
+    }
+
+    function fillEnemiesFromTier(av, tier, tiersMap){
+      const list=tiersMap.get(tier)||[];
+      for(let i=1;i<=5;i++){ const m=list[i-1]; if(m){ applyEnemyFromMonstro(m,i);} }
+      for(let i=list.length+1;i<=5;i++){
+        document.getElementById(`foe${i}1`).value='normal';
+        document.getElementById(`foe${i}2`).value='normal';
+        document.getElementById(`foe${i}Weight`).value=100; setWeightLabel(`foe${i}`,100);
+        const dead=document.getElementById(`dead${i}`); dead.checked=false; setDeadStyle(i);
+      }
+    }
+
+    function setupTierSelect(tiersMap){
+      const sel=document.getElementById('tierSelect'); sel.innerHTML='';
+      const keys=[...tiersMap.keys()].sort((a,b)=>b-a);
+      keys.forEach(t=>{ const opt=document.createElement('option'); opt.value=String(t); opt.textContent='Tier '+t; sel.appendChild(opt); });
+      sel.style.display= keys.length>1 ? '' : 'none';
+      sel.value=String(keys[0]||1); return Number(sel.value);
+    }
+
+    async function handleAventuraFile(file){
+      try{
+        const av=JSON.parse(await file.text()); aventuraData=av;
+        document.getElementById('aventuraStatus').textContent=`Aventura carregada para ${av?.email||'jogador'}`;
+        fillAlliesFromAventura(av);
+        const tiersMap=groupEnemiesByTier(av);
+        const currentTier=setupTierSelect(tiersMap);
+        fillEnemiesFromTier(av,currentTier,tiersMap);
+        const sel=document.getElementById('tierSelect');
+        sel.onchange=()=>fillEnemiesFromTier(av,Number(sel.value),tiersMap);
+      }catch(e){ document.getElementById('aventuraStatus').textContent='Falha ao ler JSON de aventura.'; console.error(e); }
+    }
+
+    document.getElementById('fileAventura').addEventListener('change', e=>{ const f=e.target.files?.[0]; if(f) handleAventuraFile(f); });
+
+    // ===== Wireup =====
+    function setDeadStyle(i){ const card=document.getElementById('foeCard'+i); card.style.opacity=document.getElementById('dead'+i).checked?0.5:1; }
+
+    function wireUp(){
+      for(let i=1;i<=5;i++){
+        const card=document.getElementById('foeCard'+i);
+        ['foe'+i+'1','foe'+i+'2'].forEach(id=>{ const sel=document.getElementById(id); sel.addEventListener('click',e=>e.stopPropagation()); sel.addEventListener('change',()=>analyzeEnemy(i)); });
+        const range=document.getElementById('foe'+i+'Weight'); const info=document.getElementById('foe'+i+'Info');
+        range.addEventListener('input',e=>{ info.textContent=`${e.target.value}% / ${100-e.target.value}%`; });
+        range.addEventListener('change',()=>analyzeEnemy(i));
+        const dead=document.getElementById('dead'+i); dead.addEventListener('change',()=>{ setDeadStyle(i); if(dead.checked){ document.getElementById('resultBox').innerHTML=`<div class='subtle'>Inimigo ${i} está morto, ignorado.</div>`; }});
+        card.addEventListener('click',()=>analyzeEnemy(i)); setDeadStyle(i);
+      }
+      [['A','allyA1','allyA2','allyAWeight','allyAInfo'],['B','allyB1','allyB2','allyBWeight','allyBInfo'],['C','allyC1','allyC2','allyCWeight','allyCInfo']].forEach(([slot,s1,s2,rangeId,infoId])=>{
+        const card=document.getElementById('allyCard'+slot);
+        [s1,s2].forEach(id=>{ const sel=document.getElementById(id); sel.addEventListener('click',e=>e.stopPropagation()); sel.addEventListener('change',()=>analyzeAlly(slot)); });
+        const range=document.getElementById(rangeId); const info=document.getElementById(infoId);
+        range.addEventListener('input',e=>{ info.textContent=`${e.target.value}% / ${100-e.target.value}%`; });
+        range.addEventListener('change',()=>analyzeAlly(slot));
+        card.addEventListener('click',()=>analyzeAlly(slot));
+      });
+    }
+
+    // init
+    populateSelects(); renderStatus(); wireUp();
+  </script>
+</body>
+</html>
