@@ -153,4 +153,26 @@ class ItemService {
         return 1;
     }
   }
+
+  /// Gera um item elite (sempre raro ou superior) para monstros elite
+  Item gerarItemElite({int tierAtual = 1}) {
+    print('👑 [ItemService] Gerando item ELITE para tier $tierAtual');
+
+    // Calcula probabilidades para itens elite (raro, épico, lendário)
+    final chance = _random.nextInt(100);
+    RaridadeItem raridadeElite;
+
+    if (chance < 10) {
+      raridadeElite = RaridadeItem.lendario;
+      print('👑 [ItemService] Raridade elite: LENDÁRIO (10% chance)');
+    } else if (chance < 40) {
+      raridadeElite = RaridadeItem.epico;
+      print('👑 [ItemService] Raridade elite: ÉPICO (30% chance)');
+    } else {
+      raridadeElite = RaridadeItem.raro;
+      print('👑 [ItemService] Raridade elite: RARO (60% chance)');
+    }
+
+    return gerarItemComRaridade(raridadeElite, tierAtual: tierAtual);
+  }
 }

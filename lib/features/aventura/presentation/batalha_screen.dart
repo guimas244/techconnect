@@ -717,8 +717,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Carrega história atual para atualizar score
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       if (historia != null) {
-        // Calcula score ganho: 1 monstro morto * tier atual = score ganho
-        final scoreGanho = historia.tier;
+        // Calcula score ganho: tier atual ou 2 pontos se tier >= 11
+        final scoreGanho = historia.tier >= 11 ? 2 : historia.tier;
         final novoScore = historia.score + scoreGanho;
         
         print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');

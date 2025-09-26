@@ -10,6 +10,8 @@ class MonstroAventura {
   final Uint8List? imagemBytes;
   final DateTime criadoEm;
   final DateTime? atualizadoEm;
+  final String colecao; // 'colecao_inicial' ou 'colecao_nostalgicos'
+  final bool isBloqueado; // true para monstros nostálgicos por padrão
 
   MonstroAventura({
     required this.id,
@@ -20,6 +22,8 @@ class MonstroAventura {
     this.imagemBytes,
     required this.criadoEm,
     this.atualizadoEm,
+    required this.colecao,
+    this.isBloqueado = false,
   });
 
   // Validação para não aceitar tipos iguais
@@ -34,6 +38,8 @@ class MonstroAventura {
       'imagemUrl': imagemUrl,
       'criadoEm': criadoEm.toIso8601String(),
       'atualizadoEm': atualizadoEm?.toIso8601String(),
+      'colecao': colecao,
+      'isBloqueado': isBloqueado,
     };
   }
 
@@ -45,9 +51,11 @@ class MonstroAventura {
       tipo2: Tipo.values.firstWhere((t) => t.name == json['tipo2']),
       imagemUrl: json['imagemUrl'],
       criadoEm: DateTime.parse(json['criadoEm']),
-      atualizadoEm: json['atualizadoEm'] != null 
-          ? DateTime.parse(json['atualizadoEm']) 
+      atualizadoEm: json['atualizadoEm'] != null
+          ? DateTime.parse(json['atualizadoEm'])
           : null,
+      colecao: json['colecao'] ?? 'colecao_inicial',
+      isBloqueado: json['isBloqueado'] ?? false,
     );
   }
 
@@ -60,6 +68,8 @@ class MonstroAventura {
     Uint8List? imagemBytes,
     DateTime? criadoEm,
     DateTime? atualizadoEm,
+    String? colecao,
+    bool? isBloqueado,
   }) {
     return MonstroAventura(
       id: id ?? this.id,
@@ -70,6 +80,8 @@ class MonstroAventura {
       imagemBytes: imagemBytes ?? this.imagemBytes,
       criadoEm: criadoEm ?? this.criadoEm,
       atualizadoEm: atualizadoEm ?? this.atualizadoEm,
+      colecao: colecao ?? this.colecao,
+      isBloqueado: isBloqueado ?? this.isBloqueado,
     );
   }
 

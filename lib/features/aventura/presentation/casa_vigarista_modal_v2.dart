@@ -37,8 +37,8 @@ class CasaVigaristaModalV2 extends StatefulWidget {
 class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     with TickerProviderStateMixin {
   final ItemService _itemService = ItemService();
-  int get custoAposta => 2 * _historiaAtual.tier;
-  int get custoFeirao => (_historiaAtual.tier * 1.5).ceil();
+  int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
+  int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
   bool _comprando = false;
   late HistoriaJogador _historiaAtual;
 

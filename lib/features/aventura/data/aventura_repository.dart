@@ -394,7 +394,7 @@ class AventuraRepository {
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: 'assets/monstros_aventura/${tipo.name}.png',
+        imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
         vida: vidaSorteada,
         energia: energiaSorteada,
         agilidade: agilidadeSorteada,
@@ -571,11 +571,17 @@ class AventuraRepository {
     }
   }
 
-  /// Sorteia 5 monstros inimigos com tipos e habilidades
+  /// Sorteia 5 monstros inimigos com tipos e habilidades + monstros elite a cada 3 tiers
   Future<List<MonstroInimigo>> _sortearMonstrosInimigos({int tierAtual = 1}) async {
     final random = Random();
     final monstrosInimigos = <MonstroInimigo>[];
-    
+
+    // Verifica se deve spawnar monstro elite (a cada 3 tiers)
+    final deveSpawnarElite = tierAtual % 3 == 0;
+
+    print('🏆 [Repository] Tier $tierAtual: ${deveSpawnarElite ? "Com monstro elite (5+1)" : "Sem monstro elite (5)"}');
+
+    // Sempre gera 5 monstros normais
     for (int i = 0; i < 5; i++) {
       // Escolhe um tipo principal aleatório
       final tiposDisponiveis = Tipo.values.toList();
@@ -638,7 +644,7 @@ class AventuraRepository {
       final monstro = MonstroInimigo(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: 'assets/monstros_aventura/${tipo.name}.png',
+        imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
         vida: vidaFinal,
         energia: energiaFinal,
         agilidade: AtributoJogo.agilidade.sortear(random),
@@ -651,8 +657,69 @@ class AventuraRepository {
       
       monstrosInimigos.add(monstro);
     }
-    
+
+    // Gera monstro elite se for tier múltiplo de 3
+    if (deveSpawnarElite) {
+      print('🏆 [Repository] Gerando monstro elite para tier $tierAtual');
+      final monstroElite = await _gerarMonstroElite(tierAtual, random);
+      monstrosInimigos.add(monstroElite);
+    }
+
     return monstrosInimigos;
+  }
+
+  /// Gera um monstro elite com dobro de vida e item raro+
+  Future<MonstroInimigo> _gerarMonstroElite(int tierAtual, Random random) async {
+    // Escolhe tipos aleatórios para o monstro elite
+    final tiposDisponiveis = Tipo.values.toList();
+    final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
+    final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+    outrosTipos.shuffle(random);
+    final tipoExtra = outrosTipos.first;
+
+    // Gera habilidades para o monstro elite
+    final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
+    final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
+
+    // Gera item SEMPRE raro ou superior para monstro elite
+    final itemElite = _itemService.gerarItemElite(tierAtual: tierAtual);
+    print('👑 [Repository] Monstro elite recebeu item: ${itemElite.nome} (${itemElite.raridade.nome})');
+
+    // Calcula atributos base
+    final vidaBase = AtributoJogo.vida.sortear(random);
+    final energiaBase = AtributoJogo.energia.sortear(random);
+    final niveisEvolucao = tierAtual;
+
+    // Aplica ganhos de evolução
+    final vidaComEvolucao = vidaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoVida.min);
+
+    // Aplica bônus de vida por tier
+    final bonusPercentual = AtributoJogo.calcularBonusVidaInimigo(tierAtual);
+    final vidaComBonus = (vidaComEvolucao * (1.0 + bonusPercentual)).round();
+
+    // DOBRA a vida para monstros elite
+    final vidaFinalElite = vidaComBonus * 2;
+    final energiaFinal = energiaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min);
+
+    print('👑 [Repository] Monstro ELITE tier $tierAtual:');
+    print('   - Vida normal: $vidaComBonus → Elite: $vidaFinalElite (2x)');
+    print('   - Energia: $energiaFinal');
+    print('   - Item elite: ${itemElite.nome}');
+
+    return MonstroInimigo(
+      tipo: tipo,
+      tipoExtra: tipoExtra,
+      imagem: 'assets/icons_gerais/monstro_elite.png', // Ícone especial para elite
+      vida: vidaFinalElite,
+      energia: energiaFinal,
+      agilidade: AtributoJogo.agilidade.sortear(random),
+      ataque: AtributoJogo.ataque.sortear(random),
+      defesa: AtributoJogo.defesa.sortear(random),
+      habilidades: habilidades,
+      itemEquipado: itemElite,
+      level: tierAtual,
+      isElite: true, // Marca como elite
+    );
   }
 
   /// Aplica evolução aleatória nas habilidades dos monstros inimigos baseado no tier

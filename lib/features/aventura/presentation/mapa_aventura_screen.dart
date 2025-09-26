@@ -320,7 +320,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       (0.7, 0.15),  // Ponto 2 - Superior direito
       (0.5, 0.45),  // Ponto 3 - Centro
       (0.25, 0.65), // Ponto 4 - Inferior esquerdo
-      (0.75, 0.68), // Ponto 5 - Inferior direito (mais alto)
+      (0.75, 0.68), // Ponto 5 - Inferior direito
+      (0.5, 0.75),  // Ponto 6 - Elite (terceira linha, centro-inferior)
     ];
     
     // Adiciona pontos dos monstros
@@ -355,11 +356,14 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: estaMorto 
+            color: estaMorto
                 ? Colors.grey.withOpacity(0.9)
                 : monstro.tipo.cor.withOpacity(0.9),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
+            border: Border.all(
+              color: monstro.isElite ? const Color(0xFFFFD700) : Colors.white, // Gold color
+              width: monstro.isElite ? 4 : 3
+            ),
             boxShadow: [
               BoxShadow(
                 color: estaMorto 
@@ -385,7 +389,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     0, 0, 0, 1, 0,
                   ]),
             child: Image.asset(
-              'assets/icons_gerais/evil_monster_viral_icon.png',
+              monstro.isElite
+                ? 'assets/icons_gerais/monstro_elite.png'
+                : 'assets/icons_gerais/monstro_comum.png',
               width: 32,
               height: 32,
               fit: BoxFit.contain,
@@ -616,35 +622,45 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       isAdvancingTier = true;
       print('🎯 [DEBUG] isAdvancingTier definido como true');
     });
-    
+
     try {
       final repository = ref.read(aventuraRepositoryProvider);
-      
+
       if (historiaAtual == null) {
         print('❌ [DEBUG] historiaAtual é null, retornando');
         return;
       }
       print('🎯 [DEBUG] historiaAtual não é null, continuando...');
-      
+
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
-      
-      // Atualiza a história com novo tier e novos monstros (score não muda aqui)
+
+      // Verifica se é o andar 10 para resetar score (só se tiver mais de 50)
+      int novoScore = historiaAtual!.score;
+      if (historiaAtual!.tier == 10 && historiaAtual!.score > 50) {
+        novoScore = 50;
+        print('🔄 [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} → $novoScore');
+      } else if (historiaAtual!.tier == 10) {
+        print('📌 [MapaAventura] Score mantido no andar 10 (≤50): ${historiaAtual!.score}');
+      }
+
+      // Atualiza a história com novo tier, novos monstros e score (resetado se tier 10)
       final historiaAtualizada = historiaAtual!.copyWith(
         tier: historiaAtual!.tier + 1,
         monstrosInimigos: novosMonstros,
+        score: novoScore,
       );
-      
+
       // Salva no repositório
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-      
+
       // Atualiza o estado local
       setState(() {
         historiaAtual = historiaAtualizada;
       });
-      
+
       print('🎯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
-      
+
     } catch (e) {
       print('❌ [MapaAventura] Erro ao avançar tier: $e');
     } finally {
@@ -672,6 +688,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        // Verificar se é o andar 10
+        bool isAndar10 = historiaAtual?.tier == 10;
+
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -679,17 +698,21 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           title: Row(
             children: [
               Icon(
-                podeAvancar ? Icons.arrow_upward : Icons.block,
-                color: podeAvancar ? Colors.green : Colors.red,
+                podeAvancar ? (isAndar10 ? Icons.warning : Icons.arrow_upward) : Icons.block,
+                color: podeAvancar ? (isAndar10 ? Colors.orange : Colors.green) : Colors.red,
                 size: 28,
               ),
               const SizedBox(width: 8),
-              Text(
-                podeAvancar ? 'Avançar Tier' : 'Requisitos não atendidos',
-                style: TextStyle(
-                  color: podeAvancar ? Colors.green : Colors.red,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  podeAvancar
+                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : 'Avançar Tier')
+                    : 'Requisitos não atendidos',
+                  style: TextStyle(
+                    color: podeAvancar ? (isAndar10 ? Colors.orange : Colors.green) : Colors.red,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -699,26 +722,97 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (podeAvancar) ...[
-                const Text(
-                  '⚠️ ATENÇÃO: Ao avançar para o próximo tier:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange,
+                if (isAndar10) ...[
+                  // Aviso especial para o andar 10
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: ((historiaAtual?.score ?? 0) > 50 ? Colors.red : Colors.green).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: ((historiaAtual?.score ?? 0) > 50 ? Colors.red : Colors.green).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              (historiaAtual?.score ?? 0) > 50 ? Icons.warning : Icons.check_circle,
+                              color: (historiaAtual?.score ?? 0) > 50 ? Colors.red : Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                (historiaAtual?.score ?? 0) > 50
+                                  ? 'RESET DE SCORE NO ANDAR 10'
+                                  : 'SCORE MANTIDO NO ANDAR 10',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: (historiaAtual?.score ?? 0) > 50 ? Colors.red : Colors.green,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          (historiaAtual?.score ?? 0) > 50
+                            ? 'Ao avançar do andar 10 para o 11, seu score será resetado para 50 pontos.'
+                            : 'Ao avançar do andar 10 para o 11, seu score será mantido (≤50 pontos).',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          (historiaAtual?.score ?? 0) > 50
+                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos → Ficará: 50 pontos'
+                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos → Será mantido',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: (historiaAtual?.score ?? 0) > 50 ? Colors.red.shade700 : Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text('• Você não poderá retornar ao tier anterior'),
-                const Text('• Novos monstros mais fortes aparecerão'),
-                const Text('• Seu progresso atual será salvo'),
-                const SizedBox(height: 8),
-                const Text(
-                  'Seu score atual será mantido.',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                  const SizedBox(height: 12),
+                  const Text(
+                    '⚠️ Outras mudanças importantes:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  const Text('• Monstros do andar 11+ darão 2 pontos por vitória'),
+                  const Text('• A loja considerará preços como se fosse tier 2'),
+                  const Text('• Novos monstros mais fortes aparecerão'),
+                ] else ...[
+                  // Aviso normal para outros andares
+                  const Text(
+                    '⚠️ ATENÇÃO: Ao avançar para o próximo tier:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('• Você não poderá retornar ao tier anterior'),
+                  const Text('• Novos monstros mais fortes aparecerão'),
+                  const Text('• Seu progresso atual será salvo'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Seu score atual será mantido.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
               ] else ...[
                 Text(
                   'Você precisa derrotar pelo menos 3 monstros para avançar de tier.',
@@ -748,7 +842,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             if (podeAvancar)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: isAndar10 ? Colors.orange : Colors.green,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
@@ -757,7 +851,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   print('🎯 [DEBUG] Modal fechado, chamando _avancarTier()');
                   _avancarTier();
                 },
-                child: const Text('Confirmar'),
+                child: Text(
+                  isAndar10
+                    ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
+                    : 'Confirmar'
+                ),
               ),
           ],
         );

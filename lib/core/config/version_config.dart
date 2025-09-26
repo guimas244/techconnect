@@ -1,5 +1,5 @@
 class VersionConfig {
-  static const String currentVersion = '1.5.6';
+  static const String currentVersion = '1.5.7';
   
   /// Compara duas versões e retorna:
   /// 1 se version1 > version2

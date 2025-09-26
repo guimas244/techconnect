@@ -16,6 +16,7 @@ class MonstroInimigo {
   final List<Habilidade> habilidades;
   final Item? itemEquipado;
   final int level; // Level do monstro
+  final bool isElite; // Se é um monstro elite
 
   const MonstroInimigo({
     required this.tipo,
@@ -31,6 +32,7 @@ class MonstroInimigo {
     required this.habilidades,
     this.itemEquipado,
     this.level = 1, // Level inicial é 1
+    this.isElite = false, // Por padrão não é elite
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -63,10 +65,11 @@ class MonstroInimigo {
       habilidades: (json['habilidades'] as List<dynamic>?)
           ?.map((h) => Habilidade.fromJson(h))
           .toList() ?? [],
-      itemEquipado: json['itemEquipado'] != null 
+      itemEquipado: json['itemEquipado'] != null
           ? Item.fromMap(json['itemEquipado'] as Map<String, dynamic>)
           : null, // Ignora o campo 'item' antigo (String) se existir
       level: json['level'] ?? 1,
+      isElite: json['isElite'] ?? false,
     );
   }
 
@@ -85,6 +88,7 @@ class MonstroInimigo {
       'habilidades': habilidades.map((h) => h.toJson()).toList(),
       'itemEquipado': itemEquipado?.toMap(),
       'level': level,
+      'isElite': isElite,
     };
   }
 
@@ -102,6 +106,7 @@ class MonstroInimigo {
     List<Habilidade>? habilidades,
     Item? itemEquipado,
     int? level,
+    bool? isElite,
   }) {
     return MonstroInimigo(
       tipo: tipo ?? this.tipo,
@@ -117,6 +122,7 @@ class MonstroInimigo {
       habilidades: habilidades ?? this.habilidades,
       itemEquipado: itemEquipado ?? this.itemEquipado,
       level: level ?? this.level,
+      isElite: isElite ?? this.isElite,
     );
   }
 

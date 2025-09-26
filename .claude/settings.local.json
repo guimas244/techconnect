@@ -25,7 +25,11 @@
       "Bash(cd:*)",
       "WebFetch(domain:drive.google.com)",
       "Read(//c/Users/guima/Documents/**)",
-      "Bash(start.bat)"
+      "Bash(start.bat)",
+      "Bash(dir:*)",
+      "Bash(ren:*)",
+      "Bash(q)",
+      "Bash(r)"
     ],
     "deny": [],
     "ask": []

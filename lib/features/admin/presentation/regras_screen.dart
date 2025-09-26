@@ -57,7 +57,7 @@ class RegrasScreen extends StatelessWidget {
                   monstro: MonstroAventura(
                     tipo: Tipo.vento,
                     tipoExtra: Tipo.voador,
-                    imagem: 'assets/monstros_aventura/vento.png',
+                    imagem: 'assets/monstros_aventura/colecao_inicial/vento.png',
                     vida: 87,
                     energia: 32,
                     agilidade: 15,
@@ -552,7 +552,7 @@ class RegrasScreen extends StatelessWidget {
           monstro: MonstroAventura(
             tipo: Tipo.fogo,
             tipoExtra: Tipo.voador,
-            imagem: 'assets/monstros_aventura/fogo.png',
+            imagem: 'assets/monstros_aventura/colecao_inicial/fogo.png',
             vida: 75,
             energia: 45,
             agilidade: 20,

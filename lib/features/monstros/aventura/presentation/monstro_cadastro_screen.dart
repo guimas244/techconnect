@@ -501,6 +501,8 @@ class _MonstroCadastroScreenState extends ConsumerState<MonstroCadastroScreen> {
         tipo2: state.tipo2,
         imagemBytes: state.imagemBytes,
         criadoEm: _isEdicao ? widget.monstroParaEditar!.criadoEm : DateTime.now(),
+        colecao: _isEdicao ? widget.monstroParaEditar!.colecao : 'colecao_inicial',
+        isBloqueado: _isEdicao ? widget.monstroParaEditar!.isBloqueado : false,
       );
 
       await repository.salvarMonstro(monstro);

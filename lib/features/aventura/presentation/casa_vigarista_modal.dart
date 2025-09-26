@@ -28,8 +28,8 @@ class CasaVigaristaModal extends StatefulWidget {
 
 class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   final ItemService _itemService = ItemService();
-  int get custoAposta => 2 * _historiaAtual.tier;
-  int get custoFeirao => (_historiaAtual.tier * 1.5).ceil();
+  int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
+  int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
   bool _comprando = false;
   late HistoriaJogador _historiaAtual;
 
@@ -488,7 +488,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
 
     // Para o feirão, verifica se tem dinheiro suficiente para o custo especial
     if (isIcon && icon == Icons.store) {
-      int custoFeirao = (_historiaAtual.tier * 1.5).ceil();
+      int custoFeirao = ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
       podeComprar = _historiaAtual.score >= custoFeirao && !_comprando;
     }
 

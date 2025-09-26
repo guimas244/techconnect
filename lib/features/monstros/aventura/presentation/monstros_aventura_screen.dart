@@ -205,37 +205,6 @@ class CatalogoMonstrosScreen extends StatefulWidget {
 class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
   String? monstroExpandido;
 
-  // Mapeamento de monstros para tipos baseado nos arquivos existentes
-  final Map<String, Tipo> monstroParaTipo = {
-    'agua': Tipo.agua,           // água -> água (direto)
-    'alien': Tipo.alien,         // alien -> alien (direto)
-    'desconhecido': Tipo.desconhecido, // desconhecido -> desconhecido (direto)
-    'deus': Tipo.deus,           // deus -> deus (direto)
-    'docrates': Tipo.docrates,   // docrates -> docrates (direto)
-    'dragao': Tipo.dragao,       // dragão -> dragão (direto)
-    'fantasma': Tipo.fantasma,   // fantasma -> fantasma (direto)
-    'fera': Tipo.fera,           // fera -> fera (direto)
-    'fogo': Tipo.fogo,           // fogo -> fogo (direto)
-    'gelo': Tipo.gelo,           // gelo -> gelo (direto)
-    'inseto': Tipo.inseto,       // inseto -> inseto (direto)
-    'luz': Tipo.luz,             // luz -> luz (direto)
-    'magico': Tipo.magico,       // mágico -> mágico (direto)
-    'marinho': Tipo.marinho,     // marinho -> marinho (direto)
-    'mistico': Tipo.mistico,     // místico -> místico (direto)
-    'normal': Tipo.normal,       // normal -> normal (direto)
-    'nostalgico': Tipo.nostalgico, // nostálgico -> nostálgico (direto)
-    'planta': Tipo.planta,       // planta -> planta (direto)
-    'psiquico': Tipo.psiquico,   // psíquico -> psíquico (direto)
-    'subterraneo': Tipo.subterraneo, // subterraneo -> subterrâneo
-    'tecnologia': Tipo.tecnologia, // tecnologia -> tecnologia (direto)
-    'tempo': Tipo.tempo,         // tempo -> tempo (direto)
-    'terrestre': Tipo.terrestre, // terrestre -> terrestre (direto)
-    'trevas': Tipo.trevas,       // trevas -> trevas (direto)
-    'venenoso': Tipo.venenoso,   // venenoso -> venenoso (direto)
-    'vento': Tipo.vento,         // vento -> vento (direto)
-    'voador': Tipo.voador,       // voador -> voador (direto)
-    'zumbi': Tipo.zumbi,         // zumbi -> zumbi (direto)
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +212,24 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
       appBar: AppBar(
         title: const Text('Catálogo de Monstros'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          // Botão para regenerar com nomes reais - TEMPORÁRIO PARA TESTE
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              final repository = MonstroAventuraRepository();
+              await repository.forcarRegeneracao();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Monstros regenerados com nomes reais!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Recarrega a tela
+              setState(() {});
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -253,22 +240,51 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
               fit: BoxFit.cover,
             ),
           ),
-          // Grid de monstros
-          GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: monstroParaTipo.length,
-            itemBuilder: (context, index) {
-              final entry = monstroParaTipo.entries.elementAt(index);
-              final nomeArquivo = entry.key;
-              final tipo = entry.value;
-              
-              return _buildMonstroItem(nomeArquivo, tipo);
+          // Grid de monstros - Mostra TODOS os monstros das duas coleções
+          Consumer(
+            builder: (context, ref, _) {
+              final monstrosAsync = ref.watch(monstrosListProvider);
+              return monstrosAsync.when(
+                data: (monstros) {
+                  // Ordena monstros: primeiro coleção inicial, depois nostálgicos
+                  final monstrosOrdenados = List<MonstroAventura>.from(monstros);
+                  monstrosOrdenados.sort((a, b) {
+                    // Primeiro ordena por coleção (inicial antes de nostálgicos)
+                    if (a.colecao != b.colecao) {
+                      return a.colecao == 'colecao_inicial' ? -1 : 1;
+                    }
+                    // Depois ordena por nome do tipo
+                    return a.tipo1.name.compareTo(b.tipo1.name);
+                  });
+
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: monstrosOrdenados.length,
+                    itemBuilder: (context, index) {
+                      final monstro = monstrosOrdenados[index];
+                      final nomeArquivo = monstro.tipo1.name;
+                      return _buildMonstroItem(nomeArquivo, monstro.tipo1, monstro);
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stackTrace) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Erro ao carregar monstros: $error'),
+                    ],
+                  ),
+                ),
+              );
             },
           ),
           // Imagem expandida
@@ -280,10 +296,80 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                 child: Center(
                   child: Hero(
                     tag: monstroExpandido!,
-                    child: Image.asset(
-                      'assets/monstros_aventura/$monstroExpandido.png',
-                      fit: BoxFit.contain,
-                      height: MediaQuery.of(context).size.height * 0.7,
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final monstrosAsync = ref.watch(monstrosListProvider);
+                        return monstrosAsync.when(
+                          data: (monstros) {
+                            // Busca o monstro pela tag expandida (formato: colecao_nomeArquivo)
+                            final partesTag = monstroExpandido!.split('_');
+                            if (partesTag.length >= 2) {
+                              final colecao = partesTag[0];
+                              final nomeArquivo = partesTag[1];
+
+                              final monstro = monstros.firstWhere(
+                                (m) => m.colecao == colecao && m.tipo1.name == nomeArquivo,
+                                orElse: () => monstros.isNotEmpty ? monstros.first : MonstroAventura(
+                                  id: 'temp',
+                                  nome: 'Temp',
+                                  tipo1: Tipo.normal,
+                                  tipo2: Tipo.agua,
+                                  criadoEm: DateTime.now(),
+                                  colecao: 'colecao_inicial',
+                                  isBloqueado: false,
+                                ),
+                              );
+
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ColorFiltered(
+                                    colorFilter: monstro.isBloqueado
+                                      ? const ColorFilter.matrix([
+                                          0, 0, 0, 0, 0,  // Red = 0
+                                          0, 0, 0, 0, 0,  // Green = 0
+                                          0, 0, 0, 0, 0,  // Blue = 0
+                                          0, 0, 0, 1, 0,  // Alpha = unchanged
+                                        ])
+                                      : const ColorFilter.matrix([
+                                          1, 0, 0, 0, 0,  // Red = unchanged
+                                          0, 1, 0, 0, 0,  // Green = unchanged
+                                          0, 0, 1, 0, 0,  // Blue = unchanged
+                                          0, 0, 0, 1, 0,  // Alpha = unchanged
+                                        ]),
+                                    child: Image.asset(
+                                      'assets/monstros_aventura/${monstro.colecao}/$nomeArquivo.png',
+                                      fit: BoxFit.contain,
+                                      height: MediaQuery.of(context).size.height * 0.6,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: monstro.isBloqueado
+                                          ? Colors.grey.withOpacity(0.8)
+                                          : monstro.tipo1.cor.withOpacity(0.8),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      monstro.nome,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                            return const CircularProgressIndicator();
+                          },
+                          loading: () => const CircularProgressIndicator(),
+                          error: (_, __) => const Icon(Icons.error, color: Colors.red, size: 64),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -294,21 +380,39 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
     );
   }
 
-  Widget _buildMonstroItem(String nomeArquivo, Tipo tipo) {
+  Widget _buildMonstroItem(String nomeArquivo, Tipo tipo, MonstroAventura monstro) {
+    // Usa tag única que inclui a coleção para evitar conflitos no Hero
+    final tagUnico = '${monstro.colecao}_$nomeArquivo';
+
     return GestureDetector(
-      onTap: () => setState(() => monstroExpandido = nomeArquivo),
+      onTap: () => setState(() => monstroExpandido = tagUnico),
       child: Card(
         elevation: 4,
         child: Column(
           children: [
             Expanded(
               child: Hero(
-                tag: nomeArquivo,
+                tag: tagUnico,
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  child: Image.asset(
-                    'assets/monstros_aventura/$nomeArquivo.png',
-                    fit: BoxFit.contain,
+                  child: ColorFiltered(
+                    colorFilter: monstro.isBloqueado
+                      ? const ColorFilter.matrix([
+                          0, 0, 0, 0, 0,  // Red = 0
+                          0, 0, 0, 0, 0,  // Green = 0
+                          0, 0, 0, 0, 0,  // Blue = 0
+                          0, 0, 0, 1, 0,  // Alpha = unchanged
+                        ])
+                      : const ColorFilter.matrix([
+                          1, 0, 0, 0, 0,  // Red = unchanged
+                          0, 1, 0, 0, 0,  // Green = unchanged
+                          0, 0, 1, 0, 0,  // Blue = unchanged
+                          0, 0, 0, 1, 0,  // Alpha = unchanged
+                        ]),
+                    child: Image.asset(
+                      'assets/monstros_aventura/${monstro.colecao}/$nomeArquivo.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
@@ -317,21 +421,25 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               decoration: BoxDecoration(
-                color: tipo.cor.withOpacity(0.2),
+                color: monstro.isBloqueado
+                    ? Colors.grey.withOpacity(0.2)
+                    : tipo.cor.withOpacity(0.2),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(12),
                   bottomRight: Radius.circular(12),
                 ),
               ),
               child: Text(
-                tipo.displayName.toUpperCase(),
+                monstro.nome.toUpperCase(),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: tipo.cor.withOpacity(0.8),
+                  color: monstro.isBloqueado
+                      ? Colors.grey.withOpacity(0.8)
+                      : tipo.cor.withOpacity(0.8),
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

@@ -205,7 +205,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: 'assets/monstros_aventura/${tipo.name}.png',
+        imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
         vida: vidaSorteada,
         energia: energiaSorteada,
         agilidade: agilidadeSorteada,
@@ -2176,7 +2176,7 @@ class _RoletaMonstrosWidgetState extends State<_RoletaMonstrosWidget>
     // Adiciona 15 imagens aleatórias antes da imagem final
     for (int i = 0; i < 15; i++) {
       tiposDisponiveis.shuffle();
-      imagensAleatorias.add('assets/monstros_aventura/${tiposDisponiveis.first}.png');
+      imagensAleatorias.add('assets/monstros_aventura/colecao_inicial/${tiposDisponiveis.first}.png');
     }
 
     // Adiciona a imagem do monstro final sorteado

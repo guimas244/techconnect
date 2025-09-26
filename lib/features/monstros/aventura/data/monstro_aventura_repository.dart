@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 import '../models/monstro_aventura.dart';
 import '../../../../core/services/google_drive_service.dart';
+import '../../../../shared/models/tipo_enum.dart';
 
 class MonstroAventuraRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
@@ -135,6 +134,34 @@ class MonstroAventuraRepository {
     _cacheCarregado = false;
   }
 
+  /// FORÇA REGENERAÇÃO DOS MONSTROS (para atualizar nomes)
+  Future<void> forcarRegeneracao() async {
+    try {
+      _cache.clear();
+      _cacheCarregado = false;
+
+      // Remove arquivo local para forçar regeneração completa
+      try {
+        if (!kIsWeb) {
+          final directory = await getApplicationDocumentsDirectory();
+          final file = File('${directory.path}/monstros_aventura.json');
+          if (await file.exists()) {
+            await file.delete();
+            print('🗑️ Arquivo local removido');
+          }
+        }
+      } catch (e) {
+        print('⚠️ Erro ao remover arquivo local: $e');
+      }
+
+      await _gerarColecoes();
+      await _salvarLocalmente();
+      print('✅ Monstros regenerados com novos nomes');
+    } catch (e) {
+      print('❌ Erro ao regenerar monstros: $e');
+    }
+  }
+
   // ========================================
   // 🔒 MÉTODOS PRIVADOS INTERNOS
   // ========================================
@@ -142,18 +169,142 @@ class MonstroAventuraRepository {
   /// Carrega cache pela primeira vez
   Future<void> _carregarCache() async {
     try {
-      // Tenta carregar do Drive primeiro
-      if (_driveService.isConectado) {
-        await _carregarDoDrive();
-      } else {
-        // Senão, carrega local
-        await _carregarLocalmente();
+      _cacheCarregado = true; // Marca como carregado primeiro
+
+      // Tenta carregar do Drive primeiro (sem bloquear)
+      try {
+        if (_driveService.isConectado) {
+          await _carregarDoDrive();
+        }
+      } catch (e) {
+        print('⚠️ Erro ao carregar do Drive: $e');
       }
-      _cacheCarregado = true;
+
+      // Se não carregou do Drive, tenta local (sem bloquear)
+      if (_cache.isEmpty) {
+        try {
+          await _carregarLocalmente();
+        } catch (e) {
+          print('⚠️ Erro ao carregar localmente: $e');
+        }
+      }
+
+      // Verifica se precisa regenerar com nomes reais
+      bool precisaRegenerar = false;
+      if (_cache.isNotEmpty) {
+        // Verifica se algum monstro ainda tem nome antigo (baseado no displayName)
+        for (final monstro in _cache) {
+          final nomeEsperado = monstro.colecao == 'colecao_nostalgicos'
+              ? '${monstro.tipo1.monsterName} Nostálgico'
+              : monstro.tipo1.monsterName;
+
+          if (monstro.nome != nomeEsperado) {
+            precisaRegenerar = true;
+            print('🔄 Detectado nome antigo: ${monstro.nome} -> $nomeEsperado');
+            break;
+          }
+        }
+      }
+
+      // Se cache vazio ou precisa regenerar, gera monstros das duas coleções
+      if (_cache.isEmpty || precisaRegenerar) {
+        if (precisaRegenerar) {
+          print('🔄 Regenerando monstros com nomes reais...');
+          _cache.clear();
+        }
+        // Executa em background para não bloquear inicialização
+        _gerarColecoes().catchError((e) {
+          print('⚠️ Erro em background ao gerar coleções: $e');
+        });
+      }
     } catch (e) {
-      print('⚠️ Erro ao carregar cache: $e');
-      _cacheCarregado = true; // Marca como carregado mesmo com erro
+      print('⚠️ Erro geral ao carregar cache: $e');
+      _cacheCarregado = true; // Sempre marca como carregado
     }
+  }
+
+  /// Gera automaticamente as duas coleções de monstros
+  Future<void> _gerarColecoes() async {
+    try {
+      print('🎮 Gerando coleções de monstros...');
+      final agora = DateTime.now();
+
+      // Lista segura de tipos para evitar problemas de inicialização
+      final tiposSeguro = [
+        Tipo.agua, Tipo.fogo, Tipo.planta, Tipo.eletrico, Tipo.psiquico,
+        Tipo.gelo, Tipo.dragao, Tipo.trevas, Tipo.fera, Tipo.venenoso,
+        Tipo.terrestre, Tipo.voador, Tipo.inseto, Tipo.pedra, Tipo.fantasma,
+        Tipo.normal, Tipo.luz, Tipo.magico, Tipo.marinho, Tipo.subterraneo,
+        Tipo.tecnologia, Tipo.alien, Tipo.tempo, Tipo.vento, Tipo.mistico,
+        Tipo.deus, Tipo.desconhecido, Tipo.nostalgico, Tipo.docrates, Tipo.zumbi
+      ];
+
+      // Gerar coleção inicial (desbloqueada)
+      for (final tipo in tiposSeguro) {
+        try {
+          final monstroInicial = MonstroAventura(
+            id: 'inicial_${tipo.name}',
+            nome: _gerarNomePorTipo(tipo, false),
+            tipo1: tipo,
+            tipo2: _obterTipoSecundario(tipo, tiposSeguro),
+            criadoEm: agora,
+            colecao: 'colecao_inicial',
+            isBloqueado: false,
+          );
+          _cache.add(monstroInicial);
+        } catch (e) {
+          print('⚠️ Erro ao gerar monstro inicial ${tipo.name}: $e');
+        }
+      }
+
+      // Gerar coleção nostálgicos (bloqueada)
+      for (final tipo in tiposSeguro) {
+        try {
+          final monstroNostalgico = MonstroAventura(
+            id: 'nostalgico_${tipo.name}',
+            nome: _gerarNomePorTipo(tipo, true),
+            tipo1: tipo,
+            tipo2: _obterTipoSecundario(tipo, tiposSeguro),
+            criadoEm: agora,
+            colecao: 'colecao_nostalgicos',
+            isBloqueado: true,
+          );
+          _cache.add(monstroNostalgico);
+        } catch (e) {
+          print('⚠️ Erro ao gerar monstro nostálgico ${tipo.name}: $e');
+        }
+      }
+
+      print('✅ ${_cache.length} monstros gerados');
+
+      // Salva as coleções de forma assíncrona e defensiva
+      try {
+        await _salvarLocalmente();
+        if (_driveService.isConectado) {
+          await _salvarNoDrive();
+        }
+      } catch (e) {
+        print('⚠️ Erro ao salvar coleções: $e');
+        // Não falha a geração por problemas de salvamento
+      }
+    } catch (e) {
+      print('❌ Erro ao gerar coleções: $e');
+      // Não propaga o erro para não quebrar a inicialização
+    }
+  }
+
+  /// Gera nome baseado no tipo e coleção
+  String _gerarNomePorTipo(Tipo tipo, bool isNostalgico) {
+    final sufixo = isNostalgico ? ' Nostálgico' : '';
+    return tipo.monsterName + sufixo;
+  }
+
+  /// Obtém tipo secundário baseado no principal
+  Tipo _obterTipoSecundario(Tipo tipoPrincipal, [List<Tipo>? tiposDisponiveis]) {
+    final tipos = (tiposDisponiveis ?? Tipo.values).where((t) => t != tipoPrincipal).toList();
+    if (tipos.isEmpty) return Tipo.normal; // Fallback seguro
+    tipos.shuffle();
+    return tipos.first;
   }
 
   /// Carrega dados do Google Drive

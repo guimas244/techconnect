@@ -224,7 +224,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     final indice = hash % tiposDisponiveis.length;
     final tipoEscolhido = tiposDisponiveis[indice];
     
-    return 'assets/monstros_aventura/${tipoEscolhido.name}.png';
+    return 'assets/monstros_aventura/colecao_inicial/${tipoEscolhido.name}.png';
   }
 
   /// Formata o horário da pontuação

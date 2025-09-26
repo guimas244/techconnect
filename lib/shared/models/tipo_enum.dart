@@ -96,7 +96,7 @@ enum Tipo {
       case Tipo.vento:
         return 'Balin';
       case Tipo.voador:
-        return 'Balin'; // Usando mesmo nome que vento
+        return 'Vipinho';
       case Tipo.zumbi:
         return 'Ratazana';
     }

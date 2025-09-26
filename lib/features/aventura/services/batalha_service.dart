@@ -104,7 +104,8 @@ class BatalhaService {
     int scoreGanho = 0;
     int scoreDepois = scoreAtual;
     if (vencedor == 'jogador') {
-      scoreGanho = tierAtual;
+      // A partir do tier 11, monstros dão 2 pontos
+      scoreGanho = tierAtual >= 11 ? 2 : tierAtual;
       scoreDepois = scoreAtual + scoreGanho;
     }
     
