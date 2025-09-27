@@ -124,20 +124,20 @@ class RecompensaService {
     // Calcula boost de qualidade: cada 10 de score = +1% de chance de subir raridade
     final boostQualidade = score ~/ 10; // 1% por cada 10 de score
     print('📊 [RecompensaService] Boost de qualidade: Score $score ÷ 10 = $boostQualidade níveis de boost');
-    
+
     // Gera item normal primeiro
     final itemBase = _itemService.gerarItemAleatorio(tierAtual: tierAtual);
     print('🎯 [RecompensaService] Item base gerado: ${itemBase.nome} (${itemBase.raridade.nome})');
-    
+
     // Aplica melhoria de qualidade se necessário
     final raridadeMelhorada = _aplicarMelhoriaQualidade(itemBase.raridade, boostQualidade);
-    
+
     // Se a raridade mudou, recria o item com nova raridade
     if (raridadeMelhorada != itemBase.raridade) {
       print('⬆️ [RecompensaService] Item melhorado: ${itemBase.raridade.nome} → ${raridadeMelhorada.nome}');
       return _itemService.gerarItemComRaridade(raridadeMelhorada, tierAtual: tierAtual);
     }
-    
+
     print('📦 [RecompensaService] Item manteve raridade: ${itemBase.raridade.nome}');
     return itemBase;
   }

@@ -674,14 +674,44 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   Future<List<MonstroInimigo>> _gerarNovosMonstrosParaTier(int novoTier) async {
     // Gera novos monstros usando o repository para o novo tier
     final repository = ref.read(aventuraRepositoryProvider);
-    
+
     print('🔄 [MapaAventura] Gerando novos monstros inimigos para tier $novoTier');
-    
+
     // Chama o método público do repository para gerar novos monstros com itens
     final novosMonstros = await repository.gerarMonstrosInimigosPorTier(novoTier);
-    
+
     print('✅ [MapaAventura] Novos monstros gerados com tier $novoTier');
     return novosMonstros;
+  }
+
+  String _getMensagemDificuldadeTitulo(int tier) {
+    switch (tier) {
+      case 19:
+        return 'Tier 20: Inimigos Mais Fortes';
+      case 29:
+        return 'Tier 30: Equipamentos Melhores';
+      case 39:
+        return 'Tier 40: Itens de Elite';
+      case 49:
+        return 'Tier 50: Equipamentos Lendários';
+      default:
+        return 'Aumento de Dificuldade';
+    }
+  }
+
+  String _getMensagemDificuldadeDescricao(int tier) {
+    switch (tier) {
+      case 19:
+        return 'A partir do tier 20, os inimigos não usarão mais itens inferiores. Apenas itens normais ou superiores serão equipados.';
+      case 29:
+        return 'A partir do tier 30, os inimigos não usarão mais itens normais. Apenas itens raros ou superiores serão equipados.';
+      case 39:
+        return 'A partir do tier 40, os inimigos não usarão mais itens raros. Apenas itens épicos ou superiores serão equipados.';
+      case 49:
+        return 'A partir do tier 50, os inimigos não usarão mais itens épicos. Apenas itens lendários serão equipados pelos inimigos.';
+      default:
+        return 'Os inimigos ficarão mais desafiadores a partir deste tier.';
+    }
   }
 
   void _mostrarModalAvancarTier(bool podeAvancar, int monstrosMortos) {
@@ -691,6 +721,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         // Verificar se é o andar 10
         bool isAndar10 = historiaAtual?.tier == 10;
 
+        // Verificar se é um dos tiers de aumento de dificuldade
+        bool isTierDificuldade = podeAvancar && [19, 29, 39, 49].contains(historiaAtual?.tier);
+
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -698,18 +731,18 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           title: Row(
             children: [
               Icon(
-                podeAvancar ? (isAndar10 ? Icons.warning : Icons.arrow_upward) : Icons.block,
-                color: podeAvancar ? (isAndar10 ? Colors.orange : Colors.green) : Colors.red,
+                podeAvancar ? (isAndar10 ? Icons.warning : (isTierDificuldade ? Icons.trending_up : Icons.arrow_upward)) : Icons.block,
+                color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
                 size: 28,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   podeAvancar
-                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : 'Avançar Tier')
+                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier'))
                     : 'Requisitos não atendidos',
                   style: TextStyle(
-                    color: podeAvancar ? (isAndar10 ? Colors.orange : Colors.green) : Colors.red,
+                    color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -722,7 +755,44 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (podeAvancar) ...[
-                if (isAndar10) ...[
+                if (isTierDificuldade) ...[
+                  // Mensagens específicas de aumento de dificuldade
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.deepOrange.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.trending_up, color: Colors.deepOrange, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _getMensagemDificuldadeTitulo(historiaAtual!.tier),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepOrange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _getMensagemDificuldadeDescricao(historiaAtual!.tier),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (isAndar10) ...[
                   // Aviso especial para o andar 10
                   Container(
                     padding: const EdgeInsets.all(12),

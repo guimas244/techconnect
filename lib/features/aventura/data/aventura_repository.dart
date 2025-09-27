@@ -598,21 +598,23 @@ class AventuraRepository {
       // Aplica evolução aleatória nas habilidades baseado no tier (tier 2+)
       final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
       
-      // Gera item equipado baseado nas regras de tier
+      // Gera item equipado baseado nas regras de tier e restrições de dificuldade
       Item? itemEquipado;
       if (tierAtual == 2) {
-        // Tier 2: monstros sempre usam itens de tier 1
+        // Tier 2: monstros sempre usam itens de tier 1 (sem restrições ainda)
         itemEquipado = _itemService.gerarItemAleatorio(tierAtual: 1);
         print('🎯 [Repository] Monstro tier 2 recebeu item tier 1: ${itemEquipado.nome}');
       } else if (tierAtual >= 3) {
         // Tier 3+: 40% de chance de usar item de 1 tier abaixo, 60% chance de item do mesmo tier
         final chanceItem = random.nextInt(100);
         if (chanceItem < 40) {
-          itemEquipado = _itemService.gerarItemAleatorio(tierAtual: tierAtual - 1);
-          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance)');
+          // Item de tier anterior COM restrições de dificuldade
+          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance) - COM RESTRIÇÕES');
         } else {
-          itemEquipado = _itemService.gerarItemAleatorio(tierAtual: tierAtual);
-          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance)');
+          // Item do tier atual COM restrições de dificuldade
+          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance) - COM RESTRIÇÕES');
         }
       } else {
         // Tier 1: sem itens
@@ -681,9 +683,9 @@ class AventuraRepository {
     final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
     final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
 
-    // Gera item SEMPRE raro ou superior para monstro elite
-    final itemElite = _itemService.gerarItemElite(tierAtual: tierAtual);
-    print('👑 [Repository] Monstro elite recebeu item: ${itemElite.nome} (${itemElite.raridade.nome})');
+    // Gera item SEMPRE raro ou superior para monstro elite COM restrições de dificuldade
+    final itemElite = _itemService.gerarItemEliteComRestricoes(tierAtual: tierAtual);
+    print('👑 [Repository] Monstro elite recebeu item: ${itemElite.nome} (${itemElite.raridade.nome}) - COM RESTRIÇÕES');
 
     // Calcula atributos base
     final vidaBase = AtributoJogo.vida.sortear(random);
