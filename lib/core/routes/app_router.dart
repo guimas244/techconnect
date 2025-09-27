@@ -15,6 +15,7 @@ import '../../features/aventura/presentation/mapa_aventura_screen.dart';
 import '../../features/aventura/models/historia_jogador.dart';
 import '../../features/jogador/presentation/jogador_screen.dart';
 import '../../features/jogador/presentation/colecao_screen.dart';
+import '../../features/jogador/presentation/vantagens_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
@@ -98,6 +99,10 @@ class AppRouter {
           GoRoute(
             path: 'colecao',
             builder: (context, state) => const ColecaoScreen(),
+          ),
+          GoRoute(
+            path: 'vantagens',
+            builder: (context, state) => const VantagensScreen(),
           ),
         ],
       ),

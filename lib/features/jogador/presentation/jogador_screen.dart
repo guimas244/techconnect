@@ -48,18 +48,10 @@ class JogadorScreen extends StatelessWidget {
                 _buildMenuCard(
                   context: context,
                   title: 'Vantagens',
-                  subtitle: 'Visualize estatísticas e conquistas',
+                  subtitle: 'Bônus obtidos através das coleções',
                   icon: Icons.star,
                   color: Colors.blue,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Funcionalidade em desenvolvimento...'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
-                  enabled: false,
+                  onTap: () => context.go('/jogador/vantagens'),
                 ),
                 const SizedBox(height: 20),
 
