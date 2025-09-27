@@ -22,7 +22,11 @@ enum AtributoJogo {
 
   // Ganhos de evolução por nível
   evolucaoGanhoVida(min: 25, max: 25), // Ganho de vida por evolução
-  evolucaoGanhoEnergia(min: 1, max: 1); // Ganho de energia por evolução
+  evolucaoGanhoEnergia(min: 1, max: 1), // Ganho de energia por evolução
+
+  // Sistema de descoberta de monstros raros da nova coleção
+  chanceMonstroColecoRaro(min: 1, max: 1), // 1% de chance de aparecer monstro raro
+  tierMinimoMonstroColecoRaro(min: 3, max: 3); // A partir do tier 3
 
   final int min;
   final int max;
@@ -53,4 +57,18 @@ enum AtributoJogo {
   }
 
   String get rangeTexto => '$min a $max';
+
+  /// Verifica se o tier atual permite monstros raros da nova coleção
+  static bool podeGerarMonstroRaro(int tier) {
+    return tier >= AtributoJogo.tierMinimoMonstroColecoRaro.min;
+  }
+
+  /// Obtém a chance (em %) de gerar monstro raro
+  static int get chanceMonstroColecoRaroPercent => AtributoJogo.chanceMonstroColecoRaro.min;
+
+  /// Verifica se deve gerar monstro raro baseado na chance
+  static bool deveGerarMonstroRaro(Random random, int tier) {
+    if (!podeGerarMonstroRaro(tier)) return false;
+    return random.nextInt(100) < chanceMonstroColecoRaroPercent;
+  }
 }

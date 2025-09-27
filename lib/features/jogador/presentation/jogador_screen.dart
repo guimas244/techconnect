@@ -10,6 +10,12 @@ class JogadorScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Jogador'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/home');
+          },
+        ),
       ),
       body: Stack(
         children: [
@@ -41,9 +47,9 @@ class JogadorScreen extends StatelessWidget {
                 // Placeholder para futuras funcionalidades
                 _buildMenuCard(
                   context: context,
-                  title: 'Perfil',
+                  title: 'Vantagens',
                   subtitle: 'Visualize estatísticas e conquistas',
-                  icon: Icons.person,
+                  icon: Icons.star,
                   color: Colors.blue,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(

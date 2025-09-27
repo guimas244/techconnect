@@ -17,6 +17,8 @@ import '../../tipagem/data/tipagem_repository.dart';
 import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
+import '../services/colecao_service.dart';
+import 'modal_monstro_desbloqueado.dart';
 // Removendo import não usado
 import 'modal_monstro_aventura.dart';
 import 'modal_monstro_inimigo.dart';
@@ -50,6 +52,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool jogadorComeca = true;
   bool itemGerado = false;
   bool evolucaoProcessada = false;
+  bool monstroRaroDesbloqueado = false;
   bool scoreAtualizado = false;
   bool podeVoltarParaAventura = false;
   int turnoAtual = 1;
@@ -748,9 +751,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         );
         // Salva histórico apenas no HIVE (SEM atualizar ranking em vitórias)
         await repository.salvarHistoricoJogadorLocal(historiaComScore);
-        
+
         print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
       }
+
+      // 🌟 Processa desbloqueio de monstro raro se aplicável
+      await _processarDesbloqueioMonstroRaro();
+
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
     }
@@ -759,16 +766,79 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     _processarEvolucaoEItens();
   }
 
+  Future<void> _processarDesbloqueioMonstroRaro() async {
+    try {
+      // Verifica se o inimigo derrotado é um monstro raro
+      if (!widget.inimigo.isRaro) {
+        print('🌟 [Desbloqueio] Inimigo não é raro, ignorando desbloqueio');
+        return;
+      }
+
+      final emailJogador = ref.read(validUserEmailProvider);
+      final colecaoService = ColecaoService();
+
+      // Verifica se o jogador já tem esse monstro desbloqueado
+      final jaTemMonstro = await colecaoService.jogadorJaTemMonstro(
+        emailJogador,
+        widget.inimigo.tipo,
+        ehNostalgico: widget.inimigo.ehNostalgico,
+      );
+
+      if (jaTemMonstro) {
+        print('🌟 [Desbloqueio] Jogador já possui ${widget.inimigo.nome}, não adicionando novamente');
+        return;
+      }
+
+      // Adiciona o monstro raro à coleção do jogador
+      await colecaoService.adicionarMonstroAColecao(
+        emailJogador,
+        widget.inimigo.tipo,
+        ehNostalgico: widget.inimigo.ehNostalgico,
+      );
+
+      print('🎉 [Desbloqueio] Monstro raro ${widget.inimigo.nome} desbloqueado e adicionado à coleção!');
+
+      // Marca que houve desbloqueio para alterar o fluxo do modal
+      setState(() {
+        monstroRaroDesbloqueado = true;
+      });
+
+      // Mostra o modal de desbloqueio
+      await _mostrarModalDesbloqueio();
+
+    } catch (e) {
+      print('❌ [Desbloqueio] Erro ao processar desbloqueio de monstro raro: $e');
+    }
+  }
+
+  Future<void> _mostrarModalDesbloqueio() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalMonstroDesbloqueado(
+        monstroDesbloqueado: widget.inimigo,
+      ),
+    );
+  }
+
   Future<void> _processarEvolucaoEItens() async {
     if (evolucaoProcessada) {
       print('⚠️ [BatalhaScreen] Evolução e itens já processados, ignorando chamada duplicada');
       return;
     }
+
+    // Se houve desbloqueio de monstro raro, não processa evolução/itens
+    if (monstroRaroDesbloqueado) {
+      print('🌟 [BatalhaScreen] Monstro raro desbloqueado, pulando evolução e drops');
+      evolucaoProcessada = true;
+      return;
+    }
+
     evolucaoProcessada = true;
-    
+
     // 1️⃣ Primeiro processa e mostra evolução
     await _processarEvolucaoMonstro();
-    
+
     // 2️⃣ Depois processa geração de item (o salvamento será feito após o equipamento)
     _gerarEMostrarItem();
   }

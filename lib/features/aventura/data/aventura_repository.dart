@@ -713,6 +713,13 @@ class AventuraRepository {
       monstrosInimigos.add(monstroElite);
     }
 
+    // 🌟 NOVO: Gera monstro raro da nova coleção se atender aos critérios
+    if (AtributoJogo.deveGerarMonstroRaro(random, tierAtual)) {
+      print('🌟 [Repository] Gerando monstro RARO da nova coleção (${AtributoJogo.chanceMonstroColecoRaroPercent}% chance no tier $tierAtual)');
+      final monstroRaro = await _gerarMonstroRaro(tierAtual, random);
+      monstrosInimigos.add(monstroRaro);
+    }
+
     return monstrosInimigos;
   }
 
@@ -767,6 +774,68 @@ class AventuraRepository {
       itemEquipado: itemElite,
       level: tierAtual,
       isElite: true, // Marca como elite
+    );
+  }
+
+  /// Gera um monstro raro da nova coleção (nostálgicos)
+  Future<MonstroInimigo> _gerarMonstroRaro(int tierAtual, Random random) async {
+    // Escolhe um tipo aleatório para o monstro raro
+    final tiposDisponiveis = Tipo.values.toList();
+    final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
+    final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+    outrosTipos.shuffle(random);
+    final tipoExtra = outrosTipos.first;
+
+    // Gera habilidades para o monstro raro
+    final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
+    final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
+
+    // Monstros raros têm chance de item igual aos monstros normais (não são elite)
+    Item? itemEquipado;
+    if (tierAtual == 2) {
+      itemEquipado = _itemService.gerarItemAleatorio(tierAtual: 1);
+    } else if (tierAtual >= 3) {
+      final chanceItem = random.nextInt(100);
+      if (chanceItem < 40) {
+        itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+      } else {
+        itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+      }
+    }
+
+    // Calcula atributos normais (não é elite, então não dobra vida)
+    final vidaBase = AtributoJogo.vida.sortear(random);
+    final energiaBase = AtributoJogo.energia.sortear(random);
+    final niveisEvolucao = tierAtual;
+
+    // Aplica ganhos de evolução
+    final vidaComEvolucao = vidaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoVida.min);
+
+    // Aplica bônus de vida por tier
+    final bonusPercentual = AtributoJogo.calcularBonusVidaInimigo(tierAtual);
+    final vidaFinal = (vidaComEvolucao * (1.0 + bonusPercentual)).round();
+    final energiaFinal = energiaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min);
+
+    print('🌟 [Repository] Monstro RARO tier $tierAtual:');
+    print('   - Tipo: ${tipo.name} (Da nova coleção nostálgica)');
+    print('   - Vida: $vidaFinal');
+    print('   - Energia: $energiaFinal');
+    print('   - Item: ${itemEquipado?.nome ?? 'Nenhum'}');
+
+    return MonstroInimigo(
+      tipo: tipo,
+      tipoExtra: tipoExtra,
+      imagem: 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png', // Usa imagem da coleção nostálgica
+      vida: vidaFinal,
+      energia: energiaFinal,
+      agilidade: AtributoJogo.agilidade.sortear(random),
+      ataque: AtributoJogo.ataque.sortear(random),
+      defesa: AtributoJogo.defesa.sortear(random),
+      habilidades: habilidades,
+      itemEquipado: itemEquipado,
+      level: tierAtual,
+      isElite: false, // Não é elite, é monstro raro
+      isRaro: true, // NOVO: Marca como monstro raro
     );
   }
 

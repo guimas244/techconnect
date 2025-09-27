@@ -17,6 +17,7 @@ class MonstroInimigo {
   final Item? itemEquipado;
   final int level; // Level do monstro
   final bool isElite; // Se é um monstro elite
+  final bool isRaro; // Se é um monstro raro da nova coleção
 
   const MonstroInimigo({
     required this.tipo,
@@ -33,6 +34,7 @@ class MonstroInimigo {
     this.itemEquipado,
     this.level = 1, // Level inicial é 1
     this.isElite = false, // Por padrão não é elite
+    this.isRaro = false, // Por padrão não é raro
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -70,6 +72,7 @@ class MonstroInimigo {
           : null, // Ignora o campo 'item' antigo (String) se existir
       level: json['level'] ?? 1,
       isElite: json['isElite'] ?? false,
+      isRaro: json['isRaro'] ?? false,
     );
   }
 
@@ -89,6 +92,7 @@ class MonstroInimigo {
       'itemEquipado': itemEquipado?.toMap(),
       'level': level,
       'isElite': isElite,
+      'isRaro': isRaro,
     };
   }
 
@@ -107,6 +111,7 @@ class MonstroInimigo {
     Item? itemEquipado,
     int? level,
     bool? isElite,
+    bool? isRaro,
   }) {
     return MonstroInimigo(
       tipo: tipo ?? this.tipo,
@@ -123,6 +128,7 @@ class MonstroInimigo {
       itemEquipado: itemEquipado ?? this.itemEquipado,
       level: level ?? this.level,
       isElite: isElite ?? this.isElite,
+      isRaro: isRaro ?? this.isRaro,
     );
   }
 

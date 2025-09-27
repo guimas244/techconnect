@@ -279,4 +279,58 @@ class ColecaoService {
       return false;
     }
   }
+
+  /// Verifica se o jogador já tem um monstro específico desbloqueado
+  Future<bool> jogadorJaTemMonstro(String email, dynamic tipo, {bool ehNostalgico = false}) async {
+    try {
+      // Converte o tipo para string
+      String nomeMonstro;
+      if (tipo.toString().contains('Tipo.')) {
+        // Se é um enum Tipo, pega o nome
+        nomeMonstro = tipo.toString().split('.').last;
+      } else {
+        nomeMonstro = tipo.toString();
+      }
+
+      // Se é nostálgico, usa o nome como está
+      // Se não é nostálgico, usa o nome do tipo base
+      final chaveColecao = nomeMonstro;
+
+      print('🔍 [ColecaoService] Verificando se jogador $email tem monstro: $chaveColecao (nostálgico: $ehNostalgico)');
+
+      final colecao = await carregarColecaoJogador(email);
+      final temMonstro = colecao[chaveColecao] == true;
+
+      print('✅ [ColecaoService] Resultado: ${temMonstro ? "TEM" : "NÃO TEM"} o monstro $chaveColecao');
+      return temMonstro;
+    } catch (e) {
+      print('❌ [ColecaoService] Erro ao verificar se jogador tem monstro: $e');
+      return false;
+    }
+  }
+
+  /// Adiciona um monstro à coleção do jogador
+  Future<bool> adicionarMonstroAColecao(String email, dynamic tipo, {bool ehNostalgico = false}) async {
+    try {
+      // Converte o tipo para string
+      String nomeMonstro;
+      if (tipo.toString().contains('Tipo.')) {
+        // Se é um enum Tipo, pega o nome
+        nomeMonstro = tipo.toString().split('.').last;
+      } else {
+        nomeMonstro = tipo.toString();
+      }
+
+      // Se é nostálgico, usa o nome como está
+      // Se não é nostálgico, usa o nome do tipo base
+      final chaveColecao = nomeMonstro;
+
+      print('🔓 [ColecaoService] Adicionando monstro $chaveColecao à coleção de $email (nostálgico: $ehNostalgico)');
+
+      return await desbloquearMonstro(email, chaveColecao);
+    } catch (e) {
+      print('❌ [ColecaoService] Erro ao adicionar monstro à coleção: $e');
+      return false;
+    }
+  }
 }

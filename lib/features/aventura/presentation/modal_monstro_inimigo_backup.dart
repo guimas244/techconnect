@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/monstro_inimigo.dart';
 import '../../../shared/models/habilidade_enum.dart';
-import '../services/colecao_service.dart';
-import '../../../core/services/storage_service.dart';
 import 'package:remixicon/remixicon.dart';
 import 'modal_detalhe_item_equipado.dart';
 
-class ModalMonstroInimigo extends StatefulWidget {
+class ModalMonstroInimigo extends StatelessWidget {
   final MonstroInimigo monstro;
   final VoidCallback? onClose;
   final bool showCloseButton;
@@ -23,79 +21,9 @@ class ModalMonstroInimigo extends StatefulWidget {
   });
 
   @override
-  State<ModalMonstroInimigo> createState() => _ModalMonstroInimigoState();
-}
-
-class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
-  bool _estaBloqueado = false;
-  bool _carregando = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _verificarDesbloqueio();
-  }
-
-  Future<void> _verificarDesbloqueio() async {
-    if (!widget.monstro.isRaro) {
-      // Monstros normais sempre desbloqueados
-      setState(() {
-        _estaBloqueado = false;
-        _carregando = false;
-      });
-      return;
-    }
-
-    try {
-      final storageService = StorageService();
-      final email = await storageService.getLastEmail();
-
-      if (email != null) {
-        final colecaoService = ColecaoService();
-        final desbloqueado = await colecaoService.jogadorJaTemMonstro(
-          email,
-          widget.monstro.tipo,
-          ehNostalgico: widget.monstro.ehNostalgico,
-        );
-
-        setState(() {
-          _estaBloqueado = !desbloqueado;
-          _carregando = false;
-        });
-
-        print('🔍 [ModalMonstro] Monstro raro ${widget.monstro.tipo.name}: ${desbloqueado ? "DESBLOQUEADO" : "BLOQUEADO"}');
-      } else {
-        setState(() {
-          _estaBloqueado = true;
-          _carregando = false;
-        });
-      }
-    } catch (e) {
-      print('❌ [ModalMonstro] Erro ao verificar desbloqueio: $e');
-      setState(() {
-        _estaBloqueado = true;
-        _carregando = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     // Verifica se o monstro está morto
-    final bool estaMorto = widget.monstro.vidaAtual <= 0;
-
-    // Mostra loading enquanto verifica desbloqueio
-    if (_carregando) {
-      return const Dialog(
-        child: SizedBox(
-          width: 100,
-          height: 100,
-          child: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
-    }
+    final bool estaMorto = monstro.vidaAtual <= 0;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -108,7 +36,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
           gradient: LinearGradient(
             colors: estaMorto
                 ? [Colors.grey.withOpacity(0.8), Colors.white]
-                : [widget.monstro.tipo.cor.withOpacity(0.8), Colors.white],
+                : [monstro.tipo.cor.withOpacity(0.8), Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -117,7 +45,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header com X de fechar (se showCloseButton for true)
-            if (widget.showCloseButton)
+            if (showCloseButton)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -137,7 +65,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                       ],
                     ),
                     child: IconButton(
-                      onPressed: widget.onClose ?? () => Navigator.of(context).pop(),
+                      onPressed: onClose ?? () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close),
                       color: Colors.black,
                       iconSize: 18,
@@ -147,7 +75,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                   ),
                 ],
               ),
-            if (widget.showCloseButton) const SizedBox(height: 10),
+            if (showCloseButton) const SizedBox(height: 10),
             Row(
               children: [
                 Container(
@@ -156,16 +84,14 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: estaMorto ? Colors.grey : widget.monstro.tipo.cor,
+                      color: estaMorto ? Colors.grey : monstro.tipo.cor,
                       width: 3
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: estaMorto
                             ? Colors.grey.withOpacity(0.3)
-                            : _estaBloqueado
-                                ? Colors.black.withOpacity(0.6)
-                                : widget.monstro.tipo.cor.withOpacity(0.3),
+                            : monstro.tipo.cor.withOpacity(0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -173,50 +99,37 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: _estaBloqueado
-                        ? Container(
-                            color: Colors.black,
-                            child: Center(
-                              child: Icon(
-                                Icons.lock,
-                                color: Colors.white.withOpacity(0.7),
-                                size: 40,
-                              ),
+                    child: ColorFiltered(
+                      colorFilter: estaMorto
+                          ? const ColorFilter.matrix([
+                              0.2126, 0.7152, 0.0722, 0, 0, // Red
+                              0.2126, 0.7152, 0.0722, 0, 0, // Green
+                              0.2126, 0.7152, 0.0722, 0, 0, // Blue
+                              0,      0,      0,      1, 0, // Alpha
+                            ])
+                          : const ColorFilter.matrix([
+                              1, 0, 0, 0, 0,
+                              0, 1, 0, 0, 0,
+                              0, 0, 1, 0, 0,
+                              0, 0, 0, 1, 0,
+                            ]),
+                      child: Image.asset(
+                        monstro.imagem,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: estaMorto
+                                ? Colors.grey.withOpacity(0.3)
+                                : monstro.tipo.cor.withOpacity(0.3),
+                            child: Icon(
+                              Icons.pets,
+                              color: estaMorto ? Colors.grey : monstro.tipo.cor,
+                              size: 40,
                             ),
-                          )
-                        : ColorFiltered(
-                            colorFilter: estaMorto
-                                ? const ColorFilter.matrix([
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Red
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Green
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Blue
-                                    0,      0,      0,      1, 0, // Alpha
-                                  ])
-                                : const ColorFilter.matrix([
-                                    1, 0, 0, 0, 0,
-                                    0, 1, 0, 0, 0,
-                                    0, 0, 1, 0, 0,
-                                    0, 0, 0, 1, 0,
-                                  ]),
-                            child: Image.asset(
-                              widget.monstro.imagem,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: estaMorto
-                                      ? Colors.grey.withOpacity(0.3)
-                                      : widget.monstro.tipo.cor.withOpacity(0.3),
-                                  child: Icon(
-                                    Icons.pets,
-                                    color: estaMorto
-                                        ? Colors.grey
-                                        : widget.monstro.tipo.cor,
-                                    size: 40,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -228,11 +141,11 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                         children: [
                           Flexible(
                             child: Text(
-                              widget.monstro.nome,
+                              monstro.nome,
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: estaMorto ? Colors.grey : widget.monstro.tipo.cor,
+                                color: estaMorto ? Colors.grey : monstro.tipo.cor,
                                 shadows: [
                                   Shadow(
                                     color: Colors.black26,
@@ -274,10 +187,10 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(widget.monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
+                          Image.asset(monstro.tipo.iconAsset, width: 32, height: 32, fit: BoxFit.contain),
                           const SizedBox(width: 8),
-                          if (widget.monstro.tipoExtra != null)
-                            Image.asset(widget.monstro.tipoExtra!.iconAsset, width: 32, height: 32, fit: BoxFit.contain)
+                          if (monstro.tipoExtra != null)
+                            Image.asset(monstro.tipoExtra!.iconAsset, width: 32, height: 32, fit: BoxFit.contain)
                           else
                             Container(width: 32, height: 32, color: Colors.transparent),
                           const SizedBox(width: 8),
@@ -299,7 +212,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                                     border: Border.all(color: Colors.white, width: 1),
                                   ),
                                   child: Text(
-                                    '${widget.monstro.level}',
+                                    '${monstro.level}',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
@@ -310,7 +223,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                               ),
                             ],
                           ),
-                          if (widget.monstro.itemEquipado != null) ...[
+                          if (monstro.itemEquipado != null) ...[
                             const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () {
@@ -329,12 +242,12 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: widget.monstro.itemEquipado!.raridade.cor,
+                                        color: monstro.itemEquipado!.raridade.cor,
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(color: Colors.white, width: 1),
                                       ),
                                       child: Text(
-                                        '${widget.monstro.itemEquipado!.tier}',
+                                        '${monstro.itemEquipado!.tier}',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
@@ -375,7 +288,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.monstro.tipo.cor,
+                      color: monstro.tipo.cor,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -383,16 +296,16 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildVidaInfo(), // Nova função para mostrar vida atual/máxima
-                      _buildAtributoInfo('Energia', widget.monstro.energiaTotal, Remix.battery_charge_fill, Colors.blue),
-                      _buildAtributoInfo('Agilidade', widget.monstro.agilidadeTotal, Remix.run_fill, Colors.green),
+                      _buildAtributoInfo('Energia', monstro.energiaTotal, Remix.battery_charge_fill, Colors.blue),
+                      _buildAtributoInfo('Agilidade', monstro.agilidadeTotal, Remix.run_fill, Colors.green),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildAtributoInfo('Ataque', widget.monstro.ataqueTotal, Remix.boxing_fill, Colors.orange),
-                      _buildAtributoInfo('Defesa', widget.monstro.defesaTotal, Remix.shield_cross_fill, Colors.purple),
+                      _buildAtributoInfo('Ataque', monstro.ataqueTotal, Remix.boxing_fill, Colors.orange),
+                      _buildAtributoInfo('Defesa', monstro.defesaTotal, Remix.shield_cross_fill, Colors.purple),
                     ],
                   ),
                 ],
@@ -404,14 +317,14 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
               width: double.infinity,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [widget.monstro.tipo.cor, widget.monstro.tipo.cor.withOpacity(0.7)],
+                  colors: [monstro.tipo.cor, monstro.tipo.cor.withOpacity(0.7)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.monstro.tipo.cor.withOpacity(0.3),
+                    color: monstro.tipo.cor.withOpacity(0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),
@@ -421,7 +334,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                 onPressed: () => _mostrarHabilidades(context),
                 icon: const Icon(Remix.magic_fill, color: Colors.white, size: 20),
                 label: Text(
-                  'Ver Habilidades (${widget.monstro.habilidades.length})',
+                  'Ver Habilidades (${monstro.habilidades.length})',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -440,7 +353,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
             ),
 
             // Botão de BATALHAR (apenas se showBattleButton for true)
-            if (widget.showBattleButton) ...[
+            if (showBattleButton) ...[
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -464,7 +377,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: estaMorto ? null : widget.onBattle,
+                  onPressed: estaMorto ? null : onBattle,
                   icon: Icon(
                     estaMorto ? Remix.skull_2_fill : Remix.sword_fill,
                     color: Colors.white,
@@ -503,24 +416,24 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
 
     switch (nome) {
       case 'Energia':
-        valorBase = widget.monstro.energia;
-        bonus = widget.monstro.itemEquipado?.energia ?? 0;
-        valorFinal = widget.monstro.energiaTotal;
+        valorBase = monstro.energia;
+        bonus = monstro.itemEquipado?.energia ?? 0;
+        valorFinal = monstro.energiaTotal;
         break;
       case 'Agilidade':
-        valorBase = widget.monstro.agilidade;
-        bonus = widget.monstro.itemEquipado?.agilidade ?? 0;
-        valorFinal = widget.monstro.agilidadeTotal;
+        valorBase = monstro.agilidade;
+        bonus = monstro.itemEquipado?.agilidade ?? 0;
+        valorFinal = monstro.agilidadeTotal;
         break;
       case 'Ataque':
-        valorBase = widget.monstro.ataque;
-        bonus = widget.monstro.itemEquipado?.ataque ?? 0;
-        valorFinal = widget.monstro.ataqueTotal;
+        valorBase = monstro.ataque;
+        bonus = monstro.itemEquipado?.ataque ?? 0;
+        valorFinal = monstro.ataqueTotal;
         break;
       case 'Defesa':
-        valorBase = widget.monstro.defesa;
-        bonus = widget.monstro.itemEquipado?.defesa ?? 0;
-        valorFinal = widget.monstro.defesaTotal;
+        valorBase = monstro.defesa;
+        bonus = monstro.itemEquipado?.defesa ?? 0;
+        valorFinal = monstro.defesaTotal;
         break;
     }
 
@@ -574,12 +487,12 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
 
   Widget _buildVidaInfo() {
     // Calcula valores de vida (valores fixos do JSON)
-    final vidaBase = widget.monstro.vida;
-    final bonusVida = widget.monstro.itemEquipado?.vida ?? 0;
-    final vidaMaximaTotal = widget.monstro.vidaTotal; // vida base + item (valores fixos)
+    final vidaBase = monstro.vida;
+    final bonusVida = monstro.itemEquipado?.vida ?? 0;
+    final vidaMaximaTotal = monstro.vidaTotal; // vida base + item (valores fixos)
 
     // Vida atual = JSON base + bônus do item
-    final vidaAtualComBonusItem = widget.monstro.vidaAtual + bonusVida;
+    final vidaAtualComBonusItem = monstro.vidaAtual + bonusVida;
 
     // Calcula a cor da vida baseada na porcentagem
     double percentualVida = (vidaAtualComBonusItem / vidaMaximaTotal).clamp(0.0, 1.0);
@@ -618,7 +531,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                 ),
               ),
               Text(
-                '${widget.monstro.vidaAtual} (+$bonusVida)',
+                '${monstro.vidaAtual} (+$bonusVida)',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -629,7 +542,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
           )
         else
           Text(
-            '${widget.monstro.vidaAtual}/$vidaBase',
+            '${monstro.vidaAtual}/$vidaBase',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -663,16 +576,16 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
   void _mostrarHabilidades(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => _HabilidadesInimigoDialog(monstro: widget.monstro),
+      builder: (context) => _HabilidadesInimigoDialog(monstro: monstro),
     );
   }
 
   void _mostrarDetalheItem(BuildContext context) {
-    if (widget.monstro.itemEquipado != null) {
+    if (monstro.itemEquipado != null) {
       showDialog(
         context: context,
         builder: (ctx) => ModalDetalheItemEquipado(
-          item: widget.monstro.itemEquipado!,
+          item: monstro.itemEquipado!,
         ),
       );
     }
