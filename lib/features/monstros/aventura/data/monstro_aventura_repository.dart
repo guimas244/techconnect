@@ -195,7 +195,7 @@ class MonstroAventuraRepository {
         // Verifica se algum monstro ainda tem nome antigo (baseado no displayName)
         for (final monstro in _cache) {
           final nomeEsperado = monstro.colecao == 'colecao_nostalgicos'
-              ? '${monstro.tipo1.monsterName} Nostálgico'
+              ? monstro.tipo1.nostalgicMonsterName
               : monstro.tipo1.monsterName;
 
           if (monstro.nome != nomeEsperado) {
@@ -297,8 +297,7 @@ class MonstroAventuraRepository {
 
   /// Gera nome baseado no tipo e coleção
   String _gerarNomePorTipo(Tipo tipo, bool isNostalgico) {
-    final sufixo = isNostalgico ? ' Nostálgico' : '';
-    return tipo.monsterName + sufixo;
+    return isNostalgico ? tipo.nostalgicMonsterName : tipo.monsterName;
   }
 
   /// Obtém tipo secundário baseado no principal

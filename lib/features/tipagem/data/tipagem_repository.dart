@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/services/google_drive_service.dart';
+import '../../aventura/services/colecao_hive_service.dart';
 
 class TipagemRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
+  final ColecaoHiveService _colecaoHiveService = ColecaoHiveService();
   
   // ✅ NOVO CICLO DE VIDA - DEPENDENTE DO DRIVE
   static final Map<Tipo, Map<Tipo, double>> _dadosLocais = {};
@@ -91,10 +93,13 @@ class TipagemRepository {
       if (sucessoCompleto) {
         _foiBaixadoDoDrive = true;
         _isInicializado = true;
-        
+
         // ✅ SALVA CACHE LOCAL APÓS DOWNLOAD BEM-SUCEDIDO
         await _salvarCacheLocal();
-        
+
+        // ✅ INICIALIZA E SINCRONIZA COLEÇÕES
+        await _inicializarColecoes();
+
         print('✅ App inicializado com sucesso! Dados baixados do Drive.');
         return true;
       } else {
@@ -623,13 +628,148 @@ class TipagemRepository {
       final dir = await getApplicationDocumentsDirectory();
       final cacheFile = File('${dir.path}/$_cacheFileName');
       final metaFile = File('${dir.path}/$_cacheMetaFileName');
-      
+
       if (cacheFile.existsSync()) await cacheFile.delete();
       if (metaFile.existsSync()) await metaFile.delete();
-      
+
       print('✅ Cache local limpo');
     } catch (e) {
       print('❌ Erro ao limpar cache local: $e');
+    }
+  }
+
+  // ========================================
+  // ✅ MÉTODOS DE COLEÇÕES
+  // ========================================
+
+  /// Inicializa e sincroniza coleções durante o download inicial
+  Future<void> _inicializarColecoes() async {
+    try {
+      print('🎯 [TipagemRepository] Inicializando sistema de coleções...');
+
+      // Inicializa o HIVE service das coleções
+      await _colecaoHiveService.init();
+
+      // Obtém email do usuário atual (se disponível)
+      final email = await _obterEmailUsuarioAtual();
+      if (email == null) {
+        print('⚠️ [TipagemRepository] Email não disponível, pulando sincronização de coleções');
+        return;
+      }
+
+      print('👤 [TipagemRepository] Sincronizando coleções para: $email');
+
+      // Tenta baixar coleção do Drive
+      await _sincronizarColecaoComDrive(email);
+
+      print('✅ [TipagemRepository] Sistema de coleções inicializado');
+    } catch (e) {
+      print('❌ [TipagemRepository] Erro ao inicializar coleções: $e');
+      // Não falha a inicialização principal por causa das coleções
+    }
+  }
+
+  /// Obtém o email do usuário atual
+  Future<String?> _obterEmailUsuarioAtual() async {
+    try {
+      // Implementação simplificada - pode ser expandida para usar providers
+      // Por enquanto, retorna null para não quebrar o fluxo
+      return null;
+    } catch (e) {
+      print('❌ [TipagemRepository] Erro ao obter email do usuário: $e');
+      return null;
+    }
+  }
+
+  /// Sincroniza coleção de um jogador específico com o Drive
+  Future<void> _sincronizarColecaoComDrive(String email) async {
+    try {
+      print('🔄 [TipagemRepository] Sincronizando coleção para: $email');
+
+      // Verifica se já existe coleção local
+      final temColecaoLocal = await _colecaoHiveService.temColecao(email);
+
+      if (temColecaoLocal) {
+        print('💾 [TipagemRepository] Coleção local encontrada para $email');
+        // Verifica se precisa sincronizar com Drive
+        final estaSincronizada = await _colecaoHiveService.estaSincronizada(email);
+        if (estaSincronizada) {
+          print('✅ [TipagemRepository] Coleção já sincronizada, pulando download');
+          return;
+        }
+      }
+
+      // Tenta baixar coleção do Drive
+      final nomeArquivo = 'colecao_$email.json';
+      final conteudoDrive = await _driveService.baixarArquivoDaPasta(nomeArquivo, 'colecao');
+
+      if (conteudoDrive.isNotEmpty) {
+        print('📥 [TipagemRepository] Coleção encontrada no Drive para $email');
+
+        // Parse do JSON do Drive
+        final dados = json.decode(conteudoDrive) as Map<String, dynamic>;
+        final colecaoDrive = Map<String, bool>.from(dados['monstros'] ?? {});
+
+        // Salva no HIVE
+        await _colecaoHiveService.salvarColecao(email, colecaoDrive);
+        await _colecaoHiveService.marcarComoSincronizada(email);
+
+        print('✅ [TipagemRepository] Coleção sincronizada do Drive para HIVE');
+      } else {
+        print('📭 [TipagemRepository] Nenhuma coleção encontrada no Drive para $email');
+
+        // Cria coleção inicial se não existir local
+        if (!temColecaoLocal) {
+          final colecaoInicial = _colecaoHiveService.criarColecaoInicial();
+          await _colecaoHiveService.salvarColecao(email, colecaoInicial);
+
+          // Salva no Drive também
+          await _salvarColecaoNoDrive(email, colecaoInicial);
+          await _colecaoHiveService.marcarComoSincronizada(email);
+
+          print('🆕 [TipagemRepository] Coleção inicial criada e sincronizada');
+        }
+      }
+    } catch (e) {
+      print('❌ [TipagemRepository] Erro ao sincronizar coleção: $e');
+    }
+  }
+
+  /// Salva coleção no Drive
+  Future<bool> _salvarColecaoNoDrive(String email, Map<String, bool> colecao) async {
+    try {
+      final dados = {
+        'email': email,
+        'monstros': colecao,
+        'ultima_atualizacao': DateTime.now().toIso8601String(),
+      };
+
+      final nomeArquivo = 'colecao_$email.json';
+      final json = jsonEncode(dados);
+
+      return await _driveService.salvarArquivoEmPasta(nomeArquivo, json, 'colecao');
+    } catch (e) {
+      print('❌ [TipagemRepository] Erro ao salvar coleção no Drive: $e');
+      return false;
+    }
+  }
+
+  /// Força refresh das coleções (para botão refresh)
+  Future<bool> refreshColecoes(String email) async {
+    try {
+      print('🔄 [TipagemRepository] Forçando refresh das coleções para: $email');
+
+      // Remove marca de sincronização para forçar download
+      await _colecaoHiveService.removerColecao(email);
+
+      // Refaz a sincronização
+      await _sincronizarColecaoComDrive(email);
+
+      print('✅ [TipagemRepository] Refresh das coleções concluído');
+      return true;
+    } catch (e) {
+      print('❌ [TipagemRepository] Erro no refresh das coleções: $e');
+      return false;
     }
   }
 }

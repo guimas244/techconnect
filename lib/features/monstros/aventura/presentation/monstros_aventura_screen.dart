@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/monstro_aventura.dart';
 import '../data/monstro_aventura_repository.dart';
 import '../../../../shared/models/tipo_enum.dart';
+import '../../../aventura/services/colecao_service.dart';
+import '../../../../core/services/storage_service.dart';
 
 // Provider para o repository
 final monstroAventuraRepositoryProvider = Provider<MonstroAventuraRepository>((ref) {
@@ -204,7 +206,56 @@ class CatalogoMonstrosScreen extends StatefulWidget {
 
 class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
   String? monstroExpandido;
+  final ColecaoService _colecaoService = ColecaoService();
+  final StorageService _storageService = StorageService();
+  Map<String, bool> _colecaoAtual = {};
+  bool _carregandoColecao = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _carregarColecao();
+  }
+
+  Future<void> _carregarColecao() async {
+    setState(() => _carregandoColecao = true);
+    try {
+      final email = await _storageService.getLastEmail();
+      if (email != null) {
+        final colecao = await _colecaoService.carregarColecaoJogador(email);
+        setState(() {
+          _colecaoAtual = colecao;
+          _carregandoColecao = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Erro ao carregar coleção no catálogo: $e');
+      setState(() => _carregandoColecao = false);
+    }
+  }
+
+  Future<void> _refreshColecao() async {
+    try {
+      final email = await _storageService.getLastEmail();
+      if (email != null) {
+        await _colecaoService.refreshColecao(email);
+        await _carregarColecao();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Coleção atualizada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao atualizar coleção: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,21 +264,20 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
         title: const Text('Catálogo de Monstros'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          // Botão para regenerar com nomes reais - TEMPORÁRIO PARA TESTE
+          // Botão de refresh da coleção
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () async {
-              final repository = MonstroAventuraRepository();
-              await repository.forcarRegeneracao();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Monstros regenerados com nomes reais!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              // Recarrega a tela
-              setState(() {});
-            },
+            icon: _carregandoColecao
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _carregandoColecao ? null : _refreshColecao,
+            tooltip: _carregandoColecao ? 'Atualizando...' : 'Atualizar Coleção',
           ),
         ],
       ),
@@ -269,7 +319,11 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                     itemBuilder: (context, index) {
                       final monstro = monstrosOrdenados[index];
                       final nomeArquivo = monstro.tipo1.name;
-                      return _buildMonstroItem(nomeArquivo, monstro.tipo1, monstro);
+                      // Coleção inicial sempre desbloqueada, outras usam HIVE
+                      final estaBloqueado = monstro.colecao == 'colecao_inicial'
+                          ? false
+                          : _colecaoAtual[nomeArquivo] != true;
+                      return _buildMonstroItem(nomeArquivo, monstro.tipo1, monstro, estaBloqueado);
                     },
                   );
                 },
@@ -322,12 +376,16 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
 
                               // Use o nome do tipo como nome do arquivo (não as partes da tag)
                               final nomeArquivoCorreto = monstro.tipo1.name;
+                              // Coleção inicial sempre desbloqueada, outras usam HIVE
+                              final estaBloqueadoExpandido = monstro.colecao == 'colecao_inicial'
+                                  ? false
+                                  : _colecaoAtual[nomeArquivoCorreto] != true;
 
                               return Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   ColorFiltered(
-                                    colorFilter: monstro.isBloqueado
+                                    colorFilter: estaBloqueadoExpandido
                                       ? const ColorFilter.matrix([
                                           0, 0, 0, 0, 0,  // Red = 0
                                           0, 0, 0, 0, 0,  // Green = 0
@@ -350,7 +408,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                     decoration: BoxDecoration(
-                                      color: monstro.isBloqueado
+                                      color: estaBloqueadoExpandido
                                           ? Colors.grey.withOpacity(0.8)
                                           : monstro.tipo1.cor.withOpacity(0.8),
                                       borderRadius: BorderRadius.circular(20),
@@ -383,7 +441,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
     );
   }
 
-  Widget _buildMonstroItem(String nomeArquivo, Tipo tipo, MonstroAventura monstro) {
+  Widget _buildMonstroItem(String nomeArquivo, Tipo tipo, MonstroAventura monstro, bool estaBloqueado) {
     // Usa tag única que inclui a coleção para evitar conflitos no Hero
     final tagUnico = '${monstro.colecao}_$nomeArquivo';
 
@@ -399,7 +457,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   child: ColorFiltered(
-                    colorFilter: monstro.isBloqueado
+                    colorFilter: estaBloqueado
                       ? const ColorFilter.matrix([
                           0, 0, 0, 0, 0,  // Red = 0
                           0, 0, 0, 0, 0,  // Green = 0
@@ -424,7 +482,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               decoration: BoxDecoration(
-                color: monstro.isBloqueado
+                color: estaBloqueado
                     ? Colors.grey.withOpacity(0.2)
                     : tipo.cor.withOpacity(0.2),
                 borderRadius: const BorderRadius.only(
@@ -437,7 +495,7 @@ class _CatalogoMonstrosScreenState extends State<CatalogoMonstrosScreen> {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: monstro.isBloqueado
+                  color: estaBloqueado
                       ? Colors.grey.withOpacity(0.8)
                       : tipo.cor.withOpacity(0.8),
                 ),

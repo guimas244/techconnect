@@ -141,7 +141,7 @@ class ModalMonstroInimigo extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              monstro.tipo.monsterName,
+                              monstro.nome,
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,

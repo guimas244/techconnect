@@ -345,6 +345,8 @@ class GoogleDriveService {
         } else {
           arquivos = await _driveService!.listInRankingFolder();
         }
+      } else if (pasta == 'colecao') {
+        arquivos = await _driveService!.listInColecaoFolder();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
@@ -438,6 +440,10 @@ class GoogleDriveService {
           } else {
             await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
           }
+        } else if (pasta == 'colecao') {
+          // Suporte à pasta de coleções
+          print('✅ [GoogleDriveService] Usando pasta COLECAO para: $pasta');
+          await _driveService!.createJsonFileInColecao(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
@@ -474,6 +480,10 @@ class GoogleDriveService {
           } else {
             await _driveService!.createJsonFileInRanking(nomeArquivo, dadosJson);
           }
+        } else if (pasta == 'colecao') {
+          // Suporte à pasta de coleções
+          print('✅ [GoogleDriveService] Usando pasta COLECAO para: $pasta');
+          await _driveService!.createJsonFileInColecao(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
@@ -657,6 +667,8 @@ class GoogleDriveService {
         } else {
           arquivos = await _driveService!.listInRankingFolder();
         }
+      } else if (pasta == 'colecao') {
+        arquivos = await _driveService!.listInColecaoFolder();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();

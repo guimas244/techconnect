@@ -132,4 +132,13 @@ class MonstroInimigo {
   int get ataqueTotal => ataque + (itemEquipado?.ataque ?? 0);
   int get defesaTotal => defesa + (itemEquipado?.defesa ?? 0);
   int get agilidadeTotal => agilidade + (itemEquipado?.agilidade ?? 0);
+
+  // Getter para o nome do monstro (nostálgico ou inicial)
+  String get nome {
+    final ehNostalgico = imagem.contains('colecao_nostalgicos');
+    return ehNostalgico ? tipo.nostalgicMonsterName : tipo.monsterName;
+  }
+
+  // Getter para verificar se é nostálgico
+  bool get ehNostalgico => imagem.contains('colecao_nostalgicos');
 }

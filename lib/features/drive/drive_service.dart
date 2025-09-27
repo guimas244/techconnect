@@ -899,4 +899,107 @@ class DriveService {
       throw e;
     }
   }
+
+  /// Cria a pasta COLECAO se não existir e retorna seu ID
+  Future<String?> criarPastaColecao() async {
+    try {
+      // Primeiro verifica se a pasta já existe
+      final res = await api.files.list(
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = 'colecao' and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+      );
+
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaColecaoId = res.files!.first.id!;
+        print('✅ [DEBUG] Pasta COLECAO encontrada: $pastaColecaoId');
+        return pastaColecaoId;
+      }
+
+      // Se não existe, cria a pasta
+      print('📁 [DEBUG] Criando pasta COLECAO...');
+      final folder = drive.File();
+      folder.name = 'colecao';
+      folder.mimeType = 'application/vnd.google-apps.folder';
+      folder.parents = [folderId];
+
+      final driveFolder = await api.files.create(folder);
+      print('✅ [DEBUG] Pasta COLECAO criada com ID: ${driveFolder.id}');
+      return driveFolder.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta COLECAO: $e');
+      // Se for erro de autenticação, relança para o GoogleDriveService tratar
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaColecao, repassando...');
+        rethrow; // Relança para o GoogleDriveService capturar
+      }
+      return null;
+    }
+  }
+
+  /// Lista arquivos na pasta COLECAO
+  Future<List<drive.File>> listInColecaoFolder() async {
+    final pastaColecaoId = await criarPastaColecao();
+    if (pastaColecaoId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta COLECAO');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaColecaoId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta COLECAO
+  Future<void> createJsonFileInColecao(String filename, Map<String, dynamic> jsonData) async {
+    final pastaColecaoId = await criarPastaColecao();
+    if (pastaColecaoId == null) {
+      throw Exception('Não foi possível acessar pasta COLECAO');
+    }
+
+    // Verificar se arquivo já existe na pasta COLECAO
+    final arquivosColecao = await listInColecaoFolder();
+    final arquivoExistente = arquivosColecao.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Tentar atualizar arquivo existente
+      try {
+        await updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado na pasta COLECAO: $filename');
+        return; // Sucesso, não precisa criar novo
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo (sem permissão): $e');
+        print('🔄 [DriveService] Criando novo arquivo ao invés de atualizar...');
+        // Modifica o nome do arquivo para evitar conflito
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+        // Continua para criar novo arquivo abaixo
+      }
+    }
+
+    // Criar novo arquivo na pasta COLECAO (ou quando falha ao atualizar)
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [pastaColecaoId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Arquivo criado na pasta COLECAO: $filename');
+  }
 }

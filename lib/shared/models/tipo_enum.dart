@@ -102,6 +102,71 @@ enum Tipo {
     }
   }
 
+  String get nostalgicMonsterName {
+    switch (this) {
+      case Tipo.agua:
+        return 'Boquin Nostálgico';
+      case Tipo.alien:
+        return 'Luminitrix Nostálgico';
+      case Tipo.desconhecido:
+        return 'Tek Nostálgico';
+      case Tipo.deus:
+        return 'Tribunal Nostálgico';
+      case Tipo.docrates:
+        return 'Mirin Nostálgico';
+      case Tipo.dragao:
+        return 'Orales Nostálgico';
+      case Tipo.eletrico:
+        return 'Catapichu Nostálgico';
+      case Tipo.fantasma:
+        return 'Fenton Nostálgico';
+      case Tipo.fera:
+        return 'Crok Nostálgico';
+      case Tipo.fogo:
+        return 'Bombi Nostálgico';
+      case Tipo.gelo:
+        return 'Cristal Nostálgico';
+      case Tipo.inseto:
+        return 'Besouro Nostálgico';
+      case Tipo.luz:
+        return 'Milagre Nostálgico';
+      case Tipo.magico:
+        return 'Maguin Nostálgico';
+      case Tipo.marinho:
+        return 'Memo Nostálgico';
+      case Tipo.mistico:
+        return 'Manty Nostálgico';
+      case Tipo.normal:
+        return 'Pedro Nostálgico';
+      case Tipo.nostalgico:
+        return 'Star Nostálgico';
+      case Tipo.pedra:
+        return 'Golem Nostálgico';
+      case Tipo.planta:
+        return 'Plan Nostálgico';
+      case Tipo.psiquico:
+        return 'Nevora Nostálgico';
+      case Tipo.subterraneo:
+        return 'Broca Nostálgico';
+      case Tipo.tecnologia:
+        return 'Missin Jax Nostálgico';
+      case Tipo.tempo:
+        return 'Kokoro Nostálgico';
+      case Tipo.terrestre:
+        return 'Perneta Nostálgico';
+      case Tipo.trevas:
+        return 'Assik Nostálgico';
+      case Tipo.venenoso:
+        return 'Scorpion Nostálgico';
+      case Tipo.vento:
+        return 'Balin Nostálgico';
+      case Tipo.voador:
+        return 'Popi Nostálgico';
+      case Tipo.zumbi:
+        return 'Cachorro Zumbi Nostálgico';
+    }
+  }
+
   Color get cor {
     switch (this) {
       case Tipo.normal:

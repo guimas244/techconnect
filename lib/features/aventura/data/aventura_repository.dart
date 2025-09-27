@@ -12,6 +12,7 @@ import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
 import '../services/ranking_service.dart';
 import '../services/aventura_hive_service.dart';
+import '../services/colecao_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 
 class AventuraRepository {
@@ -20,6 +21,7 @@ class AventuraRepository {
   final ItemService _itemService = ItemService();
   final RankingService _rankingService = RankingService();
   final AventuraHiveService _hiveService = AventuraHiveService();
+  final ColecaoService _colecaoService = ColecaoService();
 
   /// Inicializa o repository (deve ser chamado no início do app)
   Future<void> init() async {
@@ -360,17 +362,50 @@ class AventuraRepository {
       print('⚠️ [Repository] Aventura existente sem RunID, removendo antes de criar nova...');
       await removerHistoricoJogador(email);
     }
+
+    // Consulta monstros nostálgicos desbloqueados da coleção
+    print('🎯 [Repository] Consultando coleção de monstros nostálgicos para: $email');
+    final monstrosNostalgicosDesbloqueados = await _colecaoService.obterMonstrosNostalgicosDesbloqueados(email);
+
     final random = Random();
     final tiposDisponiveis = Tipo.values.toList();
-    tiposDisponiveis.shuffle(random);
+
+    // Cria uma lista combinada: tipos iniciais + tipos nostálgicos desbloqueados
+    final todosOsTiposDisponiveis = <Tipo>[];
+    todosOsTiposDisponiveis.addAll(tiposDisponiveis); // Monstros iniciais
+
+    // Adiciona monstros nostálgicos desbloqueados (se houver)
+    for (final nomeNostalgico in monstrosNostalgicosDesbloqueados) {
+      // Converte nome do monstro nostálgico para Tipo (se existir)
+      try {
+        final tipoNostalgico = Tipo.values.firstWhere((tipo) => tipo.name == nomeNostalgico);
+        todosOsTiposDisponiveis.add(tipoNostalgico);
+        print('🌟 [Repository] Monstro nostálgico adicionado à roleta: ${tipoNostalgico.name}');
+      } catch (e) {
+        print('⚠️ [Repository] Monstro nostálgico não encontrado nos tipos: $nomeNostalgico');
+      }
+    }
+
+    // Embaralha todos os tipos disponíveis (iniciais + nostálgicos)
+    todosOsTiposDisponiveis.shuffle(random);
+    print('🎲 [Repository] Total de tipos disponíveis para sorteio: ${todosOsTiposDisponiveis.length}');
+    print('📋 [Repository] Monstros nostálgicos desbloqueados: ${monstrosNostalgicosDesbloqueados.length}');
 
     final monstrosSorteados = <MonstroAventura>[];
 
-    // Sorteia 3 tipos únicos
-    for (int i = 0; i < 3 && i < tiposDisponiveis.length; i++) {
-      final tipo = tiposDisponiveis[i];
-      // Sorteia tipo extra diferente do principal
-      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+    // Sorteia 3 tipos únicos da lista combinada
+    final tiposUnicos = <Tipo>{};
+    for (int i = 0; i < todosOsTiposDisponiveis.length && tiposUnicos.length < 3; i++) {
+      tiposUnicos.add(todosOsTiposDisponiveis[i]);
+    }
+
+    // Converte o Set para List para poder iterar
+    final tiposSorteados = tiposUnicos.toList();
+
+    for (int i = 0; i < tiposSorteados.length; i++) {
+      final tipo = tiposSorteados[i];
+      // Sorteia tipo extra diferente do principal (usando todos os tipos disponíveis)
+      final outrosTipos = todosOsTiposDisponiveis.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
       
@@ -384,17 +419,24 @@ class AventuraRepository {
       final ataqueSorteado = AtributoJogo.ataque.sortear(random);
       final defesaSorteada = AtributoJogo.defesa.sortear(random);
 
-      print('🎲 [Repository] Sorteando monstro ${tipo.name}:');
+      // Determina se é um monstro nostálgico desbloqueado
+      final ehNostalgico = monstrosNostalgicosDesbloqueados.contains(tipo.name);
+      final caminhoImagem = ehNostalgico
+          ? 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png'
+          : 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png';
+
+      print('🎲 [Repository] Sorteando monstro ${tipo.name} ${ehNostalgico ? '(NOSTÁLGICO)' : '(INICIAL)'}:');
       print('   - Vida: $vidaSorteada (range: ${AtributoJogo.vida.rangeTexto})');
       print('   - Energia: $energiaSorteada (range: ${AtributoJogo.energia.rangeTexto})');
       print('   - Agilidade: $agilidadeSorteada (range: ${AtributoJogo.agilidade.rangeTexto})');
       print('   - Ataque: $ataqueSorteado (range: ${AtributoJogo.ataque.rangeTexto})');
       print('   - Defesa: $defesaSorteada (range: ${AtributoJogo.defesa.rangeTexto})');
+      print('   - Imagem: $caminhoImagem');
 
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
+        imagem: caminhoImagem,
         vida: vidaSorteada,
         energia: energiaSorteada,
         agilidade: agilidadeSorteada,
@@ -901,6 +943,49 @@ class AventuraRepository {
       print('❌ [Repository] EXCEÇÃO ao arquivar histórico: $e');
       print('❌ [Repository] Stack trace: $stackTrace');
       return false;
+    }
+  }
+
+  /// Desbloqueia um monstro nostálgico para o jogador
+  /// Pode ser chamado quando o jogador completa uma aventura, derrota um boss, etc.
+  Future<bool> desbloquearMonstroNostalgico(String email, String nomeMonstro) async {
+    try {
+      print('🌟 [Repository] Desbloqueando monstro nostálgico $nomeMonstro para $email');
+
+      final sucesso = await _colecaoService.desbloquearMonstro(email, nomeMonstro);
+
+      if (sucesso) {
+        print('✅ [Repository] Monstro $nomeMonstro desbloqueado com sucesso!');
+      } else {
+        print('❌ [Repository] Falha ao desbloquear monstro $nomeMonstro');
+      }
+
+      return sucesso;
+    } catch (e) {
+      print('❌ [Repository] Erro ao desbloquear monstro nostálgico: $e');
+      return false;
+    }
+  }
+
+  /// Verifica e desbloqueia monstros baseado no progresso da aventura
+  /// Exemplo: desbloqueia monstro a cada 3 andares completados
+  Future<void> verificarDesbloqueiosPorProgresso(String email, int tierCompletado) async {
+    try {
+      print('🎯 [Repository] Verificando desbloqueios para tier $tierCompletado');
+
+      // Exemplo de regra: desbloqueia monstro nostálgico a cada 5 tiers
+      if (tierCompletado % 5 == 0 && tierCompletado > 0) {
+        print('🏆 [Repository] Tier $tierCompletado completado! Desbloqueando monstro nostálgico...');
+
+        // Desbloqueia um monstro aleatório
+        final sucesso = await _colecaoService.desbloquearMonstrosAleatorios(email, 1);
+
+        if (sucesso) {
+          print('🌟 [Repository] Monstro nostálgico desbloqueado como recompensa do tier $tierCompletado!');
+        }
+      }
+    } catch (e) {
+      print('❌ [Repository] Erro ao verificar desbloqueios por progresso: $e');
     }
   }
 }
