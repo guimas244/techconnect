@@ -370,17 +370,18 @@ class AventuraRepository {
     final random = Random();
     final tiposDisponiveis = Tipo.values.toList();
 
-    // Cria uma lista combinada: tipos iniciais + tipos nostálgicos desbloqueados
+    // Cria uma lista com tipos iniciais (sempre disponíveis)
     final todosOsTiposDisponiveis = <Tipo>[];
-    todosOsTiposDisponiveis.addAll(tiposDisponiveis); // Monstros iniciais
+    todosOsTiposDisponiveis.addAll(tiposDisponiveis); // 30 monstros iniciais sempre
 
-    // Adiciona monstros nostálgicos desbloqueados (se houver)
+    // Adiciona monstros nostálgicos desbloqueados (expandindo as opções)
     for (final nomeNostalgico in monstrosNostalgicosDesbloqueados) {
       // Converte nome do monstro nostálgico para Tipo (se existir)
       try {
         final tipoNostalgico = Tipo.values.firstWhere((tipo) => tipo.name == nomeNostalgico);
+        // Adiciona como opção extra na roleta (não remove o inicial)
         todosOsTiposDisponiveis.add(tipoNostalgico);
-        print('🌟 [Repository] Monstro nostálgico adicionado à roleta: ${tipoNostalgico.name}');
+        print('🌟 [Repository] Monstro nostálgico ADICIONADO à roleta: ${tipoNostalgico.name}');
       } catch (e) {
         print('⚠️ [Repository] Monstro nostálgico não encontrado nos tipos: $nomeNostalgico');
       }
@@ -390,6 +391,7 @@ class AventuraRepository {
     todosOsTiposDisponiveis.shuffle(random);
     print('🎲 [Repository] Total de tipos disponíveis para sorteio: ${todosOsTiposDisponiveis.length}');
     print('📋 [Repository] Monstros nostálgicos desbloqueados: ${monstrosNostalgicosDesbloqueados.length}');
+    print('🔍 [Repository] Lista nostálgicos: $monstrosNostalgicosDesbloqueados');
 
     final monstrosSorteados = <MonstroAventura>[];
 
@@ -420,7 +422,9 @@ class AventuraRepository {
       final defesaSorteada = AtributoJogo.defesa.sortear(random);
 
       // Determina se é um monstro nostálgico desbloqueado
-      final ehNostalgico = monstrosNostalgicosDesbloqueados.contains(tipo.name);
+      // Como temos duplicados na roleta, damos 60% de chance para nostálgico se desbloqueado
+      final temNostalgico = monstrosNostalgicosDesbloqueados.contains(tipo.name);
+      final ehNostalgico = temNostalgico && random.nextDouble() < 0.6;
       final caminhoImagem = ehNostalgico
           ? 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png'
           : 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png';

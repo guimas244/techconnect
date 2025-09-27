@@ -177,6 +177,41 @@ class ColecaoService {
     return colecaoInicial;
   }
 
+  /// MÉTODO PARA TESTE - Desbloqueia alguns monstros nostálgicos específicos
+  Future<bool> desbloquearMonstrosParaTeste(String email) async {
+    try {
+      print('🧪 [ColecaoService] Desbloqueando monstros para teste para: $email');
+
+      final colecao = await carregarColecaoJogador(email);
+
+      // Desbloqueia TODOS os 30 monstros nostálgicos para teste
+      final monstrosParaTeste = [
+        'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
+        'eletrico', 'fantasma', 'fera', 'fogo', 'gelo', 'inseto',
+        'luz', 'magico', 'marinho', 'mistico', 'normal', 'nostalgico',
+        'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
+        'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
+      ];
+
+      for (final monstro in monstrosParaTeste) {
+        colecao[monstro] = true;
+        print('🔓 [ColecaoService] TESTE: Desbloqueado $monstro');
+      }
+
+      // Salva a coleção atualizada
+      final sucesso = await salvarColecaoJogador(email, colecao);
+
+      if (sucesso) {
+        print('✅ [ColecaoService] TESTE: Monstros desbloqueados com sucesso');
+      }
+
+      return sucesso;
+    } catch (e) {
+      print('❌ [ColecaoService] Erro ao desbloquear monstros para teste: $e');
+      return false;
+    }
+  }
+
   /// Desbloqueia monstros aleatórios para teste (método de desenvolvimento)
   Future<bool> desbloquearMonstrosAleatorios(String email, int quantidade) async {
     try {

@@ -5,10 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../../aventura/services/colecao_hive_service.dart';
+import '../../aventura/services/colecao_service.dart';
 
 class TipagemRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
   final ColecaoHiveService _colecaoHiveService = ColecaoHiveService();
+  final ColecaoService _colecaoService = ColecaoService();
   
   // ✅ NOVO CICLO DE VIDA - DEPENDENTE DO DRIVE
   static final Map<Tipo, Map<Tipo, double>> _dadosLocais = {};
@@ -661,6 +663,9 @@ class TipagemRepository {
 
       // Tenta baixar coleção do Drive
       await _sincronizarColecaoComDrive(email);
+
+      // 🧪 TESTE: Desbloqueia todos os monstros nostálgicos automaticamente
+      await _colecaoService.desbloquearMonstrosParaTeste(email);
 
       print('✅ [TipagemRepository] Sistema de coleções inicializado');
     } catch (e) {
