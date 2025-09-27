@@ -435,6 +435,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: _isDriveConnected ? const Color(0xFF3182CE) : Colors.grey,
                         onTap: _isDriveConnected ? () => context.go('/admin') : null,
                       ),
+                      _buildMenuCard(
+                        icon: Icons.person,
+                        label: 'Jogador',
+                        color: _isDriveConnected ? const Color(0xFF38A169) : Colors.grey,
+                        onTap: _isDriveConnected ? () => context.go('/jogador') : null,
+                      ),
                     ],
                   ),
                 ),

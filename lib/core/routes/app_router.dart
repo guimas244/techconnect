@@ -13,6 +13,8 @@ import '../../features/aventura/presentation/aventura_screen.dart';
 import '../../features/aventura/presentation/ranking_screen.dart';
 import '../../features/aventura/presentation/mapa_aventura_screen.dart';
 import '../../features/aventura/models/historia_jogador.dart';
+import '../../features/jogador/presentation/jogador_screen.dart';
+import '../../features/jogador/presentation/colecao_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 
 class AppRouter {
@@ -86,6 +88,16 @@ class AppRouter {
           GoRoute(
             path: 'regras',
             builder: (context, state) => const RegrasScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/jogador',
+        builder: (context, state) => const JogadorScreen(),
+        routes: [
+          GoRoute(
+            path: 'colecao',
+            builder: (context, state) => const ColecaoScreen(),
           ),
         ],
       ),
