@@ -767,7 +767,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
     
     // Primeiro processa evolução, depois ITENS EQUIPÁVEIS (não drops/prêmios)
-    _processarEvolucaoEItens();
+    await _processarEvolucaoEItens();
   }
 
   Future<void> _processarCuraPosBatalha() async {
@@ -891,6 +891,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (monstroRaroDesbloqueado) {
       print('🌟 [BatalhaScreen] Monstro raro desbloqueado, pulando evolução e drops');
       evolucaoProcessada = true;
+      // Finaliza a batalha já que não há itens para processar
+      await _finalizarBatalhaComSalvamento();
       return;
     }
 
@@ -900,7 +902,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     await _processarEvolucaoMonstro();
 
     // 2️⃣ Depois processa geração de item (o salvamento será feito após o equipamento)
-    _gerarEMostrarItem();
+    await _gerarEMostrarItem();
   }
 
   Future<void> _processarEvolucaoMonstro() async {

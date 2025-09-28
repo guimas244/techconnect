@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../models/monstro_inimigo.dart';
 import '../../../shared/models/tipo_enum.dart';
 
@@ -53,19 +54,25 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
                   size: 30,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'MONSTRO DESBLOQUEADO!',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 2,
-                        offset: Offset(1, 1),
-                      ),
-                    ],
+                Flexible(
+                  child: AutoSizeText(
+                    'MONSTRO DESBLOQUEADO!',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    minFontSize: 16,
+                    maxFontSize: 24,
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -119,13 +126,16 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Nome do monstro
-            Text(
+            AutoSizeText(
               monstroDesbloqueado.nome,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+              maxLines: 2,
+              minFontSize: 16,
+              maxFontSize: 22,
               textAlign: TextAlign.center,
             ),
 
@@ -156,7 +166,7 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
                 ),
               ),
               child: Text(
-                'Você desbloqueou um monstro raro da nova coleção!\n\nAgora você pode capturá-lo em futuras aventuras!',
+                'Você desbloqueou um monstro raro da nova coleção!\n\nAgora você pode utiliza-lo em futuras aventuras!',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white70,
