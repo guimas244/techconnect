@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../models/monstro_inimigo.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../services/colecao_service.dart';
@@ -173,50 +174,47 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: _estaBloqueado
-                        ? Container(
-                            color: Colors.black,
-                            child: Center(
-                              child: Icon(
-                                Icons.lock,
-                                color: Colors.white.withOpacity(0.7),
-                                size: 40,
-                              ),
+                    child: ColorFiltered(
+                      colorFilter: _estaBloqueado
+                          ? const ColorFilter.matrix([
+                              // Filtro escuro para monstros bloqueados (mantém detalhes visíveis)
+                              0.3, 0.3, 0.3, 0, 0,
+                              0.3, 0.3, 0.3, 0, 0,
+                              0.3, 0.3, 0.3, 0, 0,
+                              0, 0, 0, 1, 0,
+                            ])
+                          : estaMorto
+                          ? const ColorFilter.matrix([
+                              0.2126, 0.7152, 0.0722, 0, 0, // Red
+                              0.2126, 0.7152, 0.0722, 0, 0, // Green
+                              0.2126, 0.7152, 0.0722, 0, 0, // Blue
+                              0,      0,      0,      1, 0, // Alpha
+                            ])
+                          : const ColorFilter.matrix([
+                              1, 0, 0, 0, 0,
+                              0, 1, 0, 0, 0,
+                              0, 0, 1, 0, 0,
+                              0, 0, 0, 1, 0,
+                            ]),
+                      child: Image.asset(
+                        widget.monstro.imagem,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: estaMorto
+                                ? Colors.grey.withOpacity(0.3)
+                                : widget.monstro.tipo.cor.withOpacity(0.3),
+                            child: Icon(
+                              Icons.pets,
+                              color: estaMorto
+                                  ? Colors.grey
+                                  : widget.monstro.tipo.cor,
+                              size: 40,
                             ),
-                          )
-                        : ColorFiltered(
-                            colorFilter: estaMorto
-                                ? const ColorFilter.matrix([
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Red
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Green
-                                    0.2126, 0.7152, 0.0722, 0, 0, // Blue
-                                    0,      0,      0,      1, 0, // Alpha
-                                  ])
-                                : const ColorFilter.matrix([
-                                    1, 0, 0, 0, 0,
-                                    0, 1, 0, 0, 0,
-                                    0, 0, 1, 0, 0,
-                                    0, 0, 0, 1, 0,
-                                  ]),
-                            child: Image.asset(
-                              widget.monstro.imagem,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: estaMorto
-                                      ? Colors.grey.withOpacity(0.3)
-                                      : widget.monstro.tipo.cor.withOpacity(0.3),
-                                  child: Icon(
-                                    Icons.pets,
-                                    color: estaMorto
-                                        ? Colors.grey
-                                        : widget.monstro.tipo.cor,
-                                    size: 40,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -227,7 +225,7 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(
+                            child: AutoSizeText(
                               widget.monstro.nome,
                               style: TextStyle(
                                 fontSize: 24,
@@ -241,8 +239,10 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                                   ),
                                 ],
                               ),
-                              overflow: TextOverflow.ellipsis,
                               maxLines: 1,
+                              minFontSize: 14,
+                              maxFontSize: 24,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (estaMorto) ...[

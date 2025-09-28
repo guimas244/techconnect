@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:math';
+import 'dart:math' as math;
 import '../models/monstro_inimigo.dart';
 import '../models/historia_jogador.dart';
 import '../providers/aventura_provider.dart';
@@ -81,7 +81,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             print('🗺️ [MapaAventura] Usando mapa salvo: $mapaEscolhido');
           } else {
             // Se não há aventura iniciada, sorteia um mapa aleatório
-            final random = Random();
+            final random = math.Random();
             mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
             print('🗺️ [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
           }
@@ -91,7 +91,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       } else {
         print('❌ [MapaAventura] Nenhuma história encontrada');
         setState(() {
-          final random = Random();
+          final random = math.Random();
           mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
           isLoading = false;
         });
@@ -99,7 +99,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     } catch (e) {
       print('❌ [MapaAventura] Erro ao verificar aventura: $e');
       setState(() {
-        final random = Random();
+        final random = math.Random();
         mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
         isLoading = false;
       });
@@ -313,8 +313,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   List<Widget> _buildPontosMapa() {
     final monstrosParaUsar = monstrosParaExibir;
     final pontos = <Widget>[];
-    
-    // Posições fixas dos pontos no mapa
+
+    // Separa monstros de coleção dos demais
+    final monstrosNormais = monstrosParaUsar.where((m) => !m.isRaro).toList();
+    final monstrosColecao = monstrosParaUsar.where((m) => m.isRaro).toList();
+
+    // Posições fixas dos pontos no mapa para monstros normais
     final posicoes = [
       (0.2, 0.2),   // Ponto 1 - Superior esquerdo
       (0.7, 0.15),  // Ponto 2 - Superior direito
@@ -323,15 +327,21 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       (0.75, 0.68), // Ponto 5 - Inferior direito
       (0.5, 0.75),  // Ponto 6 - Elite (terceira linha, centro-inferior)
     ];
-    
-    // Adiciona pontos dos monstros
-    for (int i = 0; i < posicoes.length && i < monstrosParaUsar.length; i++) {
-      pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosParaUsar));
+
+    // Adiciona pontos dos monstros normais
+    for (int i = 0; i < posicoes.length && i < monstrosNormais.length; i++) {
+      pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosNormais));
     }
-    
+
     // Adiciona Casa do Vigarista (baú de tesouro) - posição central superior
     pontos.add(_buildCasaDoVigarista(0.5, 0.25));
-    
+
+    // Adiciona monstros de coleção 3 centímetros abaixo do mercado
+    for (int i = 0; i < monstrosColecao.length; i++) {
+      final posX = 0.2 + (i * 0.6); // Posições 0.2, 0.8, etc. para múltiplos monstros
+      pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.35)); // 0.25 + ~0.10 = 3cm abaixo
+    }
+
     return pontos;
   }
 
@@ -378,7 +388,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             colorFilter: estaMorto
                 ? const ColorFilter.matrix([
                     0.2126, 0.7152, 0.0722, 0, 0, // Red
-                    0.2126, 0.7152, 0.0722, 0, 0, // Green  
+                    0.2126, 0.7152, 0.0722, 0, 0, // Green
                     0.2126, 0.7152, 0.0722, 0, 0, // Blue
                     0,      0,      0,      1, 0, // Alpha
                   ])
@@ -389,9 +399,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     0, 0, 0, 1, 0,
                   ]),
             child: Image.asset(
-              monstro.isElite
-                ? 'assets/icons_gerais/monstro_elite.png'
-                : 'assets/icons_gerais/monstro_comum.png',
+              monstro.isRaro
+                ? 'assets/icons_gerais/monstro_colecao.png'
+                : (monstro.isElite
+                    ? 'assets/icons_gerais/monstro_elite.png'
+                    : 'assets/icons_gerais/monstro_comum.png'),
               width: 32,
               height: 32,
               fit: BoxFit.contain,
@@ -542,6 +554,52 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildMonstroColecao(MonstroInimigo monstro, double left, double top) {
+    final bool estaMorto = monstro.vidaAtual <= 0;
+
+    // Limita a posição máxima do topo para não colar na borda inferior
+    final screenHeight = MediaQuery.of(context).size.height;
+    final calcTop = math.min(screenHeight * top, screenHeight - 100);
+
+    return Positioned(
+      left: MediaQuery.of(context).size.width * left,
+      top: calcTop,
+      child: GestureDetector(
+        onTap: () => _mostrarModalMonstroInimigo(monstro),
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: estaMorto
+                ? Colors.grey.withOpacity(0.9)
+                : Colors.purple.withOpacity(0.9), // Cor especial para monstros de coleção
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.orange, // Cor dourada para monstros de coleção
+              width: 4
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: estaMorto
+                    ? Colors.grey.withOpacity(0.6)
+                    : Colors.purple.withOpacity(0.6),
+                blurRadius: 15,
+                spreadRadius: 3,
+              ),
+            ],
+          ),
+          child: Image.asset(
+            'assets/icons_gerais/monstro_colecao.png',
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
+            color: estaMorto ? Colors.grey.shade600 : null, // Apenas escurece se morto
+          ),
+        ),
+      ),
     );
   }
 

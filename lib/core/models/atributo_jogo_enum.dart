@@ -25,7 +25,7 @@ enum AtributoJogo {
   evolucaoGanhoEnergia(min: 1, max: 1), // Ganho de energia por evolução
 
   // Sistema de descoberta de monstros raros da nova coleção
-  chanceMonstroColecoRaro(min: 1, max: 1), // 1% de chance de aparecer monstro raro
+  chanceMonstroColecoRaro(min: 100, max: 100), // 1% de chance de aparecer monstro raro
   tierMinimoMonstroColecoRaro(min: 3, max: 3); // A partir do tier 3
 
   final int min;
@@ -68,7 +68,13 @@ enum AtributoJogo {
 
   /// Verifica se deve gerar monstro raro baseado na chance
   static bool deveGerarMonstroRaro(Random random, int tier) {
-    if (!podeGerarMonstroRaro(tier)) return false;
-    return random.nextInt(100) < chanceMonstroColecoRaroPercent;
+    if (!podeGerarMonstroRaro(tier)) {
+      print('🌟 [AtributoJogo] Tier $tier menor que o mínimo ${tierMinimoMonstroColecoRaro.min}');
+      return false;
+    }
+    final sorteio = random.nextInt(100);
+    final resultado = sorteio < chanceMonstroColecoRaroPercent;
+    print('🌟 [AtributoJogo] Sorteio: $sorteio < $chanceMonstroColecoRaroPercent = $resultado');
+    return resultado;
   }
 }

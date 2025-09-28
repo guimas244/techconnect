@@ -714,10 +714,16 @@ class AventuraRepository {
     }
 
     // 🌟 NOVO: Gera monstro raro da nova coleção se atender aos critérios
+    print('🌟 [Repository] Verificando spawn de monstro raro no tier $tierAtual...');
+    print('🌟 [Repository] Pode gerar monstro raro? ${AtributoJogo.podeGerarMonstroRaro(tierAtual)}');
+    print('🌟 [Repository] Chance configurada: ${AtributoJogo.chanceMonstroColecoRaroPercent}%');
+
     if (AtributoJogo.deveGerarMonstroRaro(random, tierAtual)) {
-      print('🌟 [Repository] Gerando monstro RARO da nova coleção (${AtributoJogo.chanceMonstroColecoRaroPercent}% chance no tier $tierAtual)');
+      print('🌟 [Repository] ✅ SORTEIO VENCEU! Gerando monstro RARO da nova coleção');
       final monstroRaro = await _gerarMonstroRaro(tierAtual, random);
       monstrosInimigos.add(monstroRaro);
+    } else {
+      print('🌟 [Repository] ❌ Sorteio perdeu, não vai gerar monstro raro desta vez');
     }
 
     return monstrosInimigos;
@@ -764,7 +770,7 @@ class AventuraRepository {
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
-      imagem: 'assets/icons_gerais/monstro_elite.png', // Ícone especial para elite
+      imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png', // Usa imagem do tipo como os outros
       vida: vidaFinalElite,
       energia: energiaFinal,
       agilidade: AtributoJogo.agilidade.sortear(random),
@@ -825,7 +831,7 @@ class AventuraRepository {
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
-      imagem: 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png', // Usa imagem da coleção nostálgica
+      imagem: 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png', // Imagem do monstro nostálgico
       vida: vidaFinal,
       energia: energiaFinal,
       agilidade: AtributoJogo.agilidade.sortear(random),

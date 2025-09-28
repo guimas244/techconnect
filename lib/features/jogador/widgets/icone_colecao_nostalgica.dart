@@ -175,10 +175,10 @@ class _IconeColecaoNostalgicaState extends State<IconeColecaoNostalgica>
                           0, 0, 0, 1, 0,
                         ])
                       : const ColorFilter.matrix([
-                          // Filtro preto para monstros bloqueados
-                          0, 0, 0, 0, 0,
-                          0, 0, 0, 0, 0,
-                          0, 0, 0, 0, 0,
+                          // Filtro escuro para monstros bloqueados (mantém detalhes visíveis)
+                          0.3, 0.3, 0.3, 0, 0,
+                          0.3, 0.3, 0.3, 0, 0,
+                          0.3, 0.3, 0.3, 0, 0,
                           0, 0, 0, 1, 0,
                         ]),
                   child: Image.asset(

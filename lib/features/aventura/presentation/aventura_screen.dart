@@ -1050,7 +1050,11 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 10,
                       children: [
-                        Icon(_getIconeBotaoAventura(), color: Colors.white, size: 26),
+                        Icon(
+                          _getIconeBotaoAventura(),
+                          color: Colors.white,
+                          size: 26,
+                        ),
                         Text(
                           _getTextoBotaoAventura(),
                           style: const TextStyle(

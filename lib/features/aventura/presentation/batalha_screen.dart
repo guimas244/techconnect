@@ -18,6 +18,7 @@ import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
 import '../services/colecao_service.dart';
+import '../../jogador/services/vantagens_service.dart';
 import 'modal_monstro_desbloqueado.dart';
 // Removendo import não usado
 import 'modal_monstro_aventura.dart';
@@ -755,6 +756,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
       }
 
+      // 🩹 Processa cura pós-batalha da coleção nostálgica
+      await _processarCuraPosBatalha();
+
       // 🌟 Processa desbloqueio de monstro raro se aplicável
       await _processarDesbloqueioMonstroRaro();
 
@@ -764,6 +768,62 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Primeiro processa evolução, depois ITENS EQUIPÁVEIS (não drops/prêmios)
     _processarEvolucaoEItens();
+  }
+
+  Future<void> _processarCuraPosBatalha() async {
+    try {
+      print('🩹 [CuraPosBatalha] Iniciando processamento da cura pós-batalha...');
+      final emailJogador = ref.read(validUserEmailProvider);
+      final vantagensService = VantagensService();
+
+      // Verifica quanto de cura o jogador tem da coleção nostálgica
+      final curaPosBatalha = await vantagensService.obterCuraPosBatalha(emailJogador);
+      print('🩹 [CuraPosBatalha] Cura disponível: $curaPosBatalha pontos');
+
+      if (curaPosBatalha > 0 && estadoAtual != null) {
+        final vidaAntesCura = estadoAtual!.vidaAtualJogador;
+        final vidaMaxima = estadoAtual!.vidaMaximaJogador;
+
+        // Só cura se o jogador não está com vida cheia
+        if (vidaAntesCura < vidaMaxima) {
+          final vidaDepoisCura = (vidaAntesCura + curaPosBatalha).clamp(0, vidaMaxima);
+          final vidaCurada = vidaDepoisCura - vidaAntesCura;
+
+          if (vidaCurada > 0) {
+            // Atualiza o estado da batalha com a vida curada
+            setState(() {
+              estadoAtual = estadoAtual!.copyWith(vidaAtualJogador: vidaDepoisCura);
+            });
+
+            // Adiciona entrada no histórico da batalha
+            final acaoCura = AcaoBatalha(
+              atacante: 'Coleção Nostálgica',
+              habilidadeNome: 'Cura Pós-Batalha',
+              danoBase: vidaCurada,
+              danoTotal: vidaCurada,
+              defesaAlvo: 0,
+              vidaAntes: vidaAntesCura,
+              vidaDepois: vidaDepoisCura,
+              descricao: 'Coleção Nostálgica restaurou $vidaCurada de vida. Vida: $vidaAntesCura→$vidaDepoisCura',
+            );
+
+            setState(() {
+              estadoAtual = estadoAtual!.copyWith(
+                historicoAcoes: [...estadoAtual!.historicoAcoes, acaoCura],
+              );
+            });
+
+            print('🩹 [CuraPosBatalha] Jogador curou $vidaCurada de vida (total: $curaPosBatalha disponível)');
+          }
+        } else {
+          print('🩹 [CuraPosBatalha] Jogador já está com vida cheia, não precisa de cura');
+        }
+      } else {
+        print('🩹 [CuraPosBatalha] Nenhuma cura disponível da coleção nostálgica');
+      }
+    } catch (e) {
+      print('❌ [CuraPosBatalha] Erro ao processar cura pós-batalha: $e');
+    }
   }
 
   Future<void> _processarDesbloqueioMonstroRaro() async {
@@ -2831,7 +2891,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       ),
       child: Row(
         children: [
-          // Imagem do monstro
+          // Imagem do monstro ou ícone de cura da coleção
           Container(
             width: 32,
             height: 32,
@@ -2839,7 +2899,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               borderRadius: BorderRadius.circular(4),
               image: DecorationImage(
                 image: AssetImage(
-                  isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem,
+                  acao.atacante == 'Coleção Nostálgica'
+                      ? 'assets/icons_gerais/magia_cura.png'
+                      : (isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem),
                 ),
                 fit: BoxFit.cover,
               ),

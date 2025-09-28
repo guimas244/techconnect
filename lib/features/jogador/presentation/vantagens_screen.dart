@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/vantagem_colecao.dart';
 import '../services/vantagens_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../aventura/services/colecao_service.dart';
 import '../../../core/models/vantagem_colecao_enum.dart';
 import '../widgets/icone_colecao_nostalgica.dart';
 import 'package:remixicon/remixicon.dart';
@@ -19,6 +20,7 @@ class _VantagensScreenState extends ConsumerState<VantagensScreen>
     with TickerProviderStateMixin {
   final VantagensService _vantagensService = VantagensService();
   final StorageService _storageService = StorageService();
+  final ColecaoService _colecaoService = ColecaoService();
 
   List<VantagemColecao> _vantagens = [];
   bool _carregando = true;
@@ -76,6 +78,33 @@ class _VantagensScreenState extends ConsumerState<VantagensScreen>
     }
   }
 
+  Future<void> _refreshVantagens() async {
+    try {
+      final email = await _storageService.getLastEmail();
+      if (email != null) {
+        await _colecaoService.refreshColecao(email);
+        await _carregarVantagens();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vantagens atualizadas com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao atualizar vantagens: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,7 +127,7 @@ class _VantagensScreenState extends ConsumerState<VantagensScreen>
                     ),
                   )
                 : const Icon(Icons.refresh),
-            onPressed: _carregando ? null : _carregarVantagens,
+            onPressed: _carregando ? null : _refreshVantagens,
             tooltip: _carregando ? 'Carregando...' : 'Atualizar',
           ),
         ],

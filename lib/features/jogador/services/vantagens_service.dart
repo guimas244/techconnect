@@ -14,7 +14,7 @@ class VantagensService {
       nomeColecao: 'Coleção Nostálgica',
       descricaoColecao: 'Monstros clássicos que trazem memórias do passado',
       tipoVantagem: TipoVantagemColecao.curaPosBatalha,
-      valor: 1.0, // +1 HP por batalha
+      valor: 30.0, // +1 HP por monstro desbloqueado (máximo 30)
       monstrosRequeridos: 30, // Total de monstros nostálgicos
       monstrosDesbloqueados: 0, // Será calculado dinamicamente
       tiposRequeridos: [
@@ -108,22 +108,33 @@ class VantagensService {
 
   /// Calcula o valor total de uma vantagem específica
   Future<double> calcularBonusTotal(String email, TipoVantagemColecao tipoVantagem) async {
-    final vantagensAtivas = await obterVantagensAtivas(email);
+    print('🩹 [VantagensService] Calculando bonus total para tipo: ${tipoVantagem.nome}');
+    final todasVantagens = await carregarVantagensJogador(email);
+    print('🩹 [VantagensService] Todas as vantagens encontradas: ${todasVantagens.length}');
 
     double bonusTotal = 0.0;
-    for (final vantagem in vantagensAtivas) {
+    for (final vantagem in todasVantagens) {
+      print('🩹 [VantagensService] Verificando vantagem: ${vantagem.nomeColecao} (${vantagem.tipoVantagem.nome})');
       if (vantagem.tipoVantagem == tipoVantagem) {
-        bonusTotal += vantagem.valor;
+        print('🩹 [VantagensService] ✅ Tipo compatível! Valor atual: ${vantagem.valorAtual} (progresso: ${vantagem.monstrosDesbloqueados}/${vantagem.monstrosRequeridos})');
+        bonusTotal += vantagem.valorAtual;
+      } else {
+        print('🩹 [VantagensService] ❌ Tipo incompatível: ${vantagem.tipoVantagem.nome} != ${tipoVantagem.nome}');
       }
     }
 
+    print('🩹 [VantagensService] Bonus total calculado: $bonusTotal');
     return bonusTotal;
   }
 
   /// Método específico para obter a cura pós-batalha (para usar no sistema de batalha)
   Future<int> obterCuraPosBatalha(String email) async {
+    print('🩹 [VantagensService] Calculando cura pós-batalha para: $email');
     final bonus = await calcularBonusTotal(email, TipoVantagemColecao.curaPosBatalha);
-    return bonus.round();
+    print('🩹 [VantagensService] Bonus total calculado: $bonus');
+    final resultado = bonus.round();
+    print('🩹 [VantagensService] Retornando: $resultado pontos de cura');
+    return resultado;
   }
 
   /// Método para obter bônus de ataque total
