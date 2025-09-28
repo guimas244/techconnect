@@ -1866,8 +1866,16 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   Future<void> _gerarEMostrarItemTradicional(HistoriaJogador historia, int tierAtual) async {
     final itemService = ItemService();
-    final itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-    print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
+
+    // Se derrotou um monstro elite, drop é SEMPRE épico
+    final Item itemObtido;
+    if (widget.inimigo.isElite) {
+      itemObtido = itemService.gerarItemComRaridade(RaridadeItem.epico, tierAtual: tierAtual);
+      print('👑 [BatalhaScreen] MONSTRO ELITE derrotado! Drop FIXO ÉPICO: ${itemObtido.nome} - Tier ${itemObtido.tier}');
+    } else {
+      itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
+      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
+    }
     
     // Mostra modal de seleção de item
     if (mounted) {

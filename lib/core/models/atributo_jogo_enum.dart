@@ -26,7 +26,7 @@ enum AtributoJogo {
 
   // Sistema de descoberta de monstros raros da nova coleção
   chanceMonstroColecoRaro(min: 100, max: 100), // 1% de chance de aparecer monstro raro
-  tierMinimoMonstroColecoRaro(min: 3, max: 3); // A partir do tier 3
+  tierMinimoMonstroColecoRaro(min: 1, max: 1); // A partir do tier 3
 
   final int min;
   final int max;

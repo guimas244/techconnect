@@ -209,31 +209,13 @@ class ItemService {
 
   /// Gera um item elite respeitando restrições de dificuldade por tier
   Item gerarItemEliteComRestricoes({int tierAtual = 1}) {
-    print('👑🔒 [ItemService] Gerando item ELITE com restrições para tier $tierAtual');
+    print('👑🔒 [ItemService] Gerando item ELITE com drop FIXO ÉPICO para tier $tierAtual');
 
-    // Obtém raridades permitidas para este tier
-    List<RaridadeItem> raridadesPermitidas = _obterRaridadesPermitidas(tierAtual);
+    // Para monstros elite, SEMPRE força item épico (sem aleatoriedade)
+    // Ignora completamente as restrições de tier para garantir drop épico
+    print('👑🔒 [ItemService] Drop FIXO: ÉPICO (100% garantido para monstro elite)');
 
-    // Para elites, sempre tenta forçar item épico ou superior
-    RaridadeItem raridadeElite;
-
-    // Se épico está disponível no tier, usa épico como padrão
-    if (raridadesPermitidas.contains(RaridadeItem.epico)) {
-      raridadeElite = RaridadeItem.epico;
-      print('👑🔒 [ItemService] Raridade elite FIXA: ÉPICO (obrigatório para elite)');
-    } else if (raridadesPermitidas.contains(RaridadeItem.lendario)) {
-      raridadeElite = RaridadeItem.lendario;
-      print('👑🔒 [ItemService] Raridade elite FIXA: LENDÁRIO (tier alto)');
-    } else if (raridadesPermitidas.contains(RaridadeItem.raro)) {
-      raridadeElite = RaridadeItem.raro;
-      print('👑🔒 [ItemService] Raridade elite FORÇADA: RARO (tier baixo, épico não disponível)');
-    } else {
-      // Fallback para a maior raridade permitida
-      raridadeElite = raridadesPermitidas.reduce((a, b) => a.nivel > b.nivel ? a : b);
-      print('👑🔒 [ItemService] Raridade elite fallback: ${raridadeElite.nome}');
-    }
-
-    return gerarItemComRaridade(raridadeElite, tierAtual: tierAtual);
+    return gerarItemComRaridade(RaridadeItem.epico, tierAtual: tierAtual);
   }
 
   /// Obtém as raridades permitidas baseado no tier (restrições de dificuldade)
