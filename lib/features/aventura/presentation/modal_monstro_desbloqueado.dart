@@ -56,9 +56,9 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
                 const SizedBox(width: 8),
                 Flexible(
                   child: AutoSizeText(
-                    'MONSTRO DESBLOQUEADO!',
+                    'MONSTRO DE COLEÇÃO DESBLOQUEADO!',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.amber,
                       shadows: [
@@ -70,8 +70,8 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
                       ],
                     ),
                     maxLines: 1,
-                    minFontSize: 16,
-                    maxFontSize: 24,
+                    minFontSize: 12,
+                    maxFontSize: 18,
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -91,6 +91,7 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
                   color: Colors.amber,
@@ -106,19 +107,22 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(13),
-                child: Image.asset(
-                  monstroDesbloqueado.imagem,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey.shade800,
-                      child: Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey.shade400,
-                        size: 40,
-                      ),
-                    );
-                  },
+                child: Container(
+                  color: Colors.white,
+                  child: Image.asset(
+                    monstroDesbloqueado.imagem,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.white,
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey.shade400,
+                          size: 40,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -139,16 +143,12 @@ class ModalMonstroDesbloqueado extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
 
-            // Tipo(s) do monstro
+            // Tipo do monstro
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildTipoChip(monstroDesbloqueado.tipo),
-                if (monstroDesbloqueado.tipoExtra != null) ...[
-                  const SizedBox(width: 8),
-                  _buildTipoChip(monstroDesbloqueado.tipoExtra!),
-                ],
               ],
             ),
 

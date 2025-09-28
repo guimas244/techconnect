@@ -142,7 +142,8 @@ class MonstroInimigo {
   // Getter para o nome do monstro (nostálgico ou inicial)
   String get nome {
     final ehNostalgico = imagem.contains('colecao_nostalgicos');
-    return ehNostalgico ? tipo.nostalgicMonsterName : tipo.monsterName;
+    final nomeBase = ehNostalgico ? tipo.nostalgicMonsterName : tipo.monsterName;
+    return isElite ? '$nomeBase Elite' : nomeBase;
   }
 
   // Getter para verificar se é nostálgico

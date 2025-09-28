@@ -214,34 +214,22 @@ class ItemService {
     // Obtém raridades permitidas para este tier
     List<RaridadeItem> raridadesPermitidas = _obterRaridadesPermitidas(tierAtual);
 
-    // Para elites, filtra apenas as raridades raro ou superior
-    List<RaridadeItem> raridadesElitePermitidas = raridadesPermitidas
-        .where((r) => [RaridadeItem.raro, RaridadeItem.epico, RaridadeItem.lendario].contains(r))
-        .toList();
-
-    // Se não há raridades elite permitidas, força a menor raridade permitida
-    if (raridadesElitePermitidas.isEmpty) {
-      final menorPermitida = raridadesPermitidas.reduce((a, b) => a.nivel < b.nivel ? a : b);
-      print('👑🔒 [ItemService] Forçando raridade elite mínima: ${menorPermitida.nome}');
-      return gerarItemComRaridade(menorPermitida, tierAtual: tierAtual);
-    }
-
-    // Calcula probabilidades apenas entre as raridades elite permitidas
-    final chance = _random.nextInt(100);
+    // Para elites, sempre tenta forçar item épico ou superior
     RaridadeItem raridadeElite;
 
-    if (raridadesElitePermitidas.contains(RaridadeItem.lendario) && chance < 10) {
-      raridadeElite = RaridadeItem.lendario;
-      print('👑🔒 [ItemService] Raridade elite com restrições: LENDÁRIO (10% chance)');
-    } else if (raridadesElitePermitidas.contains(RaridadeItem.epico) && chance < 40) {
+    // Se épico está disponível no tier, usa épico como padrão
+    if (raridadesPermitidas.contains(RaridadeItem.epico)) {
       raridadeElite = RaridadeItem.epico;
-      print('👑🔒 [ItemService] Raridade elite com restrições: ÉPICO (30% chance)');
-    } else if (raridadesElitePermitidas.contains(RaridadeItem.raro)) {
+      print('👑🔒 [ItemService] Raridade elite FIXA: ÉPICO (obrigatório para elite)');
+    } else if (raridadesPermitidas.contains(RaridadeItem.lendario)) {
+      raridadeElite = RaridadeItem.lendario;
+      print('👑🔒 [ItemService] Raridade elite FIXA: LENDÁRIO (tier alto)');
+    } else if (raridadesPermitidas.contains(RaridadeItem.raro)) {
       raridadeElite = RaridadeItem.raro;
-      print('👑🔒 [ItemService] Raridade elite com restrições: RARO (60% chance)');
+      print('👑🔒 [ItemService] Raridade elite FORÇADA: RARO (tier baixo, épico não disponível)');
     } else {
       // Fallback para a maior raridade permitida
-      raridadeElite = raridadesElitePermitidas.reduce((a, b) => a.nivel > b.nivel ? a : b);
+      raridadeElite = raridadesPermitidas.reduce((a, b) => a.nivel > b.nivel ? a : b);
       print('👑🔒 [ItemService] Raridade elite fallback: ${raridadeElite.nome}');
     }
 
