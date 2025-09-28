@@ -175,10 +175,10 @@ class _IconeColecaoNostalgicaState extends State<IconeColecaoNostalgica>
                           0, 0, 0, 1, 0,
                         ])
                       : const ColorFilter.matrix([
-                          // Filtro escuro para monstros bloqueados (mantém detalhes visíveis)
-                          0.3, 0.3, 0.3, 0, 0,
-                          0.3, 0.3, 0.3, 0, 0,
-                          0.3, 0.3, 0.3, 0, 0,
+                          // Filtro preto para monstros bloqueados
+                          0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,
+                          0, 0, 0, 0, 0,
                           0, 0, 0, 1, 0,
                         ]),
                   child: Image.asset(
@@ -187,16 +187,14 @@ class _IconeColecaoNostalgicaState extends State<IconeColecaoNostalgica>
                     errorBuilder: (context, error, stackTrace) {
                       // Fallback para ícone do tipo se a imagem não existir
                       return Container(
-                        color: estaDesbloqueado
-                            ? tipoAtual.cor.withOpacity(0.8)
-                            : Colors.grey.shade400,
+                        color: Colors.white,
                         child: Center(
                           child: Image.asset(
                             tipoAtual.iconAsset,
                             width: widget.size * 0.4,
                             height: widget.size * 0.4,
                             fit: BoxFit.contain,
-                            color: estaDesbloqueado ? Colors.white : Colors.grey.shade600,
+                            color: estaDesbloqueado ? tipoAtual.cor : Colors.black,
                           ),
                         ),
                       );
