@@ -1,87 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_consumivel.dart';
+import '../models/mochila.dart';
+import '../services/mochila_service.dart';
 import 'modal_item_consumivel.dart';
+import '../../auth/providers/auth_provider.dart';
 
-class MochilaScreen extends StatefulWidget {
+class MochilaScreen extends ConsumerStatefulWidget {
   const MochilaScreen({super.key});
 
   @override
-  State<MochilaScreen> createState() => _MochilaScreenState();
+  ConsumerState<MochilaScreen> createState() => _MochilaScreenState();
 }
 
-class _MochilaScreenState extends State<MochilaScreen> {
+class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   // Tamanho da mochila (6x5 = 30 slots)
   static const int colunas = 6;
   static const int linhas = 5;
-  static const int totalSlots = colunas * linhas;
 
-  // Lista de itens (futuramente virá do provider/repository)
-  late List<ItemConsumivel?> itens;
+  Mochila? mochila;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeMochila();
+    _carregarMochila();
   }
 
-  void _initializeMochila() {
-    // Inicializa mochila vazia
-    itens = List.filled(totalSlots, null);
+  Future<void> _carregarMochila() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) {
+      setState(() => isLoading = false);
+      return;
+    }
 
-    // Adiciona itens de exemplo (usando ícones do Material Design)
-    itens[0] = const ItemConsumivel(
-      id: 'pocao_vida_1',
-      nome: 'Poção de Vida',
-      descricao: 'Restaura 50 pontos de vida de um monstro aliado. '
-          'Útil em momentos críticos durante batalhas difíceis.',
-      tipo: TipoItemConsumivel.pocao,
-      iconPath: '', // Usará ícone do Material Design
-      quantidade: 3,
-      raridade: RaridadeConsumivel.comum,
+    final mochilaCarregada = await MochilaService.carregarMochila(
+      context,
+      user.email!,
     );
 
-    itens[1] = const ItemConsumivel(
-      id: 'joia_poder_1',
-      nome: 'Joia de Poder',
-      descricao: 'Aumenta permanentemente +5 de ataque em um monstro. '
-          'Esta gema rara contém energia cristalizada que fortalece o portador.',
-      tipo: TipoItemConsumivel.joia,
-      iconPath: '', // Usará ícone do Material Design
-      quantidade: 1,
-      raridade: RaridadeConsumivel.epico,
-    );
+    if (mounted) {
+      setState(() {
+        mochila = mochilaCarregada ?? Mochila();
+        isLoading = false;
+      });
+    }
+  }
 
-    itens[5] = const ItemConsumivel(
-      id: 'elixir_mana_1',
-      nome: 'Elixir Arcano',
-      descricao: 'Restaura completamente a energia de um monstro. '
-          'Preparado com ingredientes místicos raros.',
-      tipo: TipoItemConsumivel.elixir,
-      iconPath: '', // Usará ícone do Material Design
-      quantidade: 2,
-      raridade: RaridadeConsumivel.raro,
-    );
+  Future<void> _salvarMochila() async {
+    if (mochila == null) return;
 
-    itens[8] = const ItemConsumivel(
-      id: 'joia_defesa_1',
-      nome: 'Joia da Fortaleza',
-      descricao: 'Aumenta permanentemente +5 de defesa em um monstro. '
-          'Cristal endurecido que oferece proteção superior.',
-      tipo: TipoItemConsumivel.joia,
-      iconPath: '', // Usará ícone do Material Design
-      quantidade: 1,
-      raridade: RaridadeConsumivel.raro,
-    );
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) return;
 
-    itens[12] = const ItemConsumivel(
-      id: 'pocao_vida_super_1',
-      nome: 'Super Poção de Vida',
-      descricao: 'Restaura completamente a vida de um monstro. '
-          'A poção definitiva para emergências.',
-      tipo: TipoItemConsumivel.pocao,
-      iconPath: '', // Usará ícone do Material Design
-      quantidade: 1,
-      raridade: RaridadeConsumivel.lendario,
+    await MochilaService.salvarMochila(
+      context,
+      user.email!,
+      mochila!,
     );
   }
 
@@ -100,67 +75,136 @@ class _MochilaScreenState extends State<MochilaScreen> {
     );
   }
 
-  void _usarItem(int index) {
-    setState(() {
-      final item = itens[index];
-      if (item != null) {
-        if (item.quantidade > 1) {
-          // Diminui quantidade
-          itens[index] = item.copyWith(quantidade: item.quantidade - 1);
-        } else {
-          // Remove item
-          itens[index] = null;
-        }
-      }
-    });
+  Future<void> _usarItem(int index) async {
+    if (mochila == null) return;
 
-    // Mostrar mensagem de uso
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${itens[index]?.nome ?? "Item"} usado com sucesso!'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    final item = mochila!.itens[index];
+    if (item == null) return;
+
+    // TODO: Implementar lógica de uso do item
+
+    // Se tinha quantidade > 1, diminui
+    if (item.quantidade > 1) {
+      final novoItem = item.copyWith(quantidade: item.quantidade - 1);
+      setState(() {
+        mochila = mochila!.atualizarItem(index, novoItem);
+      });
+    } else {
+      // Remove o item
+      setState(() {
+        mochila = mochila!.removerItem(index);
+      });
+    }
+
+    await _salvarMochila();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${item.nome} usado!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
-  void _descartarItem(int index) {
-    showDialog(
+  Future<void> _descartarItem(int index) async {
+    if (mochila == null) return;
+
+    final item = mochila!.itens[index];
+    if (item == null) return;
+
+    final confirma = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar Descarte'),
-        content: Text('Deseja realmente descartar ${itens[index]?.nome}?'),
+        content: Text('Deseja realmente descartar ${item.nome}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                itens[index] = null;
-              });
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Item descartado'),
-                  backgroundColor: Colors.orange,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Descartar'),
           ),
         ],
       ),
     );
+
+    if (confirma == true && mounted) {
+      setState(() {
+        mochila = mochila!.removerItem(index);
+      });
+
+      await _salvarMochila();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item descartado'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Conta quantos slots estão ocupados
-    final itensOcupados = itens.where((item) => item != null).length;
+    if (isLoading) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.brown.shade900.withOpacity(0.95),
+              Colors.black.withOpacity(0.95),
+            ],
+          ),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.amber),
+        ),
+      );
+    }
+
+    if (mochila == null) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.brown.shade900.withOpacity(0.95),
+              Colors.black.withOpacity(0.95),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'Erro ao carregar mochila',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _carregarMochila,
+                child: const Text('Tentar Novamente'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -213,9 +257,10 @@ class _MochilaScreenState extends State<MochilaScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
 
-                // Título e contagem
+                const SizedBox(width: 16),
+
+                // Info da mochila
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,17 +271,19 @@ class _MochilaScreenState extends State<MochilaScreen> {
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          letterSpacing: 2,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '$itensOcupados / $totalSlots slots ocupados',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.brown.shade300,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '${mochila!.itensOcupados}/${mochila!.slotsDesbloqueados} slots',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.amber.shade300,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -245,7 +292,6 @@ class _MochilaScreenState extends State<MochilaScreen> {
                 // Botão de organizar (futuro)
                 IconButton(
                   onPressed: () {
-                    // Organizar itens (implementar futuramente)
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Função de organizar em breve!'),
@@ -272,10 +318,11 @@ class _MochilaScreenState extends State<MochilaScreen> {
                   mainAxisSpacing: 8,
                   childAspectRatio: 1,
                 ),
-                itemCount: totalSlots,
+                itemCount: Mochila.totalSlots,
                 itemBuilder: (context, index) {
-                  final item = itens[index];
-                  return _buildSlot(item, index);
+                  final item = mochila!.itens[index];
+                  final isBloqueado = index >= mochila!.slotsDesbloqueados;
+                  return _buildSlot(item, index, isBloqueado);
                 },
               ),
             ),
@@ -311,7 +358,28 @@ class _MochilaScreenState extends State<MochilaScreen> {
     );
   }
 
-  Widget _buildSlot(ItemConsumivel? item, int index) {
+  Widget _buildSlot(ItemConsumivel? item, int index, bool isBloqueado) {
+    // Slot bloqueado
+    if (isBloqueado) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.brown.shade900,
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.lock,
+            color: Colors.brown.shade800,
+            size: 32,
+          ),
+        ),
+      );
+    }
+
     final isEmpty = item == null;
 
     return Material(
