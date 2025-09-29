@@ -11,6 +11,8 @@ import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
 import '../presentation/casa_vigarista_modal_v2.dart';
 import '../presentation/mochila_screen.dart';
+import '../presentation/aventura_screen.dart';
+import '../presentation/progresso_screen.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -31,7 +33,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   HistoriaJogador? historiaAtual;
   bool isLoading = true;
   bool isAdvancingTier = false;
-  int _abaAtual = 0; // 0 = Mapa, 1 = Mochila, 2 = Loja
+  int _abaAtual = 1; // 0 = Aventura, 1 = Mapa, 2 = Mochila, 3 = Progresso
 
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
@@ -206,19 +208,22 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Conteúdo principal (mapa, mochila ou loja)
+            // Conteúdo principal
             Expanded(
               child: IndexedStack(
                 index: _abaAtual,
                 children: [
-                  // ABA 0: MAPA
+                  // ABA 0: AVENTURA (tela de seleção/início)
+                  const AventuraScreen(),
+
+                  // ABA 1: MAPA
                   _buildMapaView(),
 
-                  // ABA 1: MOCHILA
+                  // ABA 2: MOCHILA
                   const MochilaScreen(),
 
-                  // ABA 2: LOJA
-                  _buildLojaView(),
+                  // ABA 3: PROGRESSO
+                  const ProgressoScreen(),
                 ],
               ),
             ),
@@ -377,24 +382,6 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-  Widget _buildLojaView() {
-    if (historiaAtual == null) {
-      return const Center(
-        child: Text(
-          'Carregando loja...',
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-      );
-    }
-
-    return CasaVigaristaModalV2(
-      historia: historiaAtual!,
-      onHistoriaAtualizada: (novaHistoria) {
-        setState(() {});
-      },
-    );
-  }
-
   Widget _buildBottomNavigationBar() {
     return Container(
       height: 70,
@@ -419,23 +406,28 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         children: [
           _buildTabButton(
             index: 0,
-            icon: Icons.map,
-            label: 'MAPA',
+            icon: Icons.home,
+            label: 'AVENTURA',
             isSelected: _abaAtual == 0,
           ),
           _buildTabButton(
             index: 1,
-            icon: Icons.backpack,
-            label: 'MOCHILA',
+            icon: Icons.map,
+            label: 'MAPA',
             isSelected: _abaAtual == 1,
-            iconAsset: 'assets/icons_gerais/mochila.png',
           ),
           _buildTabButton(
             index: 2,
-            icon: Icons.store,
-            label: 'LOJA',
+            icon: Icons.backpack,
+            label: 'MOCHILA',
             isSelected: _abaAtual == 2,
-            iconAsset: 'assets/npc/loja.png',
+            iconAsset: 'assets/icons_gerais/mochila.png',
+          ),
+          _buildTabButton(
+            index: 3,
+            icon: Icons.star,
+            label: 'PROGRESSO',
+            isSelected: _abaAtual == 3,
           ),
         ],
       ),

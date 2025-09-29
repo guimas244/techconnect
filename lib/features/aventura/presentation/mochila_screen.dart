@@ -429,33 +429,19 @@ class _MochilaScreenState extends State<MochilaScreen> {
   }
 
   Widget _buildLegendaRaridade(RaridadeConsumivel raridade) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: raridade.cor,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: raridade.cor.withOpacity(0.5),
-                blurRadius: 4,
-              ),
-            ],
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: raridade.cor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: raridade.cor.withOpacity(0.5),
+            blurRadius: 4,
           ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          raridade.nome,
-          style: TextStyle(
-            fontSize: 11,
-            color: raridade.cor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
