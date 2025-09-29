@@ -14,6 +14,7 @@ import '../../../core/models/atributo_jogo_enum.dart';
 import '../data/aventura_repository.dart';
 import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/config/developer_config.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -617,11 +618,12 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         ),
         actions: [
           // Botão temporário para deletar do HIVE
-          IconButton(
-            icon: const Icon(Icons.delete_forever, color: Colors.red),
-            onPressed: _deletarDoHive,
-            tooltip: 'Deletar aventura do HIVE (temporário)',
-          ),
+          if (DeveloperConfig.ENABLE_TYPE_EDITING)
+            IconButton(
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              onPressed: _deletarDoHive,
+              tooltip: 'Deletar aventura do HIVE (temporário)',
+            ),
           // Botão para listar arquivos na pasta do Drive
           // Botão para salvar no Drive
           if (historiaAtual != null)
@@ -870,54 +872,55 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                           ),
                           SizedBox(height: 16),
                           // Botão de sincronização com Drive
-                          SizedBox(
-                            width: double.infinity,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: _sincronizarComDrive,
-                                splashColor: Colors.blue.shade100,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Colors.blue.shade400, Colors.cyan.shade400],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.blue.withOpacity(0.18),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 6),
+                          if (DeveloperConfig.ENABLE_TYPE_EDITING)
+                            SizedBox(
+                              width: double.infinity,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
+                                  onTap: _sincronizarComDrive,
+                                  splashColor: Colors.blue.shade100,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Colors.blue.shade400, Colors.cyan.shade400],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
                                       ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                  child: Center(
-                                    child: Wrap(
-                                      alignment: WrapAlignment.center,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      spacing: 10,
-                                      children: [
-                                        Icon(Icons.cloud_download, color: Colors.white, size: 26),
-                                        Text(
-                                          'SINCRONIZAR COM DRIVE',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            letterSpacing: 1.1,
-                                          ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.blue.withOpacity(0.18),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 6),
                                         ),
                                       ],
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    child: Center(
+                                      child: Wrap(
+                                        alignment: WrapAlignment.center,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        spacing: 10,
+                                        children: [
+                                          Icon(Icons.cloud_download, color: Colors.white, size: 26),
+                                          Text(
+                                            'SINCRONIZAR COM DRIVE',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 1.1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),

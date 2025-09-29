@@ -10,6 +10,7 @@ import '../../tipagem/data/tipagem_repository.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
 import '../presentation/casa_vigarista_modal_v2.dart';
+import '../presentation/mochila_screen.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -30,7 +31,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   HistoriaJogador? historiaAtual;
   bool isLoading = true;
   bool isAdvancingTier = false;
-  
+  int _abaAtual = 0; // 0 = Mapa, 1 = Mochila, 2 = Loja
+
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
     'assets/mapas_aventura/deserto.jpg',
@@ -149,46 +151,113 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       );
     }
 
-    int tierAtual = historiaAtual?.tier ?? 1;
-    int scoreAtual = historiaAtual?.score ?? 0;
-    int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
-    bool podeAvancarTier = mortosNoTier >= 3;
-    print('🎯 [DEBUG] mortosNoTier: $mortosNoTier, podeAvancarTier: $podeAvancarTier');
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black87,
-        title: Text(historiaAtual?.aventuraIniciada == true 
-            ? 'Aventura em Andamento' 
+        title: Text(historiaAtual?.aventuraIniciada == true
+            ? 'Aventura em Andamento'
             : 'Mapa de Aventura'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Imagem do mapa de fundo
-            Positioned.fill(
-              child: Image.asset(
-                mapaEscolhido,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey.shade800,
-                    child: const Center(
+        actions: [
+          // Ícone de refresh - só aparece quando aventura iniciada e sem batalhas no andar atual
+          if (historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _refreshAndar,
+                  tooltip: 'Resetar andar atual',
+                ),
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Center(
                       child: Text(
-                        'Mapa não encontrado',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                        '${historiaAtual?.refreshsRestantes ?? 0}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Conteúdo principal (mapa, mochila ou loja)
+            Expanded(
+              child: IndexedStack(
+                index: _abaAtual,
+                children: [
+                  // ABA 0: MAPA
+                  _buildMapaView(),
+
+                  // ABA 1: MOCHILA
+                  const MochilaScreen(),
+
+                  // ABA 2: LOJA
+                  _buildLojaView(),
+                ],
               ),
             ),
+
+            // Barra de abas inferior
+            _buildBottomNavigationBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapaView() {
+    int tierAtual = historiaAtual?.tier ?? 1;
+    int scoreAtual = historiaAtual?.score ?? 0;
+    int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
+    bool podeAvancarTier = mortosNoTier >= 3;
+    print('🎯 [DEBUG] mortosNoTier: $mortosNoTier, podeAvancarTier: $podeAvancarTier');
+
+    return Stack(
+      children: [
+        // Imagem do mapa de fundo
+        Positioned.fill(
+          child: Image.asset(
+            mapaEscolhido,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey.shade800,
+                child: const Center(
+                  child: Text(
+                    'Mapa não encontrado',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
             // TIER, SCORE e botão avançar
             Positioned(
               top: 16,
@@ -269,42 +338,175 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
             
-            // Overlay de loading quando avançando tier
-            if (isAdvancingTier)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.8),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 3,
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          'Preparando novo andar...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Gerando novos monstros e salvando progresso',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+        // Overlay de loading quando avançando tier
+        if (isAdvancingTier)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.8),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 3,
                     ),
-                  ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Preparando novo andar...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Gerando novos monstros e salvando progresso',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLojaView() {
+    if (historiaAtual == null) {
+      return const Center(
+        child: Text(
+          'Carregando loja...',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      );
+    }
+
+    return CasaVigaristaModalV2(
+      historia: historiaAtual!,
+      onHistoriaAtualizada: (novaHistoria) {
+        setState(() {});
+      },
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.9),
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildTabButton(
+            index: 0,
+            icon: Icons.map,
+            label: 'MAPA',
+            isSelected: _abaAtual == 0,
+          ),
+          _buildTabButton(
+            index: 1,
+            icon: Icons.backpack,
+            label: 'MOCHILA',
+            isSelected: _abaAtual == 1,
+            iconAsset: 'assets/icons_gerais/mochila.png',
+          ),
+          _buildTabButton(
+            index: 2,
+            icon: Icons.store,
+            label: 'LOJA',
+            isSelected: _abaAtual == 2,
+            iconAsset: 'assets/npc/loja.png',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    String? iconAsset,
+  }) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _abaAtual = index;
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isSelected ? Colors.amber : Colors.transparent,
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícone (asset ou icon)
+                if (iconAsset != null)
+                  Image.asset(
+                    iconAsset,
+                    width: 28,
+                    height: 28,
+                    color: isSelected ? Colors.amber : Colors.white60,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        icon,
+                        size: 28,
+                        color: isSelected ? Colors.amber : Colors.white60,
+                      );
+                    },
+                  )
+                else
+                  Icon(
+                    icon,
+                    size: 28,
+                    color: isSelected ? Colors.amber : Colors.white60,
+                  ),
+
+                const SizedBox(height: 4),
+
+                // Label
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.amber : Colors.white60,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -333,8 +535,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosNormais));
     }
 
-    // Adiciona Casa do Vigarista (baú de tesouro) - posição central superior
-    pontos.add(_buildCasaDoVigarista(0.5, 0.25));
+    // Casa do Vigarista agora está nas abas inferiores
+    // pontos.add(_buildCasaDoVigarista(0.5, 0.25));
 
     // Adiciona monstros de coleção 3 centímetros abaixo do mercado
     for (int i = 0; i < monstrosColecao.length; i++) {
@@ -415,10 +617,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   Widget _buildCasaDoVigarista(double left, double top) {
-    // Verifica se o jogador tem score suficiente (mínimo = 2 * tier atual)
+    // Verifica se o jogador tem score suficiente (mínimo = 1 * tier atual)
     int tierAtual = historiaAtual?.tier ?? 1;
     int scoreAtual = historiaAtual?.score ?? 0;
-    int custoMinimo = 2 * tierAtual;
+    int custoMinimo = 1 * tierAtual;
     bool podeAcessar = scoreAtual >= custoMinimo;
     
     final screenHeight = MediaQuery.of(context).size.height;
@@ -1106,5 +1308,204 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         ),
       ),
     );
+  }
+
+  /// Verifica se pode refresh do andar (não houve batalhas no andar atual e tem refreshs restantes)
+  bool _podeRefreshAndar() {
+    if (historiaAtual == null) return false;
+
+    // Verifica se há batalhas no tier atual
+    final batalhasNoTierAtual = historiaAtual!.historicoBatalhas
+        .where((batalha) => batalha.tierNaBatalha == historiaAtual!.tier)
+        .toList();
+
+    // Verifica se tem refreshs restantes
+    final temRefreshsRestantes = historiaAtual!.refreshsRestantes > 0;
+
+    return batalhasNoTierAtual.isEmpty && temRefreshsRestantes;
+  }
+
+  /// Reseta o andar atual gerando novos monstros
+  Future<void> _refreshAndar() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [Colors.blue.withOpacity(0.1), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Ícone de refresh animado
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.refresh,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Título
+                const Text(
+                  'Resetando Andar',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+
+                // Progress indicator
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 16),
+
+                // Mensagem explicativa
+                const Text(
+                  'Gerando novos monstros para o andar atual...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+
+                // Container de informação adicional
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Seu progresso no tier será mantido.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.refresh, color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Refreshs restantes após este: ${(historiaAtual?.refreshsRestantes ?? 1) - 1}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      if (historiaAtual == null) return;
+
+      // Delay de 2 segundos para mostrar o loading
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Gera novos monstros para o tier atual
+      final novosMonstros = await repository.gerarMonstrosInimigosPorTier(historiaAtual!.tier);
+
+      // Atualiza a história com novos monstros e decrementa refreshs
+      final historiaAtualizada = historiaAtual!.copyWith(
+        monstrosInimigos: novosMonstros,
+        refreshsRestantes: historiaAtual!.refreshsRestantes - 1,
+      );
+
+      // Salva localmente
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+      // Salva no Drive
+      print('💾 [MapaAventura] Salvando refresh no Drive...');
+      await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
+
+      // Atualiza o estado local
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      // Fecha o dialog de loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      print('🔄 [MapaAventura] Andar resetado! Novos monstros gerados para tier ${historiaAtualizada.tier}');
+      print('🔄 [MapaAventura] Refreshs restantes: ${historiaAtualizada.refreshsRestantes}');
+
+    } catch (e) {
+      print('❌ [MapaAventura] Erro ao resetar andar: $e');
+
+      // Fecha o dialog de loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Mostra erro
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Erro'),
+            content: const Text('Não foi possível resetar o andar. Tente novamente.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 }

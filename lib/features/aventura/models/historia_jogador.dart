@@ -13,6 +13,7 @@ class HistoriaJogador {
   final List<RegistroBatalha> historicoBatalhas;
   final String runId; // ID único para cada run/aventura
   final DateTime dataCriacao; // Data de criação da aventura
+  final int refreshsRestantes; // Quantidade de refreshs restantes (máximo 5 por run)
 
   HistoriaJogador({
     required this.email,
@@ -25,6 +26,7 @@ class HistoriaJogador {
     this.historicoBatalhas = const [],
     String? runId,
     DateTime? dataCriacao,
+    this.refreshsRestantes = 5, // Inicia com 5 refreshs
   }) : runId = runId ?? '',
        dataCriacao = dataCriacao ?? DateTime.utc(2000); // Default para aventuras antigas
 
@@ -48,6 +50,7 @@ class HistoriaJogador {
       dataCriacao: json['dataCriacao'] != null
           ? DateTime.parse(json['dataCriacao'])
           : DateTime.utc(2000), // Default para aventuras antigas sem data
+      refreshsRestantes: json['refreshsRestantes'] ?? 5, // Default 5 para aventuras antigas
     );
   }
 
@@ -63,6 +66,7 @@ class HistoriaJogador {
       'historicoBatalhas': historicoBatalhas.map((b) => b.toJson()).toList(),
       'runId': runId,
       'dataCriacao': dataCriacao.toIso8601String(),
+      'refreshsRestantes': refreshsRestantes,
     };
   }
 
@@ -77,6 +81,7 @@ class HistoriaJogador {
     List<RegistroBatalha>? historicoBatalhas,
     String? runId,
     DateTime? dataCriacao,
+    int? refreshsRestantes,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -89,6 +94,7 @@ class HistoriaJogador {
       historicoBatalhas: historicoBatalhas ?? this.historicoBatalhas,
       runId: runId ?? this.runId,
       dataCriacao: dataCriacao ?? this.dataCriacao,
+      refreshsRestantes: refreshsRestantes ?? this.refreshsRestantes,
     );
   }
 
