@@ -252,7 +252,8 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
       final valorTipo = bonusTipo[nome] ?? 0;
       displayText = valorTipo > 0 ? '+$valorTipo' : '-';
     } else {
-      displayText = valor > 0 ? '+$valor' : '-';
+      // Sem tipo selecionado, sempre mostra "-"
+      displayText = '-';
     }
 
     return Column(
