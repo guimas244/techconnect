@@ -14,6 +14,7 @@ import '../models/historia_jogador.dart';
 import '../models/magia_drop.dart';
 import '../models/progresso_diario.dart';
 import '../providers/aventura_provider.dart';
+import '../providers/progresso_bonus_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
@@ -1445,6 +1446,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Salva de volta
       final novoProgressoJson = jsonEncode(progresso.toJson());
       await prefs.setString('progresso_diario', novoProgressoJson);
+
+      // Recarrega os bônus no provider para refletir imediatamente nos monstros
+      await ref.read(progressoBonusStateProvider.notifier).reload();
 
       print('✅ [Progresso] Kill registrado para tipo ${tipoInimigo.name} (total: ${progresso.killsPorTipo[tipoInimigo.name]})');
     } catch (e) {

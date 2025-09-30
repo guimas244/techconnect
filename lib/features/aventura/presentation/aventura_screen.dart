@@ -607,15 +607,10 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: Colors.blueGrey.shade900,
-        title: const Text('Aventura'),
+        title: const Text('Equipe'),
         centerTitle: true,
         elevation: 2,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _voltarParaHome();
-          },
-        ),
+        automaticallyImplyLeading: false, // Remove o botão voltar
         actions: [
           // Botão temporário para deletar do HIVE
           if (DeveloperConfig.ENABLE_TYPE_EDITING)
@@ -1017,14 +1012,15 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           ),
         ),
         const SizedBox(height: 30),
-        // Botão Iniciar/Continuar Aventura
-        SizedBox(
-          width: double.infinity,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _podeUsarBotaoAventura() ? _botaoPrincipalAction : null,
+        // Botão Iniciar Aventura (oculta após aventura iniciada)
+        if (historiaAtual == null || !historiaAtual!.aventuraIniciada)
+          SizedBox(
+            width: double.infinity,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _podeUsarBotaoAventura() ? _botaoPrincipalAction : null,
               splashColor: Colors.deepPurple.shade100,
               child: Opacity(
                 opacity: _podeUsarBotaoAventura() ? 1.0 : 0.5,

@@ -304,9 +304,15 @@ class ModalMonstroAventura extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildVidaInfo(), // Nova função para mostrar vida atual/máxima
-                      _buildEnergiaInfo(), // Nova função para mostrar energia atual/máxima
-                      _buildAtributoInfo('Agilidade', monstro.agilidade, Remix.run_fill, Colors.purple),
+                      _buildVidaInfo(bonusProgresso: bonusTipo['HP'] ?? 0), // Nova função para mostrar vida atual/máxima
+                      _buildEnergiaInfo(), // Energia não recebe bônus de progresso
+                      _buildAtributoInfo(
+                        'Agilidade',
+                        monstro.agilidade,
+                        Remix.run_fill,
+                        Colors.purple,
+                        bonusProgresso: bonusTipo['SPD'] ?? 0,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -495,22 +501,22 @@ class ModalMonstroAventura extends ConsumerWidget {
     );
   }
 
-  Widget _buildVidaInfo() {
+  Widget _buildVidaInfo({int bonusProgresso = 0}) {
     // Usa vida máxima com buffs se estiver em batalha
     final vidaMaxima = isBatalha && vidaMaximaAtual != null ? vidaMaximaAtual! : monstro.vida;
-    
+
     // Calcula a cor da vida baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
     double percentualVida = (monstro.vidaAtual / vidaMaxima).clamp(0.0, 1.0);
-    Color corVida = percentualVida > 0.5 
-        ? Colors.green 
-        : percentualVida > 0.25 
-            ? Colors.orange 
+    Color corVida = percentualVida > 0.5
+        ? Colors.green
+        : percentualVida > 0.25
+            ? Colors.orange
             : Colors.red;
-    
+
     // Determina se há buff de vida
     final temBuffVida = isBatalha && vidaMaxima > monstro.vida;
     final buffVida = temBuffVida ? vidaMaxima - monstro.vida : 0;
-    
+
     return Column(
       children: [
         Icon(
@@ -531,8 +537,9 @@ class ModalMonstroAventura extends ConsumerWidget {
         Builder(
           builder: (context) {
             final bonusItem = monstro.itemEquipado?.atributos['vida'] ?? 0;
-            
-            if (bonusItem > 0 && !temBuffVida) {
+            final temBonus = bonusItem > 0 || bonusProgresso > 0;
+
+            if (temBonus && !temBuffVida) {
               return Column(
                 children: [
                   Text(
@@ -543,13 +550,36 @@ class ModalMonstroAventura extends ConsumerWidget {
                       color: Colors.red,
                     ),
                   ),
-                  Text(
-                    '${monstro.vida} (+$bonusItem)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${monstro.vida}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      if (bonusItem > 0)
+                        Text(
+                          ' +$bonusItem',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      if (bonusProgresso > 0)
+                        Text(
+                          ' +$bonusProgresso',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               );
@@ -589,24 +619,24 @@ class ModalMonstroAventura extends ConsumerWidget {
     );
   }
 
-  Widget _buildEnergiaInfo() {
+  Widget _buildEnergiaInfo({int bonusProgresso = 0}) {
     // Usa energiaAtual se estiver em batalha, senão usa energia padrão
     final energiaAtualValue = isBatalha && energiaAtual != null ? energiaAtual! : monstro.energiaAtual;
     // Usa energia máxima com buffs se estiver em batalha
     final energiaMaxima = isBatalha && energiaMaximaAtual != null ? energiaMaximaAtual! : monstro.energia;
-    
+
     // Calcula a cor da energia baseada na porcentagem, garantindo que seja entre 0.0 e 1.0
     double percentualEnergia = (energiaAtualValue / energiaMaxima).clamp(0.0, 1.0);
-    Color corEnergia = percentualEnergia > 0.5 
-        ? Colors.blue 
-        : percentualEnergia > 0.25 
-            ? Colors.orange 
+    Color corEnergia = percentualEnergia > 0.5
+        ? Colors.blue
+        : percentualEnergia > 0.25
+            ? Colors.orange
             : Colors.red;
-    
+
     // Determina se há buff de energia
     final temBuffEnergia = isBatalha && energiaMaxima > monstro.energia;
     final buffEnergia = temBuffEnergia ? energiaMaxima - monstro.energia : 0;
-    
+
     return Column(
       children: [
         Icon(
@@ -627,8 +657,9 @@ class ModalMonstroAventura extends ConsumerWidget {
         Builder(
           builder: (context) {
             final bonusItem = monstro.itemEquipado?.atributos['energia'] ?? 0;
-            
-            if (bonusItem > 0 && !temBuffEnergia) {
+            final temBonus = bonusItem > 0 || bonusProgresso > 0;
+
+            if (temBonus && !temBuffEnergia) {
               return Column(
                 children: [
                   Text(
@@ -639,13 +670,36 @@ class ModalMonstroAventura extends ConsumerWidget {
                       color: Colors.blue,
                     ),
                   ),
-                  Text(
-                    '${monstro.energia} (+$bonusItem)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${monstro.energia}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      if (bonusItem > 0)
+                        Text(
+                          ' +$bonusItem',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      if (bonusProgresso > 0)
+                        Text(
+                          ' +$bonusProgresso',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               );

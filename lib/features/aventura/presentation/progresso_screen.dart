@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/progresso_diario.dart';
 import '../../../shared/models/tipo_enum.dart';
 import 'package:intl/intl.dart';
+import '../providers/progresso_bonus_provider.dart';
 
-class ProgressoScreen extends StatefulWidget {
+class ProgressoScreen extends ConsumerStatefulWidget {
   const ProgressoScreen({super.key});
 
   @override
-  State<ProgressoScreen> createState() => _ProgressoScreenState();
+  ConsumerState<ProgressoScreen> createState() => _ProgressoScreenState();
 }
 
-class _ProgressoScreenState extends State<ProgressoScreen> {
+class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
   ProgressoDiario? progressoAtual;
   bool _mostrarDistribuicao = false;
   bool _isLoading = true;
@@ -79,6 +81,9 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
 
     final novoProgresso = progressoAtual!.atualizarDistribuicao(_distribuicaoTemp);
     await _salvarProgresso(novoProgresso);
+
+    // Recarrega os bônus no provider para refletir nos monstros
+    await ref.read(progressoBonusStateProvider.notifier).reload();
 
     setState(() {
       progressoAtual = novoProgresso;
