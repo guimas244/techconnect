@@ -1,6 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:math';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import 'aventura_screen.dart';
@@ -9,6 +12,7 @@ import '../models/habilidade.dart';
 import '../models/item.dart';
 import '../models/historia_jogador.dart';
 import '../models/magia_drop.dart';
+import '../models/progresso_diario.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/habilidade_enum.dart';
@@ -20,12 +24,54 @@ import '../services/magia_service.dart';
 import '../services/colecao_service.dart';
 import '../../jogador/services/vantagens_service.dart';
 import 'modal_monstro_desbloqueado.dart';
-// Removendo import não usado
-import 'modal_monstro_aventura.dart';
+import '../models/item_consumivel.dart';
+import '../models/mochila.dart';
+import '../services/mochila_service.dart';
+import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
-import 'modal_item_obtido.dart';
-import 'modal_magia_obtida.dart';
+import 'modal_monstro_aventura.dart';
 
+class _ResultadoEvolucao {
+  final HistoriaJogador historiaAtualizada;
+  final List<MonstroAventura> evoluidos;
+  final Map<MonstroAventura, Map<String, int>> ganhos;
+  final Map<MonstroAventura, String?> habilidades;
+
+  const _ResultadoEvolucao({
+    required this.historiaAtualizada,
+    required this.evoluidos,
+    required this.ganhos,
+    required this.habilidades,
+  });
+}
+
+class _DropResultado {
+  final Item? item;
+  final int? tier;
+  final RaridadeItem? raridade;
+  final MagiaDrop? magia;
+
+  const _DropResultado({
+    this.item,
+    this.tier,
+    this.raridade,
+    this.magia,
+  });
+}
+
+class _PacoteRecompensas {
+  final RecompensasBatalha recompensas;
+  final List<MonstroAventura> timeAtualizado;
+  final Mochila mochila;
+  final String emailJogador;
+
+  const _PacoteRecompensas({
+    required this.recompensas,
+    required this.timeAtualizado,
+    required this.mochila,
+    required this.emailJogador,
+  });
+}
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
   final MonstroInimigo inimigo;
@@ -77,14 +123,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Verifica se o sistema de tipagem está inicializado
     final isInicializado = await _tipagemRepository.isInicializadoAsync;
     if (!isInicializado) {
-      print('⚠️ [Batalha] Sistema de tipagem não inicializado, usando valores padrão');
+      print('?? [Batalha] Sistema de tipagem não inicializado, usando valores padrão');
     } else {
-      print('✅ [Batalha] Sistema de tipagem inicializado e pronto');
+      print('? [Batalha] Sistema de tipagem inicializado e pronto');
     }
   }
 
   void _inicializarBatalha() {
-    print('🗡️ [BatalhaScreen] Inicializando batalha...');
+    print('??? [BatalhaScreen] Inicializando batalha...');
     
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
@@ -100,12 +146,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final itemInimigo = widget.inimigo.itemEquipado;
     
     // Debug: mostra stats base do inimigo
-    print('🎯 [DEBUG] Inimigo stats base: ATK=${widget.inimigo.ataque} DEF=${widget.inimigo.defesa} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vida} AGI=${widget.inimigo.agilidade}');
-    print('🎯 [DEBUG] Inimigo stats com item: ATK=${widget.inimigo.ataqueTotal} DEF=${widget.inimigo.defesaTotal} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vidaTotal} AGI=${widget.inimigo.agilidadeTotal}');
+    print('?? [DEBUG] Inimigo stats base: ATK=${widget.inimigo.ataque} DEF=${widget.inimigo.defesa} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vida} AGI=${widget.inimigo.agilidade}');
+    print('?? [DEBUG] Inimigo stats com item: ATK=${widget.inimigo.ataqueTotal} DEF=${widget.inimigo.defesaTotal} HP=${widget.inimigo.vidaAtual}/${widget.inimigo.vidaTotal} AGI=${widget.inimigo.agilidadeTotal}');
     if (itemInimigo != null) {
-      print('🎯 [DEBUG] Item do inimigo: ${itemInimigo.nome} - ATK+${itemInimigo.ataque} DEF+${itemInimigo.defesa} HP+${itemInimigo.vida} AGI+${itemInimigo.agilidade}');
+      print('?? [DEBUG] Item do inimigo: ${itemInimigo.nome} - ATK+${itemInimigo.ataque} DEF+${itemInimigo.defesa} HP+${itemInimigo.vida} AGI+${itemInimigo.agilidade}');
     } else {
-      print('🎯 [DEBUG] Inimigo SEM item equipado');
+      print('?? [DEBUG] Inimigo SEM item equipado');
     }
     final ataqueInimigoTotal = widget.inimigo.ataqueTotal;
     final defesaInimigoTotal = widget.inimigo.defesaTotal;
@@ -120,10 +166,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
     
-    print('📊 [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
-    print('📊 [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
+    print('?? [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
+    print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
-      print('📊 [Item] Inimigo equipado: ${itemInimigo.nome}');
+      print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
     }
 
     estadoAtual = EstadoBatalha(
@@ -146,7 +192,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       historicoAcoes: [],
     );
     
-    print('🏃 [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa a rodada');
+    print('?? [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa a rodada');
   }
 
   void _executarRodadaCompleta() {
@@ -165,7 +211,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   void _resumirBatalha() {
     if (estadoAtual == null || batalhaConcluida) return;
     
-    print('⚡ [Batalha Automática] Iniciando batalha automática...');
+    print('? [Batalha Automática] Iniciando batalha automática...');
     
     setState(() {
       batalhaAutomatica = true;
@@ -186,7 +232,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     while (!batalhaConcluida && rodadaCount < maxRodadas) {
       rodadaCount++;
-      print('⚡ [Auto Battle] Rodada $rodadaCount');
+      print('? [Auto Battle] Rodada $rodadaCount');
       
       // Determina ordem dos ataques baseada na agilidade
       bool jogadorPrimeiro = jogadorComeca;
@@ -238,14 +284,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Se chegou no limite de rodadas, empate
     if (rodadaCount >= maxRodadas) {
-      print('⚠️ [Auto Battle] Limite de rodadas atingido, finalizando como empate');
+      print('?? [Auto Battle] Limite de rodadas atingido, finalizando como empate');
       _finalizarBatalhaAutomatica(estadoAtualizado, 'empate');
     }
   }
 
   /// Finaliza batalha automática e processa resultados
   void _finalizarBatalhaAutomatica(EstadoBatalha estadoFinal, String vencedorFinal) {
-    print('⚡ [Auto Battle] Finalizando batalha automática - Vencedor: $vencedorFinal');
+    print('? [Auto Battle] Finalizando batalha automática - Vencedor: $vencedorFinal');
     
     setState(() {
       batalhaAutomatica = false;
@@ -263,7 +309,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Determina ordem dos ataques baseada na agilidade (usa a mesma lógica da inicialização)
     bool jogadorPrimeiro = jogadorComeca;
     
-    print('🎯 [Rodada] Iniciando rodada completa - ${jogadorPrimeiro ? "Jogador" : "Inimigo"} ataca primeiro');
+    print('?? [Rodada] Iniciando rodada completa - ${jogadorPrimeiro ? "Jogador" : "Inimigo"} ataca primeiro');
     
     EstadoBatalha estadoAtualizado = estadoAtual!;
     
@@ -311,13 +357,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Jogador] Sem energia para habilidades - usando ataque básico');
+      print('?? [Jogador] Sem energia para habilidades - usando ataque básico');
       // Executa ataque básico quando não tem energia para habilidades
       return await _executarAtaqueBasico(estado, true); // true = é jogador
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
-    print('⚔️ [Jogador] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+    print('?? [Jogador] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
     
     // Aplica habilidade e desconta energia
     var novoEstado = await _aplicarHabilidade(estado, habilidade, true);
@@ -339,13 +385,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         .toList();
     
     if (habilidadesDisponiveis.isEmpty) {
-      print('⚠️ [Inimigo] Sem energia para habilidades - usando ataque básico');
+      print('?? [Inimigo] Sem energia para habilidades - usando ataque básico');
       // Executa ataque básico quando não tem energia para habilidades
       return await _executarAtaqueBasico(estado, false); // false = é inimigo
     }
     
     final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
-    print('⚔️ [Inimigo] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+    print('?? [Inimigo] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
     
     // Aplica habilidade e desconta energia
     var novoEstado = await _aplicarHabilidade(estado, habilidade, false);
@@ -449,13 +495,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
           int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -644,7 +690,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
     
-    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes?$vidaDepois';
     
     // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
     if (efetividade == 0.0) {
@@ -673,7 +719,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   void _finalizarBatalha(String vencedorBatalha) {
-    print('🏁 [BatalhaScreen] Finalizando batalha com vencedor: $vencedorBatalha');
+    print('?? [BatalhaScreen] Finalizando batalha com vencedor: $vencedorBatalha');
     if (mounted) {
       setState(() {
         batalhaConcluida = true;
@@ -690,7 +736,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Se o jogador venceu, calcular score e gerar item
     if (vencedorBatalha == 'jogador') {
-      print('🎉 [BatalhaScreen] Jogador venceu, processando score e recompensas...');
+      print('?? [BatalhaScreen] Jogador venceu, processando score e recompensas...');
       _atualizarScoreEGerarItem();
     } else {
       // Se perdeu, salva batalha no histórico sem dar score
@@ -709,7 +755,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   Future<void> _atualizarScoreEGerarItem() async {
     if (scoreAtualizado) {
-      print('⚠️ [BatalhaScreen] Score já atualizado, ignorando chamada duplicada');
+      print('?? [BatalhaScreen] Score já atualizado, ignorando chamada duplicada');
       return;
     }
     scoreAtualizado = true;
@@ -725,8 +771,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final scoreGanho = historia.tier >= 11 ? 2 : historia.tier;
         final novoScore = historia.score + scoreGanho;
         
-        print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
-        print('🎯 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
+        print('?? [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        print('?? [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
         
         // Cria registro da batalha
         final registroBatalha = RegistroBatalha(
@@ -753,32 +799,72 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Salva histórico apenas no HIVE (SEM atualizar ranking em vitórias)
         await repository.salvarHistoricoJogadorLocal(historiaComScore);
 
-        print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
+        print('? [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
       }
 
-      // 🩹 Processa cura pós-batalha da coleção nostálgica
+      // ?? Processa cura pós-batalha da coleção nostálgica
       await _processarCuraPosBatalha();
 
-      // 🌟 Processa desbloqueio de monstro raro se aplicável
+      // ?? Processa desbloqueio de monstro raro se aplicável
       await _processarDesbloqueioMonstroRaro();
 
     } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao atualizar score: $e');
+      print('? [BatalhaScreen] Erro ao atualizar score: $e');
     }
     
     // Primeiro processa evolução, depois ITENS EQUIPÁVEIS (não drops/prêmios)
     await _processarEvolucaoEItens();
   }
 
+  Future<void> _salvarBatalhaDerrota() async {
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Carrega história atual
+      final historia = await repository.carregarHistoricoJogador(emailJogador);
+      if (historia != null) {
+        // Cria registro da batalha sem dar score
+        final registroBatalha = RegistroBatalha(
+          jogadorNome: widget.jogador.tipo.monsterName,
+          inimigoNome: widget.inimigo.tipo.monsterName,
+          acoes: estadoAtual?.historicoAcoes ?? [],
+          vencedor: 'inimigo',
+          dataHora: DateTime.now(),
+          vidaInicialJogador: widget.jogador.vida,
+          vidaFinalJogador: estadoAtual?.vidaAtualJogador ?? 0,
+          vidaInicialInimigo: widget.inimigo.vida,
+          vidaFinalInimigo: estadoAtual?.vidaAtualInimigo ?? 0,
+          tierNaBatalha: historia.tier,
+          scoreAntes: historia.score,
+          scoreDepois: historia.score, // Score não muda em derrota
+          scoreGanho: 0, // Nenhum score ganho
+        );
+
+        // Atualiza história com histórico da batalha (sem alterar score)
+        final historiaAtualizada = historia.copyWith(
+          historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
+        );
+
+        // Salva histórico apenas no HIVE
+        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+        print('✅ [BatalhaScreen] Derrota registrada no histórico (sem score)!');
+      }
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao salvar derrota: $e');
+    }
+  }
+
   Future<void> _processarCuraPosBatalha() async {
     try {
-      print('🩹 [CuraPosBatalha] Iniciando processamento da cura pós-batalha...');
+      print('?? [CuraPosBatalha] Iniciando processamento da cura pós-batalha...');
       final emailJogador = ref.read(validUserEmailProvider);
       final vantagensService = VantagensService();
 
       // Verifica quanto de cura o jogador tem da coleção nostálgica
       final curaPosBatalha = await vantagensService.obterCuraPosBatalha(emailJogador);
-      print('🩹 [CuraPosBatalha] Cura disponível: $curaPosBatalha pontos');
+      print('?? [CuraPosBatalha] Cura disponível: $curaPosBatalha pontos');
 
       if (curaPosBatalha > 0 && estadoAtual != null) {
         final vidaAntesCura = estadoAtual!.vidaAtualJogador;
@@ -804,7 +890,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               defesaAlvo: 0,
               vidaAntes: vidaAntesCura,
               vidaDepois: vidaDepoisCura,
-              descricao: 'Coleção Nostálgica restaurou $vidaCurada de vida. Vida: $vidaAntesCura→$vidaDepoisCura',
+              descricao: 'Coleção Nostálgica restaurou $vidaCurada de vida. Vida: $vidaAntesCura?$vidaDepoisCura',
             );
 
             setState(() {
@@ -813,16 +899,16 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               );
             });
 
-            print('🩹 [CuraPosBatalha] Jogador curou $vidaCurada de vida (total: $curaPosBatalha disponível)');
+            print('?? [CuraPosBatalha] Jogador curou $vidaCurada de vida (total: $curaPosBatalha disponível)');
           }
         } else {
-          print('🩹 [CuraPosBatalha] Jogador já está com vida cheia, não precisa de cura');
+          print('?? [CuraPosBatalha] Jogador já está com vida cheia, não precisa de cura');
         }
       } else {
-        print('🩹 [CuraPosBatalha] Nenhuma cura disponível da coleção nostálgica');
+        print('?? [CuraPosBatalha] Nenhuma cura disponível da coleção nostálgica');
       }
     } catch (e) {
-      print('❌ [CuraPosBatalha] Erro ao processar cura pós-batalha: $e');
+      print('? [CuraPosBatalha] Erro ao processar cura pós-batalha: $e');
     }
   }
 
@@ -830,7 +916,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     try {
       // Verifica se o inimigo derrotado é um monstro raro
       if (!widget.inimigo.isRaro) {
-        print('🌟 [Desbloqueio] Inimigo não é raro, ignorando desbloqueio');
+        print('?? [Desbloqueio] Inimigo não é raro, ignorando desbloqueio');
         return;
       }
 
@@ -845,7 +931,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
 
       if (jaTemMonstro) {
-        print('🌟 [Desbloqueio] Jogador já possui ${widget.inimigo.nome}, não adicionando novamente');
+        print('?? [Desbloqueio] Jogador já possui ${widget.inimigo.nome}, não adicionando novamente');
         return;
       }
 
@@ -856,7 +942,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         ehNostalgico: widget.inimigo.ehNostalgico,
       );
 
-      print('🎉 [Desbloqueio] Monstro raro ${widget.inimigo.nome} desbloqueado e adicionado à coleção!');
+      print('?? [Desbloqueio] Monstro raro ${widget.inimigo.nome} desbloqueado e adicionado à coleção!');
 
       // Marca que houve desbloqueio para alterar o fluxo do modal
       setState(() {
@@ -867,7 +953,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await _mostrarModalDesbloqueio();
 
     } catch (e) {
-      print('❌ [Desbloqueio] Erro ao processar desbloqueio de monstro raro: $e');
+      print('? [Desbloqueio] Erro ao processar desbloqueio de monstro raro: $e');
     }
   }
 
@@ -881,1133 +967,425 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
   }
 
+
   Future<void> _processarEvolucaoEItens() async {
     if (evolucaoProcessada) {
-      print('⚠️ [BatalhaScreen] Evolução e itens já processados, ignorando chamada duplicada');
+      print('[BatalhaScreen] Evolucao e itens ja processados, ignorando chamada duplicada');
       return;
     }
 
-    // Se houve desbloqueio de monstro raro, não processa evolução/itens
     if (monstroRaroDesbloqueado) {
-      print('🌟 [BatalhaScreen] Monstro raro desbloqueado, pulando evolução e drops');
+      print('[BatalhaScreen] Monstro raro desbloqueado, pulando evolucao e drops');
       evolucaoProcessada = true;
-      // Finaliza a batalha já que não há itens para processar
       await _finalizarBatalhaComSalvamento();
       return;
     }
 
     evolucaoProcessada = true;
 
-    // 1️⃣ Primeiro processa e mostra evolução
-    await _processarEvolucaoMonstro();
+    try {
+      final pacote = await _montarRecompensasBatalha();
+      if (!mounted) return;
 
-    // 2️⃣ Depois processa geração de item (o salvamento será feito após o equipamento)
-    await _gerarEMostrarItem();
+      if (pacote == null) {
+        await _finalizarBatalhaComSalvamento();
+        return;
+      }
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => ModalRecompensasBatalha(
+          recompensas: pacote.recompensas,
+          timeJogador: pacote.timeAtualizado,
+          mochilaAtual: pacote.mochila,
+          onEquiparItem: (monstro, item) => _equiparItemEMonstro(monstro, item),
+          onDescartarItem: (item) async {
+            print('[BatalhaScreen] Item descartado: ${item.nome}');
+          },
+          onEquiparMagia: (monstro, magia, habilidade) =>
+              _equiparMagiaEMonstro(monstro, magia, habilidade),
+          onDescartarMagia: (magia) async {
+            print('[BatalhaScreen] Magia descartada: ${magia.nome}');
+          },
+          onGuardarItensNaMochila: (novosItens, slots) =>
+              _guardarItensNaMochila(
+                pacote.emailJogador,
+                pacote.mochila,
+                novosItens,
+                slots,
+              ),
+          onConcluir: _finalizarBatalhaComSalvamento,
+        ),
+      );
+    } catch (e, stack) {
+      print('[BatalhaScreen] Erro ao processar recompensas: $e');
+      print(stack);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao processar recompensas: $e')),
+        );
+      }
+      await _finalizarBatalhaComSalvamento();
+    }
   }
 
-  Future<void> _processarEvolucaoMonstro() async {
-    try {
-      final emailJogador = ref.read(validUserEmailProvider);
-      final repository = ref.read(aventuraRepositoryProvider);
-      final evolucaoService = EvolucaoService();
-      
-      // Carrega história atual
-      final historia = await repository.carregarHistoricoJogador(emailJogador);
-      if (historia == null || historia.monstros.isEmpty) {
-        print('❌ [Evolução] Nenhum monstro encontrado para evolução');
-        return;
+  Future<_PacoteRecompensas?> _montarRecompensasBatalha() async {
+    final emailJogador = ref.read(validUserEmailProvider);
+    final repository = ref.read(aventuraRepositoryProvider);
+    final evolucaoService = EvolucaoService();
+
+    final historiaCarregada =
+        await repository.carregarHistoricoJogador(emailJogador);
+    if (historiaCarregada == null || historiaCarregada.monstros.isEmpty) {
+      print('[BatalhaScreen] Historia do jogador nao encontrada para montar recompensas');
+      return null;
+    }
+
+    final resultadoEvolucao = await _aplicarEvolucaoSeNecessario(
+      historiaCarregada,
+      evolucaoService,
+      repository,
+    );
+
+    final historiaAtual =
+        resultadoEvolucao?.historiaAtualizada ?? historiaCarregada;
+
+    final drop = await _gerarDropParaRecompensas(historiaAtual);
+    final mochila = await _carregarMochilaAtual(emailJogador);
+
+    final recompensas = RecompensasBatalha(
+      monstrosEvoluidos: resultadoEvolucao?.evoluidos ?? const [],
+      ganhosAtributos: resultadoEvolucao?.ganhos ?? const {},
+      habilidadesEvoluidas: resultadoEvolucao?.habilidades ?? const {},
+      itemRecebido: drop.item,
+      tierItem: drop.tier,
+      raridadeItem: drop.raridade,
+      magiaRecebida: drop.magia,
+      itensConsumiveisRecebidos: const [],
+    );
+
+    return _PacoteRecompensas(
+      recompensas: recompensas,
+      timeAtualizado: historiaAtual.monstros,
+      mochila: mochila,
+      emailJogador: emailJogador,
+    );
+  }
+
+  Future<_ResultadoEvolucao?> _aplicarEvolucaoSeNecessario(
+    HistoriaJogador historia,
+    EvolucaoService evolucaoService,
+    dynamic repository,
+  ) async {
+    final monstroSorteado =
+        evolucaoService.sortearMonstroParaEvoluir(historia.monstros);
+    if (monstroSorteado == null) {
+      return null;
+    }
+
+    final levelInimigoDerrotado = widget.inimigo.level;
+    final podeEvoluir =
+        evolucaoService.podeEvoluir(monstroSorteado, levelInimigoDerrotado);
+
+    var historiaAtualizada = historia;
+    final evoluidos = <MonstroAventura>[];
+    final ganhos = <MonstroAventura, Map<String, int>>{};
+    final habilidades = <MonstroAventura, String?>{};
+
+    if (!podeEvoluir) {
+      final resultadoHabilidade =
+          evolucaoService.tentarEvoluirHabilidade(monstroSorteado, levelInimigoDerrotado);
+      final monstroAtualizado =
+          resultadoHabilidade['monstroAtualizado'] as MonstroAventura;
+
+      evoluidos.add(monstroAtualizado);
+      ganhos[monstroAtualizado] = {
+        'levelAntes': monstroSorteado.level,
+        'levelDepois': monstroAtualizado.level,
+        'vida': monstroAtualizado.vida - monstroSorteado.vida,
+        'energia': monstroAtualizado.energia - monstroSorteado.energia,
+        'ataque': monstroAtualizado.ataque - monstroSorteado.ataque,
+        'defesa': monstroAtualizado.defesa - monstroSorteado.defesa,
+        'agilidade': monstroAtualizado.agilidade - monstroSorteado.agilidade,
+      };
+
+      final info = evolucaoService.criarInfoEvolucaoHabilidade(
+        monstroSorteado,
+        resultadoHabilidade,
+      );
+      final habilidadeInfo =
+          info['habilidadeEvoluida'] as Map<String, dynamic>? ?? {};
+      final mensagem = _descricaoHabilidade(habilidadeInfo);
+      if (mensagem != null) {
+        habilidades[monstroAtualizado] = mensagem;
       }
-      
-      // Sorteia um monstro aleatório para evoluir
-      final monstroSorteado = evolucaoService.sortearMonstroParaEvoluir(historia.monstros);
-      if (monstroSorteado == null) {
-        print('❌ [Evolução] Falha ao sortear monstro para evolução');
-        return;
-      }
-      
-      print('🎲 [Evolução] Monstro sorteado para evolução: ${monstroSorteado.tipo.monsterName}');
-      
-      // Verifica se pode evoluir baseado no level gap
-      final levelInimigoDerrrotado = widget.inimigo.level;
-      final podeEvoluir = evolucaoService.podeEvoluir(monstroSorteado, levelInimigoDerrrotado);
-      
-      if (!podeEvoluir) {
-        // Monstro não pode evoluir por level gap, mas habilidades podem tentar evoluir
-        print('🚫 [Evolução] ${monstroSorteado.tipo.monsterName} não evoluiu devido ao level gap, tentando evoluir habilidade...');
-        
-        final resultadoHabilidade = evolucaoService.tentarEvoluirHabilidade(monstroSorteado, levelInimigoDerrrotado);
-        final monstroAtualizado = resultadoHabilidade['monstroAtualizado'] as MonstroAventura;
-        
-        // Atualiza a lista de monstros se uma habilidade evoluiu
-        if (resultadoHabilidade['habilidadeEvoluiu'] == true) {
-          final monstrosAtualizados = historia.monstros.map((m) {
-            if (m.tipo == monstroSorteado.tipo && 
-                m.tipoExtra == monstroSorteado.tipoExtra && 
+
+      if (resultadoHabilidade['habilidadeEvoluiu'] == true) {
+        historiaAtualizada = historia.copyWith(
+          monstros: historia.monstros.map((m) {
+            if (m.tipo == monstroSorteado.tipo &&
+                m.tipoExtra == monstroSorteado.tipoExtra &&
                 m.imagem == monstroSorteado.imagem) {
               return monstroAtualizado;
             }
             return m;
-          }).toList();
-          
-          // Salva a história com o monstro atualizado
-          final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-
-          // Mostra loading durante salvamento
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => const AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Salvando evolução...'),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-
-          // Fecha loading
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
-        }
-        
-        // Cria informações para o modal de habilidade
-        final infoEvolucaoHabilidade = evolucaoService.criarInfoEvolucaoHabilidade(monstroSorteado, resultadoHabilidade);
-        
-        // Mostra modal de evolução de habilidade
-        if (mounted) {
-          await _mostrarModalEvolucaoHabilidade(infoEvolucaoHabilidade);
-        }
-        
-        return;
+          }).toList(),
+        );
+        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       }
-      
-      // Evolui o monstro usando o novo sistema com level gap das habilidades
-      final monstroAntes = monstroSorteado;
-      final resultadoEvolucao = evolucaoService.evoluirMonstroCompleto(monstroSorteado, levelInimigoDerrrotado);
-      final monstroEvoluido = resultadoEvolucao['monstroEvoluido'] as MonstroAventura;
-      
-      // Atualiza a lista de monstros com o monstro evoluído
-      final monstrosAtualizados = historia.monstros.map((m) {
-        if (m.tipo == monstroSorteado.tipo && 
-            m.tipoExtra == monstroSorteado.tipoExtra && 
+
+      return _ResultadoEvolucao(
+        historiaAtualizada: historiaAtualizada,
+        evoluidos: evoluidos,
+        ganhos: ganhos,
+        habilidades: habilidades,
+      );
+    }
+
+    final resultadoEvolucao =
+        evolucaoService.evoluirMonstroCompleto(monstroSorteado, levelInimigoDerrotado);
+    final monstroEvoluido =
+        resultadoEvolucao['monstroEvoluido'] as MonstroAventura;
+
+    evoluidos.add(monstroEvoluido);
+
+    final infoCompleta =
+        evolucaoService.criarInfoEvolucaoCompleta(monstroSorteado, resultadoEvolucao);
+    final ganhosMapa = infoCompleta['ganhos'] as Map<String, dynamic>;
+    ganhos[monstroEvoluido] = {
+      'levelAntes': infoCompleta['levelAntes'] as int,
+      'levelDepois': infoCompleta['levelDepois'] as int,
+      'vida': ganhosMapa['vida'] as int,
+      'energia': ganhosMapa['energia'] as int,
+      'ataque': ganhosMapa['ataque'] as int,
+      'defesa': ganhosMapa['defesa'] as int,
+      'agilidade': ganhosMapa['agilidade'] as int,
+    };
+
+    final habilidadeInfo =
+        infoCompleta['habilidadeEvoluida'] as Map<String, dynamic>? ?? {};
+    final mensagemHabilidade = _descricaoHabilidade(habilidadeInfo);
+    if (mensagemHabilidade != null) {
+      habilidades[monstroEvoluido] = mensagemHabilidade;
+    }
+
+    historiaAtualizada = historia.copyWith(
+      monstros: historia.monstros.map((m) {
+        if (m.tipo == monstroSorteado.tipo &&
+            m.tipoExtra == monstroSorteado.tipoExtra &&
             m.imagem == monstroSorteado.imagem) {
           return monstroEvoluido;
         }
         return m;
-      }).toList();
-      
-      // Salva a história com o monstro evoluído
-      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-
-      // Mostra loading durante salvamento
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Salvando evolução...'),
-              ],
-            ),
-          ),
-        );
-      }
-
-      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-
-      // Fecha loading
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-      
-      // Cria informações da evolução para exibir
-      final infoEvolucao = evolucaoService.criarInfoEvolucaoCompleta(monstroAntes, resultadoEvolucao);
-      
-      // Mostra modal de evolução
-      if (mounted) {
-        await _mostrarModalEvolucao(infoEvolucao);
-      }
-      
-      print('✅ [Evolução] ${monstroEvoluido.tipo.monsterName} evoluiu para level ${monstroEvoluido.level}!');
-      
-    } catch (e) {
-      print('❌ [Evolução] Erro ao processar evolução: $e');
-    }
-  }
-
-  Future<void> _mostrarModalEvolucao(Map<String, dynamic> infoEvolucao) async {
-    final ganhos = infoEvolucao['ganhos'] as Map<String, dynamic>;
-    final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
-    
-    if (mounted) {
-      await showDialog(
-        context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.star,
-              color: Colors.amber,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'EVOLUÇÃO!',
-              style: TextStyle(
-                color: Colors.amber,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                '${infoEvolucao['monstro']} evoluiu!',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.blue.shade300),
-                ),
-                child: Text(
-                  'Level ${infoEvolucao['levelAntes']} → ${infoEvolucao['levelDepois']}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.blue.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              '🎁 Ganhos de atributos:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
-              ),
-              child: Column(
-                children: ganhos.entries.where((entry) => entry.value > 0).map((entry) => 
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _getIconeAtributo(entry.key),
-                          color: Colors.green.shade600,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_nomeAtributo(entry.key)}: +${entry.value}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Seção de Habilidade (Evoluída ou com Level Gap)
-            if (habilidadeEvoluida['evoluiu'] == true) ...[
-              const Text(
-                '✨ Habilidade evoluída:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.purple.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      child: Image.asset(
-                        'assets/icons_gerais/magia.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.auto_awesome,
-                            color: Colors.purple.shade600,
-                            size: 20,
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${habilidadeEvoluida['nome']}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Level ${habilidadeEvoluida['levelAntes']} → ${habilidadeEvoluida['levelDepois']}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.purple.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ] else if (habilidadeEvoluida['evoluiu'] == false && habilidadeEvoluida['motivo'] == 'level_gap') ...[
-              const Text(
-                '🚫 Habilidade não evoluiu:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.block,
-                      color: Colors.orange.shade600,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${habilidadeEvoluida['nome']}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Level ${habilidadeEvoluida['levelAtual']} (inimigo era level ${habilidadeEvoluida['levelInimigo']})',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.orange.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Muito poderosa para evoluir contra este inimigo',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange.shade600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Próximo: Escolha de item obtido',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber.shade700,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Continuar para Item'),
-          ),
-        ],
-      ),
+      }).toList(),
     );
-    }
-  }
 
-  Future<void> _mostrarModalSemEvolucao(Map<String, dynamic> infoSemEvolucao) async {
-    if (mounted) {
-      await showDialog(
-        context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.info,
-              color: Colors.orange,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'SEM EVOLUÇÃO',
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                '${infoSemEvolucao['monstro']} não evoluiu',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.trending_up, color: Colors.orange.shade600, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Diferença de Level:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${infoSemEvolucao['monstro']}:',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Level ${infoSemEvolucao['levelMonstro']}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Inimigo derrotado:',
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Level ${infoSemEvolucao['levelInimigo']}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.lightbulb, color: Colors.grey.shade600, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Seu monstro é muito mais poderoso que o inimigo derrotado. Enfrente inimigos mais fortes para evoluir!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Próximo: Escolha de item obtido',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber.shade700,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Continuar para Item'),
-          ),
-        ],
-      ),
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    return _ResultadoEvolucao(
+      historiaAtualizada: historiaAtualizada,
+      evoluidos: evoluidos,
+      ganhos: ganhos,
+      habilidades: habilidades,
     );
-    }
   }
 
-  Future<void> _mostrarModalEvolucaoHabilidade(Map<String, dynamic> infoEvolucao) async {
-    final habilidadeEvoluida = infoEvolucao['habilidadeEvoluida'] as Map<String, dynamic>;
-    
-    if (mounted) {
-      await showDialog(
-        context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              color: Colors.purple,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'HABILIDADE EVOLUIU!',
-              style: TextStyle(
-                color: Colors.purple,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                '${infoEvolucao['monstro']}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Text(
-                  'Monstro não evoluiu (level gap)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.orange.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Seção de Habilidade (Evoluída ou com Level Gap)
-            if (habilidadeEvoluida['evoluiu'] == true) ...[
-              const Text(
-                '✨ Habilidade evoluída:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.purple.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      child: Image.asset(
-                        'assets/icons_gerais/magia.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.auto_awesome,
-                            color: Colors.purple.shade600,
-                            size: 20,
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${habilidadeEvoluida['nome']}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Level ${habilidadeEvoluida['levelAntes']} → ${habilidadeEvoluida['levelDepois']}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.purple.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else if (habilidadeEvoluida['evoluiu'] == false && habilidadeEvoluida['motivo'] == 'level_gap') ...[
-              const Text(
-                '🚫 Habilidade não evoluiu:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.block,
-                      color: Colors.orange.shade600,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${habilidadeEvoluida['nome']}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Level ${habilidadeEvoluida['levelAtual']} (inimigo era level ${habilidadeEvoluida['levelInimigo']})',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.orange.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Muito poderosa para evoluir contra este inimigo',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange.shade600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info, color: Colors.amber.shade700, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Próximo: Escolha de item obtido',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.amber.shade700,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Continuar para Item'),
-          ),
-        ],
-      ),
-    );
-    }
-  }
-
-  String _nomeAtributo(String atributo) {
-    switch (atributo) {
-      case 'vida': return 'Vida';
-      case 'energia': return 'Energia';
-      case 'ataque': return 'Ataque';
-      case 'defesa': return 'Defesa';
-      case 'agilidade': return 'Agilidade';
-      default: return atributo;
-    }
-  }
-
-  IconData _getIconeAtributo(String atributo) {
-    switch (atributo) {
-      case 'vida': return Icons.favorite;
-      case 'energia': return Icons.bolt;
-      case 'ataque': return Icons.flash_on;
-      case 'defesa': return Icons.shield;
-      case 'agilidade': return Icons.speed;
-      default: return Icons.star;
-    }
-  }
-
-  Future<void> _salvarBatalhaDerrota() async {
-    try {
-      final emailJogador = ref.read(validUserEmailProvider);
-      final repository = ref.read(aventuraRepositoryProvider);
-      
-      // Carrega história atual
-      final historia = await repository.carregarHistoricoJogador(emailJogador);
-      if (historia != null) {
-        // Cria registro da batalha sem dar score
-        final registroBatalha = RegistroBatalha(
-          jogadorNome: widget.jogador.tipo.monsterName,
-          inimigoNome: widget.inimigo.tipo.monsterName,
-          acoes: estadoAtual?.historicoAcoes ?? [],
-          vencedor: 'inimigo',
-          dataHora: DateTime.now(),
-          vidaInicialJogador: widget.jogador.vida,
-          vidaFinalJogador: estadoAtual?.vidaAtualJogador ?? 0,
-          vidaInicialInimigo: widget.inimigo.vida,
-          vidaFinalInimigo: estadoAtual?.vidaAtualInimigo ?? 0,
-          tierNaBatalha: historia.tier,
-          scoreAntes: historia.score,
-          scoreDepois: historia.score, // Score não muda na derrota
-          scoreGanho: 0, // Sem ganho de score na derrota
-        );
-        
-        // Atualiza história apenas com histórico da batalha
-        final historiaComBatalha = historia.copyWith(
-          historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
-        );
-
-        // Mostra loading durante salvamento da derrota
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Salvando derrota...'),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Salva localmente primeiro
-        await repository.salvarHistoricoJogadorLocal(historiaComBatalha);
-
-        // Em caso de derrota, salva no Drive e atualiza ranking
-        print('💾 [BatalhaScreen] Salvando derrota no Drive e atualizando ranking...');
-        await repository.salvarHistoricoEAtualizarRanking(historiaComBatalha);
-
-        // Fecha loading
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-
-        print('✅ [BatalhaScreen] Batalha de derrota salva no histórico (HIVE + Drive)!');
+  String? _descricaoHabilidade(Map<String, dynamic> info) {
+    if (info.isEmpty) return null;
+    if (info['evoluiu'] == true) {
+      final nome = info['nome'];
+      final antes = info['levelAntes'];
+      final depois = info['levelDepois'];
+      if (nome != null && antes != null && depois != null) {
+        return '$nome evoluiu para o nivel $depois (antes nivel $antes)';
       }
-    } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao salvar batalha de derrota: $e');
+      return 'Habilidade evoluiu';
     }
+    if (info['motivo'] == 'level_gap') {
+      final nome = info['nome'];
+      final levelAtual = info['levelAtual'];
+      final levelInimigo = info['levelInimigo'];
+      if (nome != null && levelAtual != null && levelInimigo != null) {
+        return '$nome nao evoluiu: nivel atual $levelAtual, inimigo $levelInimigo';
+      }
+      return 'Habilidade nao evoluiu por diferenca de nivel';
+    }
+    return null;
   }
 
-  Future<void> _gerarEMostrarItem() async {
+  Future<_DropResultado> _gerarDropParaRecompensas(
+    HistoriaJogador historia,
+  ) async {
     if (itemGerado) {
-      print('⚠️ [BatalhaScreen] Item já gerado, ignorando chamada duplicada');
-      return;
+      print('[BatalhaScreen] Drop ja gerado, ignorando outra chamada');
+      return const _DropResultado();
     }
     itemGerado = true;
-    print('🎁 [BatalhaScreen] Iniciando geração de drop...');
+
+    final tierAtual = historia.tier;
+    final chanceDrop = _random.nextInt(100);
+
+    if (chanceDrop < 30) {
+      final magiaService = MagiaService();
+      final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
+      print('[BatalhaScreen] Magia gerada: ${magia.nome} (tier $tierAtual)');
+      return _DropResultado(magia: magia);
+    }
+
+    final itemService = ItemService();
+    final Item item;
+
+    if (widget.inimigo.isElite) {
+      item = itemService.gerarItemComRaridade(
+        RaridadeItem.epico,
+        tierAtual: tierAtual,
+      );
+      print('[BatalhaScreen] Drop epico garantido por inimigo elite: ${item.nome}');
+    } else {
+      item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
+      print('[BatalhaScreen] Item gerado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
+    }
+
+    return _DropResultado(
+      item: item,
+      tier: item.tier,
+      raridade: item.raridade,
+    );
+  }
+
+  Future<Mochila> _carregarMochilaAtual(String emailJogador) async {
+    try {
+      final mochila = await MochilaService.carregarMochila(context, emailJogador);
+      if (mochila != null) {
+        return mochila;
+      }
+    } catch (e) {
+      print('[BatalhaScreen] Erro ao carregar mochila: $e');
+    }
+    return Mochila();
+  }
+
+  Future<void> _guardarItensNaMochila(
+    String emailJogador,
+    Mochila mochilaBase,
+    List<ItemConsumivel> novosItens,
+    Set<int> slotsParaLiberar,
+  ) async {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty) {
+      return;
+    }
+
+    Mochila mochila = mochilaBase;
+
+    if (slotsParaLiberar.isNotEmpty) {
+      final indicesOrdenados = slotsParaLiberar.toList()..sort();
+      for (final index in indicesOrdenados.reversed) {
+        if (index >= 0 && index < Mochila.totalSlots) {
+          mochila = mochila.removerItem(index);
+        }
+      }
+    }
+
+    for (final item in novosItens) {
+      final existe = mochila.itens.any((slot) => slot?.id == item.id);
+      if (existe) {
+        print('[BatalhaScreen] Item ${item.nome} ja esta na mochila, descartado por duplicidade');
+        continue;
+      }
+      final mochilaAtualizada = mochila.adicionarItem(item);
+      if (identical(mochilaAtualizada, mochila)) {
+        print('[BatalhaScreen] Sem espaco para guardar ${item.nome}, item descartado');
+      } else {
+        mochila = mochilaAtualizada;
+      }
+    }
+
+    await MochilaService.salvarMochila(context, emailJogador, mochila);
+  }
+
+  Future<void> _equiparItemEMonstro(
+    MonstroAventura monstro,
+    Item item,
+  ) async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       final historia = await repository.carregarHistoricoJogador(emailJogador);
-      final tierAtual = historia?.tier ?? 1;
-      
-      if (historia == null || historia.monstros.isEmpty) {
-        throw Exception('Nenhum monstro encontrado para equipar item/magia');
-      }
+      if (historia == null) return;
 
-      // 30% chance de drop ser magia, 70% chance de ser item (sistema original)
-      final random = Random();
-      final chanceDrop = random.nextInt(100);
-      print('🎲 [BatalhaScreen] Chance de drop: $chanceDrop/100');
-      
-      if (chanceDrop < 30) {
-        // Drop de magia (30%)
-        print('✨ [BatalhaScreen] Drop será MAGIA (chance: $chanceDrop < 30)');
-        await _gerarEMostrarMagia(historia, tierAtual);
-      } else {
-        // Drop de item (70%)
-        print('🎯 [BatalhaScreen] Drop será ITEM (chance: $chanceDrop >= 30)');
-        await _gerarEMostrarItemTradicional(historia, tierAtual);
-      }
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == monstro.tipo &&
+            m.tipoExtra == monstro.tipoExtra &&
+            m.imagem == monstro.imagem) {
+          return m.copyWith(itemEquipado: item);
+        }
+        return m;
+      }).toList();
+
+      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+      print('[BatalhaScreen] Item ${item.nome} equipado em ${monstro.tipo.monsterName}');
     } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao gerar drop: $e');
+      print('[BatalhaScreen] Erro ao equipar item: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao gerar recompensa: $e')),
+          SnackBar(content: Text('Erro ao equipar item: $e')),
         );
       }
     }
   }
 
-
-  Future<void> _gerarEMostrarItemTradicional(HistoriaJogador historia, int tierAtual) async {
-    final itemService = ItemService();
-
-    // Se derrotou um monstro elite, drop é SEMPRE épico
-    final Item itemObtido;
-    if (widget.inimigo.isElite) {
-      itemObtido = itemService.gerarItemComRaridade(RaridadeItem.epico, tierAtual: tierAtual);
-      print('👑 [BatalhaScreen] MONSTRO ELITE derrotado! Drop FIXO ÉPICO: ${itemObtido.nome} - Tier ${itemObtido.tier}');
-    } else {
-      itemObtido = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-      print('🎁 [BatalhaScreen] Item gerado: ${itemObtido.nome} (${itemObtido.raridade.name}) - Tier ${itemObtido.tier}');
-    }
-    
-    // Mostra modal de seleção de item
-    if (mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => ModalItemObtido(
-          item: itemObtido,
-          monstrosDisponiveis: historia.monstros,
-          onEquiparItem: (monstro, item) async {
-            await _equiparItemEMonstro(monstro, item);
-          },
-        ),
-      );
-      
-      // Se o modal foi fechado sem equipar (descarte), ainda precisa finalizar a batalha
-      if (!podeVoltarParaAventura) {
-        await _finalizarBatalhaComSalvamento();
-      }
-    }
-  }
-
-  Future<void> _gerarEMostrarMagia(HistoriaJogador historia, int tierAtual) async {
-    final magiaService = MagiaService();
-    final magiaObtida = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
-    print('🎁 [BatalhaScreen] Magia gerada: ${magiaObtida.nome} (${magiaObtida.tipo.name}) - Level ${magiaObtida.level}');
-    
-    // Mostra modal de seleção de magia
-    if (mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => ModalMagiaObtida(
-          magia: magiaObtida,
-          monstrosDisponiveis: historia.monstros,
-          onEquiparMagia: (monstro, magia, habilidadeSubstituida) async {
-            await _equiparMagiaEMonstro(monstro, magia, habilidadeSubstituida);
-          },
-        ),
-      );
-      
-      // Se o modal foi fechado sem equipar (descarte), ainda precisa finalizar a batalha
-      if (!podeVoltarParaAventura) {
-        await _finalizarBatalhaComSalvamento();
-      }
-    }
-  }
-
-  /// Equipa uma magia no monstro substituindo uma habilidade existente
-  Future<void> _equiparMagiaEMonstro(MonstroAventura monstro, MagiaDrop magia, Habilidade habilidadeSubstituida) async {
+  Future<void> _equiparMagiaEMonstro(
+    MonstroAventura monstro,
+    MagiaDrop magia,
+    Habilidade habilidadeSubstituida,
+  ) async {
     try {
-      // Converte a magia para habilidade com tipagem do monstro
-      // Atualiza a descrição substituindo o texto genérico pelo tipo elemental real
       final descricaoAtualizada = magia.descricao.replaceAll(
-        'Tipagem elemental será definida ao equipar no monstro.',
-        'Tipo elemental: ${monstro.tipo.displayName}.'
+        'TIPO_ELEMENTAL',
+        monstro.tipo.name.toUpperCase(),
       );
-      
+
       final novaHabilidade = Habilidade(
         nome: magia.nome,
         descricao: descricaoAtualizada,
         tipo: magia.tipo,
         efeito: magia.efeito,
-        tipoElemental: monstro.tipo, // Usa o tipo principal do monstro
+        tipoElemental: monstro.tipo,
         valor: magia.valor,
         custoEnergia: magia.custoEnergia,
         level: magia.level,
       );
 
-      // Cria nova lista de habilidades substituindo a selecionada
-      final novasHabilidades = <Habilidade>[];
-      for (final hab in monstro.habilidades) {
-        if (hab == habilidadeSubstituida) {
-          novasHabilidades.add(novaHabilidade);
-        } else {
-          novasHabilidades.add(hab);
-        }
-      }
+      final novasHabilidades = monstro.habilidades
+          .map(
+            (habilidade) =>
+                habilidade == habilidadeSubstituida ? novaHabilidade : habilidade,
+          )
+          .toList();
 
-      // Atualiza o monstro
       final monstroAtualizado = monstro.copyWith(habilidades: novasHabilidades);
 
-      // Salva no histórico
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       final historia = await repository.carregarHistoricoJogador(emailJogador);
-      
-      if (historia != null) {
-        final monstrosAtualizados = historia.monstros.map((m) {
-          if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
-            return monstroAtualizado;
-          }
-          return m;
-        }).toList();
-        
-        final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      if (historia == null) return;
 
-        // Mostra loading durante salvamento
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Equipando magia...'),
-                ],
-              ),
-            ),
-          );
+      final monstrosAtualizados = historia.monstros.map((m) {
+        if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
+          return monstroAtualizado;
         }
+        return m;
+      }).toList();
 
-        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
 
-        // Fecha loading
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-        
-        // Magia equipada com sucesso
-        print('🎯 [BatalhaScreen] Magia equipada em ${monstro.tipo.monsterName}');
-        
-        print('✅ [BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.monsterName}, substituindo ${habilidadeSubstituida.nome}');
-      }
-
-      // Após equipar a magia, salva tudo e mostra botão para voltar
-      await _finalizarBatalhaComSalvamento();
+      print('[BatalhaScreen] Magia ${magia.nome} equipada em ${monstro.tipo.monsterName}');
     } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao equipar magia: $e');
+      print('[BatalhaScreen] Erro ao equipar magia: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao equipar magia: $e')),
@@ -2015,84 +1393,62 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
   }
-
-  // ==========================================
-  // 🎯 EQUIPAR ITEM NO MONSTRO (NÃO É DROP!)
-  // ==========================================
-  // IMPORTANTE: Esta função EQUIPA o item no monstro
-  // O item é equipado diretamente no monstro durante a batalha
-  Future<void> _equiparItemEMonstro(MonstroAventura monstro, Item item) async {
-    try {
-      final emailJogador = ref.read(validUserEmailProvider);
-      final repository = ref.read(aventuraRepositoryProvider);
-      // Carrega história atual
-      final historia = await repository.carregarHistoricoJogador(emailJogador);
-      if (historia == null) return;
-      // Atualiza o monstro com o item equipado
-      final monstrosAtualizados = historia.monstros.map((m) {
-        if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra && m.imagem == monstro.imagem) {
-          debugPrint('🟢 [BatalhaScreen] Equipando item no monstro: ${m.tipo.monsterName}');
-          debugPrint('🟢 [BatalhaScreen] Item: ${item.toString()}');
-          return m.copyWith(itemEquipado: item);
-        }
-        return m;
-      }).toList();
-      // Log do monstro atualizado
-      final monstroLog = monstrosAtualizados.firstWhere((m) => m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra && m.imagem == monstro.imagem);
-      debugPrint('🟢 [BatalhaScreen] Monstro após equipar: ${monstroLog.toJson()}');
-      // Salva a história com o item equipado imediatamente
-      final historiaAtualizada = historia.copyWith(monstros: monstrosAtualizados);
-
-      // Mostra loading durante salvamento
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Equipando item...'),
-              ],
-            ),
-          ),
-        );
-      }
-
-      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-
-      // Fecha loading
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-
-      debugPrint('✅ [BatalhaScreen] Item equipado e salvo no histórico em ${monstro.tipo.monsterName}!');
-      
-      // Item equipado com sucesso
-      print('🎯 [BatalhaScreen] Item equipado em ${monstro.tipo.monsterName}');
-      
-      // Após equipar o item, salva tudo e mostra botão para voltar
-      await _finalizarBatalhaComSalvamento();
-    } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao equipar item: $e');
-    }
-  }
-
   /// Finaliza a batalha salvando tudo e mostrando o botão para voltar
   Future<void> _finalizarBatalhaComSalvamento() async {
-    print('🔄 [BatalhaScreen] Finalizando batalha e salvando resultado final...');
+    print('?? [BatalhaScreen] Finalizando batalha e salvando resultado final...');
+
+    // Registra kill no progresso diário se jogador venceu
+    if (vencedor == 'jogador') {
+      await _registrarKillNoProgresso();
+    }
+
     await _salvarResultadoLocal();
-    print('✅ [BatalhaScreen] Resultado final salvo com sucesso!');
-    
+    print('? [BatalhaScreen] Resultado final salvo com sucesso!');
+
     // Mostra botão para voltar manualmente
-    print('🔘 [BatalhaScreen] Ativando botão "Voltar para Aventura"');
+    print('?? [BatalhaScreen] Ativando botão "Voltar para Aventura"');
     if (mounted) {
       setState(() {
         processandoVitoria = false; // Desativa o loading
         podeVoltarParaAventura = true;
       });
+    }
+  }
+
+  Future<void> _registrarKillNoProgresso() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      // Carrega progresso atual
+      final progressoJson = prefs.getString('progresso_diario');
+      ProgressoDiario progresso;
+
+      if (progressoJson != null) {
+        final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
+        final progressoSalvo = ProgressoDiario.fromJson(progressoData);
+
+        // Se é de outro dia, cria novo
+        if (progressoSalvo.data != hoje) {
+          progresso = ProgressoDiario(data: hoje);
+        } else {
+          progresso = progressoSalvo;
+        }
+      } else {
+        progresso = ProgressoDiario(data: hoje);
+      }
+
+      // Registra kill do tipo principal do inimigo
+      final tipoInimigo = widget.inimigo.tipo;
+      progresso = progresso.adicionarKill(tipoInimigo);
+
+      // Salva de volta
+      final novoProgressoJson = jsonEncode(progresso.toJson());
+      await prefs.setString('progresso_diario', novoProgressoJson);
+
+      print('✅ [Progresso] Kill registrado para tipo ${tipoInimigo.name} (total: ${progresso.killsPorTipo[tipoInimigo.name]})');
+    } catch (e) {
+      print('❌ [Progresso] Erro ao registrar kill: $e');
     }
   }
 
@@ -2106,7 +1462,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
     
     try {
-      print('💾 [BatalhaScreen] SAVE FIRST: Salvando resultado no Drive...');
+      print('?? [BatalhaScreen] SAVE FIRST: Salvando resultado no Drive...');
       
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
@@ -2118,7 +1474,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
       
       // Sempre atualiza a vida atual do monstro do jogador, independente de quem venceu
-      print('🔍 [DEBUG] Procurando monstro do jogador para atualizar:');
+      print('?? [DEBUG] Procurando monstro do jogador para atualizar:');
       print('  - Tipo: ${widget.jogador.tipo}');
       print('  - TipoExtra: ${widget.jogador.tipoExtra}');
       print('  - Vida atual no estado: ${estadoAtual!.vidaAtualJogador}');
@@ -2131,8 +1487,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           final vidaFinal = estadoAtual!.vidaAtualJogador <= 0 ? 0 : estadoAtual!.vidaAtualJogador.clamp(0, vidaMaximaComItem);
           // Também limita a energia atual ao valor máximo base do monstro (sem item)
           final energiaFinal = estadoAtual!.energiaAtualJogador.clamp(0, m.energia);
-          print('  ✅ MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
-          print('  ✅ MATCH! Atualizando energia para $energiaFinal (original: ${estadoAtual!.energiaAtualJogador}, max base: ${m.energia})');
+          print('  ? MATCH! Atualizando vida de ${m.vidaAtual} para $vidaFinal (original: ${estadoAtual!.vidaAtualJogador})');
+          print('  ? MATCH! Atualizando energia para $energiaFinal (original: ${estadoAtual!.energiaAtualJogador}, max base: ${m.energia})');
           
           return m.copyWith(
             vidaAtual: vidaFinal,
@@ -2148,7 +1504,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             m.tipoExtra == widget.inimigo.tipoExtra) {
           // Limita a vida final ao valor máximo com item (valores fixos do JSON)
           final vidaFinal = estadoAtual!.vidaAtualInimigo <= 0 ? 0 : estadoAtual!.vidaAtualInimigo.clamp(0, m.vidaTotal);
-          print('🏥 [DEBUG] Inimigo ${m.tipo.monsterName}: vida ${estadoAtual!.vidaAtualInimigo} → salva como $vidaFinal');
+          print('?? [DEBUG] Inimigo ${m.tipo.monsterName}: vida ${estadoAtual!.vidaAtualInimigo} ? salva como $vidaFinal');
           
           return m.copyWith(
             vidaAtual: vidaFinal,
@@ -2166,11 +1522,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Salva a história atualizada
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       
-      print('✅ [BatalhaScreen] Resultado salvo com sucesso!');
+      print('? [BatalhaScreen] Resultado salvo com sucesso!');
       
     } catch (e) {
 
-      print('❌ [BatalhaScreen] Erro ao salvar resultado: $e');
+      print('? [BatalhaScreen] Erro ao salvar resultado: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro ao salvar resultado: $e')),
@@ -2238,12 +1594,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     
     // Durante batalha automática, não salva o estado a cada rodada
     if (batalhaAutomatica) {
-      print('⚡ [Auto Battle] Pulando salvamento durante batalha automática');
+      print('? [Auto Battle] Pulando salvamento durante batalha automática');
       return;
     }
     
     try {
-      print('💾 [BatalhaScreen] Salvando estado da batalha...');
+      print('?? [BatalhaScreen] Salvando estado da batalha...');
       
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
@@ -2283,16 +1639,16 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
       
-      print('✅ [BatalhaScreen] Estado da batalha salvo!');
+      print('? [BatalhaScreen] Estado da batalha salvo!');
       
     } catch (e) {
-      print('❌ [BatalhaScreen] Erro ao salvar estado: $e');
+      print('? [BatalhaScreen] Erro ao salvar estado: $e');
       // Não mostra erro na UI para não atrapalhar a batalha
     }
   }
 
   // ========================================
-  // 🔍 MODAL DE DETALHAMENTO DE MONSTRO
+  // ?? MODAL DE DETALHAMENTO DE MONSTRO
   // ========================================
   
   void _mostrarDetalheMonstro(dynamic monstro, bool isJogador) {
@@ -2325,7 +1681,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     } else {
       // Converte MonstroInimigo para MonstroAventura
       // Adiciona logs para inspecionar dados
-      debugPrint('🟠 [BatalhaScreen] Abrindo modal de monstro inimigo. Dados recebidos:');
+      debugPrint('?? [BatalhaScreen] Abrindo modal de monstro inimigo. Dados recebidos:');
       debugPrint('tipo: ${monstro.tipo}');
       debugPrint('tipoExtra: ${monstro.tipoExtra}');
       debugPrint('imagem: ${monstro.imagem}');
@@ -2369,7 +1725,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   // ========================================
-  // 🎯 SISTEMA DE EFETIVIDADE DE TIPOS
+  // ?? SISTEMA DE EFETIVIDADE DE TIPOS
   // ========================================
   
   /// Calcula a efetividade do tipo atacante contra o tipo defensor usando as tabelas JSON
@@ -2381,15 +1737,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       if (tabelaDefesa != null && tabelaDefesa.containsKey(tipoAtacante)) {
         // O valor na tabela indica quanto de dano o defensor recebe do atacante
         final multiplicadorDano = tabelaDefesa[tipoAtacante]!;
-        print('🎯 [Efetividade] ${tipoDefensor.displayName} recebe ${multiplicadorDano}x dano de ${tipoAtacante.displayName}');
+        print('?? [Efetividade] ${tipoDefensor.displayName} recebe ${multiplicadorDano}x dano de ${tipoAtacante.displayName}');
         return multiplicadorDano;
       }
       
       // Se não encontrar na tabela, retorna efetividade normal
-      print('⚠️ [Efetividade] Não encontrada defesa de ${tipoDefensor.name} vs ${tipoAtacante.name}, usando 1.0x');
+      print('?? [Efetividade] Não encontrada defesa de ${tipoDefensor.name} vs ${tipoAtacante.name}, usando 1.0x');
       return 1.0;
     } catch (e) {
-      print('❌ [Efetividade] Erro ao calcular: $e');
+      print('? [Efetividade] Erro ao calcular: $e');
       return 1.0; // Fallback para efetividade normal
     }
   }
@@ -2975,7 +2331,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                     ),
                   ),
                   child: Text(
-                    aguardandoContinuar ? '▶️ Continuar' : '⚔️ Próxima Rodada',
+                    aguardandoContinuar ? '?? Continuar' : '?? Próxima Rodada',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -2998,7 +2354,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                     ),
                   ),
                   child: const Text(
-                    '⚡ Auto Batalha',
+                    '? Auto Batalha',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -3062,3 +2418,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // ==========================================
 
 }
+
+
+
+
+
+
+

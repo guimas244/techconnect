@@ -222,7 +222,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   // ABA 2: MOCHILA
                   const MochilaScreen(),
 
-                  // ABA 3: PROGRESSO
+                  // ABA 3: LOJA
+                  _buildLojaView(),
+
+                  // ABA 4: PROGRESSO
                   const ProgressoScreen(),
                 ],
               ),
@@ -382,6 +385,45 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
+  Widget _buildLojaView() {
+    if (historiaAtual == null) {
+      return Container(
+        color: Colors.grey.shade900,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Carregando loja...',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return CasaVigaristaModalV2(
+      historia: historiaAtual!,
+      onHistoriaAtualizada: (historiaAtualizada) async {
+        setState(() {
+          historiaAtual = historiaAtualizada;
+        });
+
+        try {
+          final repository = ref.read(aventuraRepositoryProvider);
+          await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+          await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
+          print('💾 [Loja] História atualizada após compra');
+        } catch (e) {
+          print('❌ [Loja] Erro ao salvar história: $e');
+        }
+      },
+    );
+  }
+
   Widget _buildBottomNavigationBar() {
     return Container(
       height: 70,
@@ -425,9 +467,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           ),
           _buildTabButton(
             index: 3,
+            icon: Icons.store,
+            label: 'LOJA',
+            isSelected: _abaAtual == 3,
+          ),
+          _buildTabButton(
+            index: 4,
             icon: Icons.star,
             label: 'PROGRESSO',
-            isSelected: _abaAtual == 3,
+            isSelected: _abaAtual == 4,
           ),
         ],
       ),

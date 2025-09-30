@@ -339,37 +339,37 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
             ),
           ),
 
-          // Badge de kills (estilo monstro level)
-          if (kills > 0)
-            Positioned(
-              right: 2,
-              top: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.amber.shade700, Colors.amber.shade900],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+          // Badge de kills (estilo monstro level) - sempre visível
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.amber.shade700, Colors.amber.shade900],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      size: 11,
-                      color: Colors.white,
-                    ),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    size: 11,
+                    color: Colors.white,
+                  ),
+                  if (kills > 0) ...[
                     const SizedBox(width: 2),
                     Text(
                       '$kills',
@@ -387,9 +387,10 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
+          ),
         ],
       ),
       ),
