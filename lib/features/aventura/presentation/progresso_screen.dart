@@ -17,6 +17,7 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
   bool _mostrarDistribuicao = false;
   bool _isLoading = true;
   Tipo? _tipoSelecionado;
+  int _pontosPorKill = 2;
 
   // Controladores para distribuição
   final Map<String, double> _distribuicaoTemp = {
@@ -35,6 +36,9 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
   Future<void> _carregarProgressoAtual() async {
     final prefs = await SharedPreferences.getInstance();
     final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // Carrega pontos por kill configurados
+    _pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
 
     // Tenta carregar progresso salvo
     final progressoJson = prefs.getString('progresso_diario');
@@ -112,7 +116,7 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
       );
     }
 
-    final bonus = progressoAtual!.calcularBonus();
+    final bonus = progressoAtual!.calcularBonusSync(pontosPorKill: _pontosPorKill);
 
     return Container(
       decoration: const BoxDecoration(
@@ -228,7 +232,7 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
     for (final entry in (progressoAtual?.distribuicaoAtributos ?? {}).entries) {
       final atributo = entry.key;
       final porcentagem = entry.value;
-      final pontos = (kills * porcentagem / 100).floor();
+      final pontos = (kills * _pontosPorKill * porcentagem / 100).floor();
       bonus[atributo] = pontos;
     }
 
@@ -434,7 +438,7 @@ class _ProgressoScreenState extends State<ProgressoScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'Distribua os pontos de progresso entre os atributos. '
-                  'Cada kill do dia vira 1 ponto total, dividido pela porcentagem escolhida.\n\n'
+                  'Cada kill do dia vira $_pontosPorKill pontos total, dividido pela porcentagem escolhida.\n\n'
                   '• Máximo de 50% em um único atributo\n'
                   '• Total deve somar até 100%',
                   style: TextStyle(

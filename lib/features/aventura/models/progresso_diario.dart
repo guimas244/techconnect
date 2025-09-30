@@ -1,4 +1,5 @@
 import '../../../shared/models/tipo_enum.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProgressoDiario {
   final String data; // Data no formato 'yyyy-MM-dd'
@@ -45,15 +46,32 @@ class ProgressoDiario {
   }
 
   // Bônus de status baseado nos kills e distribuição
-  Map<String, int> calcularBonus() {
+  Future<Map<String, int>> calcularBonus() async {
+    final bonus = <String, int>{};
+    final prefs = await SharedPreferences.getInstance();
+    final pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
+
+    for (final entry in distribuicaoAtributos.entries) {
+      final atributo = entry.key;
+      final porcentagem = entry.value;
+
+      // Cada kill gera pontos configuráveis (padrão: 2), distribuído pela porcentagem
+      final pontos = (totalKills * pontosPorKill * porcentagem / 100).floor();
+      bonus[atributo] = pontos;
+    }
+
+    return bonus;
+  }
+
+  // Versão síncrona com valor padrão para compatibilidade
+  Map<String, int> calcularBonusSync({int pontosPorKill = 2}) {
     final bonus = <String, int>{};
 
     for (final entry in distribuicaoAtributos.entries) {
       final atributo = entry.key;
       final porcentagem = entry.value;
 
-      // Cada kill gera 1 ponto total, distribuído pela porcentagem
-      final pontos = (totalKills * porcentagem / 100).floor();
+      final pontos = (totalKills * pontosPorKill * porcentagem / 100).floor();
       bonus[atributo] = pontos;
     }
 

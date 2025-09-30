@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import 'modal_detalhe_item_equipado.dart';
 import '../models/monstro_aventura.dart';
+import '../providers/progresso_bonus_provider.dart';
 import 'package:remixicon/remixicon.dart';
 // Garante que RemixIcon está disponível
 
-class ModalMonstroAventura extends StatelessWidget {
+class ModalMonstroAventura extends ConsumerWidget {
   final MonstroAventura monstro;
   final VoidCallback? onClose;
   final bool showCloseButton;
@@ -30,7 +32,11 @@ class ModalMonstroAventura extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Carrega os bônus do progresso diário para o tipo do monstro
+    final bonusProgresso = ref.watch(progressoBonusStateProvider);
+    final bonusTipo = bonusProgresso[monstro.tipo] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -308,18 +314,20 @@ class ModalMonstroAventura extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildAtributoInfo(
-                        'Ataque', 
-                        isBatalha && ataqueAtual != null ? ataqueAtual! : monstro.ataque, 
-                        Remix.boxing_fill, 
+                        'Ataque',
+                        isBatalha && ataqueAtual != null ? ataqueAtual! : monstro.ataque,
+                        Remix.boxing_fill,
                         Colors.orange,
                         valorOriginal: isBatalha && ataqueAtual != null ? monstro.ataque : null,
+                        bonusProgresso: bonusTipo['ATK'] ?? 0,
                       ),
                       _buildAtributoInfo(
-                        'Defesa', 
-                        isBatalha && defesaAtual != null ? defesaAtual! : monstro.defesa, 
-                        Remix.shield_cross_fill, 
+                        'Defesa',
+                        isBatalha && defesaAtual != null ? defesaAtual! : monstro.defesa,
+                        Remix.shield_cross_fill,
                         Colors.green,
                         valorOriginal: isBatalha && defesaAtual != null ? monstro.defesa : null,
+                        bonusProgresso: bonusTipo['DEF'] ?? 0,
                       ),
                     ],
                   ),
@@ -373,7 +381,7 @@ class ModalMonstroAventura extends StatelessWidget {
     );
   }
 
-  Widget _buildAtributoInfo(String nome, int valor, IconData icone, Color cor, {int? valorOriginal}) {
+  Widget _buildAtributoInfo(String nome, int valor, IconData icone, Color cor, {int? valorOriginal, int bonusProgresso = 0}) {
     return Column(
       children: [
         Icon(icone, color: cor, size: 24),
@@ -409,7 +417,7 @@ class ModalMonstroAventura extends StatelessWidget {
                   break;
               }
             }
-            
+
             // Calcula buff total (item + habilidade de batalha)
             int buffHabilidade = 0;
             if (isBatalha) {
@@ -422,9 +430,11 @@ class ModalMonstroAventura extends StatelessWidget {
                   break;
               }
             }
-            
+
             int bonusTotal = bonusItem + buffHabilidade;
-            if (bonusTotal > 0) {
+            bool temBonus = bonusTotal > 0 || bonusProgresso > 0;
+
+            if (temBonus) {
               return Column(
                 children: [
                   Text(
@@ -435,13 +445,37 @@ class ModalMonstroAventura extends StatelessWidget {
                       color: cor,
                     ),
                   ),
-                  Text(
-                    '${valor - bonusTotal} (+$bonusTotal)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (bonusTotal > 0)
+                        Text(
+                          '${valor - bonusTotal - bonusProgresso}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      if (bonusTotal > 0)
+                        Text(
+                          ' +$bonusTotal',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      if (bonusProgresso > 0)
+                        Text(
+                          ' +$bonusProgresso',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               );

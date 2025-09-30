@@ -54,6 +54,12 @@ class AdminScreen extends StatelessWidget {
                   color: Colors.blueGrey.shade600,
                   onTap: () => context.push('/admin/regras'),
                 ),
+                _MenuBlock(
+                  icon: Icons.explore,
+                  label: 'Aventura',
+                  color: Colors.blueGrey.shade500,
+                  onTap: () => context.push('/admin/aventura'),
+                ),
               ],
             ),
           ),

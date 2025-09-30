@@ -33,7 +33,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   HistoriaJogador? historiaAtual;
   bool isLoading = true;
   bool isAdvancingTier = false;
-  int _abaAtual = 1; // 0 = Aventura, 1 = Mapa, 2 = Mochila, 3 = Progresso
+  int _abaAtual = 0; // 0 = Equipe, 1 = Mapa, 2 = Mochila, 3 = Loja, 4 = Progresso
 
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
@@ -49,22 +49,23 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     _verificarAventuraIniciada();
   }
 
+
   Future<void> _verificarAventuraIniciada() async {
     try {
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = ref.read(aventuraRepositoryProvider);
       
-      print('🗺️ [MapaAventura] Verificando aventura iniciada para: $emailJogador');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Verificando aventura iniciada para: $emailJogador');
       
-      // Carrega a história do jogador
+      // Carrega a histÃƒÆ’Ã‚Â³ria do jogador
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       
       if (historia != null) {
-        print('🗺️ [MapaAventura] História encontrada - Aventura iniciada: ${historia.aventuraIniciada}');
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] HistÃƒÆ’Ã‚Â³ria encontrada - Aventura iniciada: ${historia.aventuraIniciada}');
 
         // Verifica se a aventura expirou
         if (historia.aventuraExpirada) {
-          print('⏰ [MapaAventura] Aventura expirada ao carregar mapa!');
+          print('ÃƒÂ¢Ã‚ÂÃ‚Â° [MapaAventura] Aventura expirada ao carregar mapa!');
           setState(() {
             isLoading = false;
           });
@@ -80,20 +81,20 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           historiaAtual = historia;
 
           if (historia.aventuraIniciada && historia.mapaAventura != null) {
-            // Se há aventura iniciada, usa o mapa salvo
+            // Se hÃƒÆ’Ã‚Â¡ aventura iniciada, usa o mapa salvo
             mapaEscolhido = historia.mapaAventura!;
-            print('🗺️ [MapaAventura] Usando mapa salvo: $mapaEscolhido');
+            print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Usando mapa salvo: $mapaEscolhido');
           } else {
-            // Se não há aventura iniciada, sorteia um mapa aleatório
+            // Se nÃƒÆ’Ã‚Â£o hÃƒÆ’Ã‚Â¡ aventura iniciada, sorteia um mapa aleatÃƒÆ’Ã‚Â³rio
             final random = math.Random();
             mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
-            print('🗺️ [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
+            print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
           }
 
           isLoading = false;
         });
       } else {
-        print('❌ [MapaAventura] Nenhuma história encontrada');
+        print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Nenhuma histÃƒÆ’Ã‚Â³ria encontrada');
         setState(() {
           final random = math.Random();
           mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
@@ -101,7 +102,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         });
       }
     } catch (e) {
-      print('❌ [MapaAventura] Erro ao verificar aventura: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao verificar aventura: $e');
       setState(() {
         final random = math.Random();
         mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
@@ -111,18 +112,35 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   List<MonstroInimigo> get monstrosParaExibir {
-    // Se há história carregada e aventura iniciada, usa os monstros da história
+    // Se hÃƒÆ’Ã‚Â¡ histÃƒÆ’Ã‚Â³ria carregada e aventura iniciada, usa os monstros da histÃƒÆ’Ã‚Â³ria
     if (historiaAtual != null && historiaAtual!.aventuraIniciada) {
-      print('🗺️ [MapaAventura] Usando monstros da história: ${historiaAtual!.monstrosInimigos.length}');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Usando monstros da histÃƒÆ’Ã‚Â³ria: ${historiaAtual!.monstrosInimigos.length}');
       return historiaAtual!.monstrosInimigos;
     }
     
-    // Caso contrário, usa os monstros passados por parâmetro
-    print('🗺️ [MapaAventura] Usando monstros do parâmetro: ${widget.monstrosInimigos.length}');
+    // Caso contrÃƒÆ’Ã‚Â¡rio, usa os monstros passados por parÃƒÆ’Ã‚Â¢metro
+    print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Usando monstros do parÃƒÆ’Ã‚Â¢metro: ${widget.monstrosInimigos.length}');
     return widget.monstrosInimigos;
   }
   @override
   Widget build(BuildContext context) {
+    // Observa mudanÃƒÆ’Ã‚Â§as no estado da aventura para recarregar quando necessÃƒÆ’Ã‚Â¡rio
+    ref.listen<AventuraEstado>(aventuraEstadoProvider, (previous, next) {
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Estado mudou: $previous -> $next');
+      if (next == AventuraEstado.aventuraIniciada && previous != AventuraEstado.aventuraIniciada) {
+        print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [MapaAventura] Aventura foi iniciada! Recarregando estado...');
+        _verificarAventuraIniciada();
+      } else if (next == AventuraEstado.semHistorico) {
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Aventura foi deletada! Recarregando estado...');
+        setState(() {
+          historiaAtual = null;
+        });
+      } else if (next == AventuraEstado.podeIniciar) {
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Novos monstros sorteados! Recarregando estado...');
+        _verificarAventuraIniciada();
+      }
+    });
+
     if (isLoading) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -132,7 +150,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
         ),
         body: const Center(
@@ -157,16 +181,20 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black87,
-        title: Text(historiaAtual?.aventuraIniciada == true
-            ? 'Aventura em Andamento'
-            : 'Mapa de Aventura'),
+        title: const Text('Aventura'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         actions: [
-          // Ícone de refresh - só aparece quando aventura iniciada e sem batalhas no andar atual
+          // ÃƒÆ’Ã‚Âcone de refresh - sÃƒÆ’Ã‚Â³ aparece quando aventura iniciada e sem batalhas no andar atual
           if (historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
             Stack(
               children: [
@@ -208,12 +236,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Conteúdo principal
+            // ConteÃƒÆ’Ã‚Âºdo principal
             Expanded(
               child: IndexedStack(
                 index: _abaAtual,
                 children: [
-                  // ABA 0: AVENTURA (tela de seleção/início)
+                  // ABA 0: EQUIPE (tela de seleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o/inÃƒÆ’Ã‚Â­cio)
                   const AventuraScreen(),
 
                   // ABA 1: MAPA
@@ -244,7 +272,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     int scoreAtual = historiaAtual?.score ?? 0;
     int mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
     bool podeAvancarTier = mortosNoTier >= 3;
-    print('🎯 [DEBUG] mortosNoTier: $mortosNoTier, podeAvancarTier: $podeAvancarTier');
+    print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] mortosNoTier: $mortosNoTier, podeAvancarTier: $podeAvancarTier');
 
     return Stack(
       children: [
@@ -258,7 +286,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 color: Colors.grey.shade800,
                 child: const Center(
                   child: Text(
-                    'Mapa não encontrado',
+                    'Mapa nÃƒÆ’Ã‚Â£o encontrado',
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
@@ -266,7 +294,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             },
           ),
         ),
-            // TIER, SCORE e botão avançar
+            // TIER, SCORE e botÃƒÆ’Ã‚Â£o avanÃƒÆ’Ã‚Â§ar
             Positioned(
               top: 16,
               left: 16,
@@ -310,7 +338,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                       ),
                     ),
                     
-                    // BOTÃO AVANÇAR
+                    // BOTÃƒÆ’Ã†â€™O AVANÃƒÆ’Ã¢â‚¬Â¡AR
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -346,7 +374,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
             
-        // Overlay de loading quando avançando tier
+        // Overlay de loading quando avanÃƒÆ’Ã‚Â§ando tier
         if (isAdvancingTier)
           Positioned.fill(
             child: Container(
@@ -416,9 +444,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           final repository = ref.read(aventuraRepositoryProvider);
           await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
           await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
-          print('💾 [Loja] História atualizada após compra');
+          print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ [Loja] HistÃƒÆ’Ã‚Â³ria atualizada apÃƒÆ’Ã‚Â³s compra');
         } catch (e) {
-          print('❌ [Loja] Erro ao salvar história: $e');
+          print('ÃƒÂ¢Ã‚ÂÃ…â€™ [Loja] Erro ao salvar histÃƒÆ’Ã‚Â³ria: $e');
         }
       },
     );
@@ -448,15 +476,22 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         children: [
           _buildTabButton(
             index: 0,
-            icon: Icons.home,
-            label: 'AVENTURA',
+            icon: Icons.groups,
+            label: 'EQUIPE',
             isSelected: _abaAtual == 0,
           ),
-          _buildTabButton(
-            index: 1,
-            icon: Icons.map,
-            label: 'MAPA',
-            isSelected: _abaAtual == 1,
+          Builder(
+            builder: (context) {
+              final mapaDisabled = historiaAtual?.aventuraIniciada != true;
+              print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MAPA TAB] aventuraIniciada=${historiaAtual?.aventuraIniciada}, disabled=$mapaDisabled');
+              return _buildTabButton(
+                index: 1,
+                icon: Icons.map,
+                label: 'MAPA',
+                isSelected: _abaAtual == 1,
+                disabled: mapaDisabled,
+              );
+            },
           ),
           _buildTabButton(
             index: 2,
@@ -465,11 +500,18 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             isSelected: _abaAtual == 2,
             iconAsset: 'assets/icons_gerais/mochila.png',
           ),
-          _buildTabButton(
-            index: 3,
-            icon: Icons.store,
-            label: 'LOJA',
-            isSelected: _abaAtual == 3,
+          Builder(
+            builder: (context) {
+              final lojaDisabled = historiaAtual?.aventuraIniciada != true;
+              print('ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Âª [LOJA TAB] aventuraIniciada=${historiaAtual?.aventuraIniciada}, disabled=$lojaDisabled');
+              return _buildTabButton(
+                index: 3,
+                icon: Icons.store,
+                label: 'LOJA',
+                isSelected: _abaAtual == 3,
+                disabled: lojaDisabled,
+              );
+            },
           ),
           _buildTabButton(
             index: 4,
@@ -488,12 +530,23 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     required String label,
     required bool isSelected,
     String? iconAsset,
+    bool disabled = false,
   }) {
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            if (disabled) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Inicie uma aventura primeiro!'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return; // Impede mudanÃƒÆ’Ã‚Â§a de aba
+            }
             setState(() {
               _abaAtual = index;
             });
@@ -510,18 +563,22 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Ícone (asset ou icon)
+                // ÃƒÆ’Ã‚Âcone (asset ou icon)
                 if (iconAsset != null)
                   Image.asset(
                     iconAsset,
                     width: 28,
                     height: 28,
-                    color: isSelected ? Colors.amber : Colors.white60,
+                    color: disabled
+                        ? Colors.white.withOpacity(0.3)
+                        : (isSelected ? Colors.amber : Colors.white60),
                     errorBuilder: (context, error, stackTrace) {
                       return Icon(
                         icon,
                         size: 28,
-                        color: isSelected ? Colors.amber : Colors.white60,
+                        color: disabled
+                            ? Colors.white.withOpacity(0.3)
+                            : (isSelected ? Colors.amber : Colors.white60),
                       );
                     },
                   )
@@ -529,7 +586,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   Icon(
                     icon,
                     size: 28,
-                    color: isSelected ? Colors.amber : Colors.white60,
+                    color: disabled
+                        ? Colors.white.withOpacity(0.3)
+                        : (isSelected ? Colors.amber : Colors.white60),
                   ),
 
                 const SizedBox(height: 4),
@@ -540,7 +599,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? Colors.amber : Colors.white60,
+                    color: disabled
+                        ? Colors.white.withOpacity(0.3)
+                        : (isSelected ? Colors.amber : Colors.white60),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -556,11 +617,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final monstrosParaUsar = monstrosParaExibir;
     final pontos = <Widget>[];
 
-    // Separa monstros de coleção dos demais
+    // Separa monstros de coleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o dos demais
     final monstrosNormais = monstrosParaUsar.where((m) => !m.isRaro).toList();
     final monstrosColecao = monstrosParaUsar.where((m) => m.isRaro).toList();
 
-    // Posições fixas dos pontos no mapa para monstros normais
+    // PosiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes fixas dos pontos no mapa para monstros normais
     final posicoes = [
       (0.2, 0.2),   // Ponto 1 - Superior esquerdo
       (0.7, 0.15),  // Ponto 2 - Superior direito
@@ -575,12 +636,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       pontos.add(_buildPontoMapa(i, posicoes[i].$1, posicoes[i].$2, monstrosNormais));
     }
 
-    // Casa do Vigarista agora está nas abas inferiores
+    // Casa do Vigarista agora estÃƒÆ’Ã‚Â¡ nas abas inferiores
     // pontos.add(_buildCasaDoVigarista(0.5, 0.25));
 
-    // Adiciona monstros de coleção 3 centímetros abaixo do mercado
+    // Adiciona monstros de coleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o 3 centÃƒÆ’Ã‚Â­metros abaixo do mercado
     for (int i = 0; i < monstrosColecao.length; i++) {
-      final posX = 0.2 + (i * 0.6); // Posições 0.2, 0.8, etc. para múltiplos monstros
+      final posX = 0.2 + (i * 0.6); // PosiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes 0.2, 0.8, etc. para mÃƒÆ’Ã‚Âºltiplos monstros
       pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.35)); // 0.25 + ~0.10 = 3cm abaixo
     }
 
@@ -595,7 +656,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final monstro = monstros[index];
     final bool estaMorto = monstro.vidaAtual <= 0;
     
-    // Limita a posição máxima do topo para não colar na borda inferior
+    // Limita a posiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o mÃƒÆ’Ã‚Â¡xima do topo para nÃƒÆ’Ã‚Â£o colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
     final maxTop = screenHeight * 0.85;
     final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
@@ -657,7 +718,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   Widget _buildCasaDoVigarista(double left, double top) {
-    // Verifica se o jogador tem score suficiente (mínimo = 1 * tier atual)
+    // Verifica se o jogador tem score suficiente (mÃƒÆ’Ã‚Â­nimo = 1 * tier atual)
     int tierAtual = historiaAtual?.tier ?? 1;
     int scoreAtual = historiaAtual?.score ?? 0;
     int custoMinimo = 1 * tierAtual;
@@ -668,7 +729,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
     
     return Positioned(
-      left: MediaQuery.of(context).size.width * left - 35, // Centraliza o ícone
+      left: MediaQuery.of(context).size.width * left - 35, // Centraliza o ÃƒÆ’Ã‚Â­cone
       top: calcTop,
       child: GestureDetector(
         onTap: () => _mostrarCasaDoVigarista(podeAcessar, custoMinimo),
@@ -726,12 +787,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Você não possui score suficiente para acessar a Casa do Vigarista.',
+                  'VocÃƒÆ’Ã‚Âª nÃƒÆ’Ã‚Â£o possui score suficiente para acessar a Casa do Vigarista.',
                   style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Score necessário: $custoMinimo pontos',
+                  'Score necessÃƒÆ’Ã‚Â¡rio: $custoMinimo pontos',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
@@ -779,19 +840,19 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               historiaAtual = historiaAtualizada;
             });
 
-            // Salva no repositório
+            // Salva no repositÃƒÆ’Ã‚Â³rio
             try {
               final repository = ref.read(aventuraRepositoryProvider);
               // Salva localmente primeiro
               await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
 
-              // Salva no Drive e atualiza ranking após compra na loja
-              print('💾 [MapaAventura] Salvando compra no Drive e atualizando ranking...');
+              // Salva no Drive e atualiza ranking apÃƒÆ’Ã‚Â³s compra na loja
+              print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ [MapaAventura] Salvando compra no Drive e atualizando ranking...');
               await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
 
-              print('💾 [MapaAventura] História atualizada após compra na Casa do Vigarista (HIVE + Drive)');
+              print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ [MapaAventura] HistÃƒÆ’Ã‚Â³ria atualizada apÃƒÆ’Ã‚Â³s compra na Casa do Vigarista (HIVE + Drive)');
             } catch (e) {
-              print('❌ [MapaAventura] Erro ao salvar história: $e');
+              print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao salvar histÃƒÆ’Ã‚Â³ria: $e');
             }
           },
         );
@@ -802,7 +863,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   Widget _buildMonstroColecao(MonstroInimigo monstro, double left, double top) {
     final bool estaMorto = monstro.vidaAtual <= 0;
 
-    // Limita a posição máxima do topo para não colar na borda inferior
+    // Limita a posiÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o mÃƒÆ’Ã‚Â¡xima do topo para nÃƒÆ’Ã‚Â£o colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
     final calcTop = math.min(screenHeight * top, screenHeight - 100);
 
@@ -817,10 +878,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           decoration: BoxDecoration(
             color: estaMorto
                 ? Colors.grey.withOpacity(0.9)
-                : Colors.purple.withOpacity(0.9), // Cor especial para monstros de coleção
+                : Colors.purple.withOpacity(0.9), // Cor especial para monstros de coleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
             shape: BoxShape.circle,
             border: Border.all(
-              color: Colors.orange, // Cor dourada para monstros de coleção
+              color: Colors.orange, // Cor dourada para monstros de coleÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
               width: 4
             ),
             boxShadow: [
@@ -846,8 +907,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   void _mostrarModalMonstroInimigo(MonstroInimigo monstro) async {
-    // 🎯 PRINT DOS DADOS DE DEFESA DO MONSTRO INIMIGO
-    print('🐉 [MONSTRO INIMIGO CLICADO] Tipo: ${monstro.tipo.displayName} (${monstro.tipo.name})');
+    // ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ PRINT DOS DADOS DE DEFESA DO MONSTRO INIMIGO
+    print('ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â° [MONSTRO INIMIGO CLICADO] Tipo: ${monstro.tipo.displayName} (${monstro.tipo.name})');
     
     try {
       // Busca os dados de defesa do tipo do monstro
@@ -855,8 +916,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       final dadosDefesa = await tipagemRepository.carregarDadosTipo(monstro.tipo);
       
       if (dadosDefesa != null) {
-        print('💥 [DADOS DE DEFESA] Lista de dano recebido por ${monstro.tipo.displayName}:');
-        print('─' * 60);
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¥ [DADOS DE DEFESA] Lista de dano recebido por ${monstro.tipo.displayName}:');
+        print('ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬' * 60);
         
         // Imprime cada tipo e o valor de dano recebido
         for (final entry in dadosDefesa.entries) {
@@ -870,19 +931,19 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           } else if (multiplicador < 1.0 && multiplicador > 0.0) {
             efetividade = 'POUCO EFETIVO';
           } else if (multiplicador == 0.0) {
-            efetividade = 'NÃO AFETA';
+            efetividade = 'NÃƒÆ’Ã†â€™O AFETA';
           } else {
             efetividade = 'NORMAL';
           }
           
           print('${atacante.displayName.padRight(15)} -> ${multiplicador.toString().padLeft(4)} (${efetividade})');
         }
-        print('─' * 60);
+        print('ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬' * 60);
       } else {
-        print('❌ [ERRO] Não foi possível carregar dados de defesa para ${monstro.tipo.displayName}');
+        print('ÃƒÂ¢Ã‚ÂÃ…â€™ [ERRO] NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel carregar dados de defesa para ${monstro.tipo.displayName}');
       }
     } catch (e) {
-      print('❌ [ERRO] Erro ao buscar dados de defesa: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ [ERRO] Erro ao buscar dados de defesa: $e');
     }
     
     showDialog(
@@ -903,7 +964,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   void _iniciarBatalha(MonstroInimigo monstroInimigo) {
     // Verifica se a aventura expirou antes de iniciar batalha
     if (historiaAtual != null && historiaAtual!.aventuraExpirada) {
-      print('⏰ [MapaAventura] Tentativa de batalhar com aventura expirada!');
+      print('ÃƒÂ¢Ã‚ÂÃ‚Â° [MapaAventura] Tentativa de batalhar com aventura expirada!');
       _mostrarModalAventuraExpirada();
       return;
     }
@@ -917,41 +978,41 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   }
 
   Future<void> _avancarTier() async {
-    print('🎯 [DEBUG] _avancarTier() iniciado');
+    print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] _avancarTier() iniciado');
     setState(() {
       isAdvancingTier = true;
-      print('🎯 [DEBUG] isAdvancingTier definido como true');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] isAdvancingTier definido como true');
     });
 
     try {
       final repository = ref.read(aventuraRepositoryProvider);
 
       if (historiaAtual == null) {
-        print('❌ [DEBUG] historiaAtual é null, retornando');
+        print('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] historiaAtual ÃƒÆ’Ã‚Â© null, retornando');
         return;
       }
-      print('🎯 [DEBUG] historiaAtual não é null, continuando...');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] historiaAtual nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© null, continuando...');
 
-      // Gera novos monstros para o próximo tier
+      // Gera novos monstros para o prÃƒÆ’Ã‚Â³ximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
 
-      // Verifica se é o andar 10 para resetar score (só se tiver mais de 50)
+      // Verifica se ÃƒÆ’Ã‚Â© o andar 10 para resetar score (sÃƒÆ’Ã‚Â³ se tiver mais de 50)
       int novoScore = historiaAtual!.score;
       if (historiaAtual!.tier == 10 && historiaAtual!.score > 50) {
         novoScore = 50;
-        print('🔄 [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} → $novoScore');
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ $novoScore');
       } else if (historiaAtual!.tier == 10) {
-        print('📌 [MapaAventura] Score mantido no andar 10 (≤50): ${historiaAtual!.score}');
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€™ [MapaAventura] Score mantido no andar 10 (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤50): ${historiaAtual!.score}');
       }
 
-      // Atualiza a história com novo tier, novos monstros e score (resetado se tier 10)
+      // Atualiza a histÃƒÆ’Ã‚Â³ria com novo tier, novos monstros e score (resetado se tier 10)
       final historiaAtualizada = historiaAtual!.copyWith(
         tier: historiaAtual!.tier + 1,
         monstrosInimigos: novosMonstros,
         score: novoScore,
       );
 
-      // Salva no repositório
+      // Salva no repositÃƒÆ’Ã‚Â³rio
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
 
       // Atualiza o estado local
@@ -959,12 +1020,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         historiaAtual = historiaAtualizada;
       });
 
-      print('🎯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [MapaAventura] Tier avanÃƒÆ’Ã‚Â§ado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
 
     } catch (e) {
-      print('❌ [MapaAventura] Erro ao avançar tier: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao avanÃƒÆ’Ã‚Â§ar tier: $e');
     } finally {
-      print('🎯 [DEBUG] Finally executado, resetando isAdvancingTier');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] Finally executado, resetando isAdvancingTier');
       setState(() {
         isAdvancingTier = false;
       });
@@ -975,12 +1036,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     // Gera novos monstros usando o repository para o novo tier
     final repository = ref.read(aventuraRepositoryProvider);
 
-    print('🔄 [MapaAventura] Gerando novos monstros inimigos para tier $novoTier');
+    print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Gerando novos monstros inimigos para tier $novoTier');
 
-    // Chama o método público do repository para gerar novos monstros com itens
+    // Chama o mÃƒÆ’Ã‚Â©todo pÃƒÆ’Ã‚Âºblico do repository para gerar novos monstros com itens
     final novosMonstros = await repository.gerarMonstrosInimigosPorTier(novoTier);
 
-    print('✅ [MapaAventura] Novos monstros gerados com tier $novoTier');
+    print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [MapaAventura] Novos monstros gerados com tier $novoTier');
     return novosMonstros;
   }
 
@@ -993,7 +1054,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       case 39:
         return 'Tier 40: Itens de Elite';
       case 49:
-        return 'Tier 50: Equipamentos Lendários';
+        return 'Tier 50: Equipamentos LendÃƒÆ’Ã‚Â¡rios';
       default:
         return 'Aumento de Dificuldade';
     }
@@ -1002,15 +1063,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   String _getMensagemDificuldadeDescricao(int tier) {
     switch (tier) {
       case 19:
-        return 'A partir do tier 20, os inimigos não usarão mais itens inferiores. Apenas itens normais ou superiores serão equipados.';
+        return 'A partir do tier 20, os inimigos nÃƒÆ’Ã‚Â£o usarÃƒÆ’Ã‚Â£o mais itens inferiores. Apenas itens normais ou superiores serÃƒÆ’Ã‚Â£o equipados.';
       case 29:
-        return 'A partir do tier 30, os inimigos não usarão mais itens normais. Apenas itens raros ou superiores serão equipados.';
+        return 'A partir do tier 30, os inimigos nÃƒÆ’Ã‚Â£o usarÃƒÆ’Ã‚Â£o mais itens normais. Apenas itens raros ou superiores serÃƒÆ’Ã‚Â£o equipados.';
       case 39:
-        return 'A partir do tier 40, os inimigos não usarão mais itens raros. Apenas itens épicos ou superiores serão equipados.';
+        return 'A partir do tier 40, os inimigos nÃƒÆ’Ã‚Â£o usarÃƒÆ’Ã‚Â£o mais itens raros. Apenas itens ÃƒÆ’Ã‚Â©picos ou superiores serÃƒÆ’Ã‚Â£o equipados.';
       case 49:
-        return 'A partir do tier 50, os inimigos não usarão mais itens épicos. Apenas itens lendários serão equipados pelos inimigos.';
+        return 'A partir do tier 50, os inimigos nÃƒÆ’Ã‚Â£o usarÃƒÆ’Ã‚Â£o mais itens ÃƒÆ’Ã‚Â©picos. Apenas itens lendÃƒÆ’Ã‚Â¡rios serÃƒÆ’Ã‚Â£o equipados pelos inimigos.';
       default:
-        return 'Os inimigos ficarão mais desafiadores a partir deste tier.';
+        return 'Os inimigos ficarÃƒÆ’Ã‚Â£o mais desafiadores a partir deste tier.';
     }
   }
 
@@ -1018,10 +1079,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        // Verificar se é o andar 10
+        // Verificar se ÃƒÆ’Ã‚Â© o andar 10
         bool isAndar10 = historiaAtual?.tier == 10;
 
-        // Verificar se é um dos tiers de aumento de dificuldade
+        // Verificar se ÃƒÆ’Ã‚Â© um dos tiers de aumento de dificuldade
         bool isTierDificuldade = podeAvancar && [19, 29, 39, 49].contains(historiaAtual?.tier);
 
         return AlertDialog(
@@ -1039,8 +1100,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               Expanded(
                 child: Text(
                   podeAvancar
-                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier'))
-                    : 'Requisitos não atendidos',
+                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'AvanÃƒÆ’Ã‚Â§ar Tier'))
+                    : 'Requisitos nÃƒÆ’Ã‚Â£o atendidos',
                   style: TextStyle(
                     color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
                     fontSize: 18,
@@ -1056,7 +1117,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             children: [
               if (podeAvancar) ...[
                 if (isTierDificuldade) ...[
-                  // Mensagens específicas de aumento de dificuldade
+                  // Mensagens especÃƒÆ’Ã‚Â­ficas de aumento de dificuldade
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1129,15 +1190,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                         const SizedBox(height: 8),
                         Text(
                           (historiaAtual?.score ?? 0) > 50
-                            ? 'Ao avançar do andar 10 para o 11, seu score será resetado para 50 pontos.'
-                            : 'Ao avançar do andar 10 para o 11, seu score será mantido (≤50 pontos).',
+                            ? 'Ao avanÃƒÆ’Ã‚Â§ar do andar 10 para o 11, seu score serÃƒÆ’Ã‚Â¡ resetado para 50 pontos.'
+                            : 'Ao avanÃƒÆ’Ã‚Â§ar do andar 10 para o 11, seu score serÃƒÆ’Ã‚Â¡ mantido (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤50 pontos).',
                           style: const TextStyle(fontSize: 14),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           (historiaAtual?.score ?? 0) > 50
-                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos → Ficará: 50 pontos'
-                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos → Será mantido',
+                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FicarÃƒÆ’Ã‚Â¡: 50 pontos'
+                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SerÃƒÆ’Ã‚Â¡ mantido',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -1149,7 +1210,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    '⚠️ Outras mudanças importantes:',
+                    'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Outras mudanÃƒÆ’Ã‚Â§as importantes:',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1157,13 +1218,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text('• Monstros do andar 11+ darão 2 pontos por vitória'),
-                  const Text('• A loja considerará preços como se fosse tier 2'),
-                  const Text('• Novos monstros mais fortes aparecerão'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Monstros do andar 11+ darÃƒÆ’Ã‚Â£o 2 pontos por vitÃƒÆ’Ã‚Â³ria'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ A loja considerarÃƒÆ’Ã‚Â¡ preÃƒÆ’Ã‚Â§os como se fosse tier 2'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Novos monstros mais fortes aparecerÃƒÆ’Ã‚Â£o'),
                 ] else ...[
                   // Aviso normal para outros andares
                   const Text(
-                    '⚠️ ATENÇÃO: Ao avançar para o próximo tier:',
+                    'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â ATENÃƒÆ’Ã¢â‚¬Â¡ÃƒÆ’Ã†â€™O: Ao avanÃƒÆ’Ã‚Â§ar para o prÃƒÆ’Ã‚Â³ximo tier:',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1171,12 +1232,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('• Você não poderá retornar ao tier anterior'),
-                  const Text('• Novos monstros mais fortes aparecerão'),
-                  const Text('• Seu progresso atual será salvo'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ VocÃƒÆ’Ã‚Âª nÃƒÆ’Ã‚Â£o poderÃƒÆ’Ã‚Â¡ retornar ao tier anterior'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Novos monstros mais fortes aparecerÃƒÆ’Ã‚Â£o'),
+                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Seu progresso atual serÃƒÆ’Ã‚Â¡ salvo'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Seu score atual será mantido.',
+                    'Seu score atual serÃƒÆ’Ã‚Â¡ mantido.',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -1185,7 +1246,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 ],
               ] else ...[
                 Text(
-                  'Você precisa derrotar pelo menos 3 monstros para avançar de tier.',
+                  'VocÃƒÆ’Ã‚Âª precisa derrotar pelo menos 3 monstros para avanÃƒÆ’Ã‚Â§ar de tier.',
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 12),
@@ -1216,14 +1277,14 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
-                  print('🎯 [DEBUG] Botão Confirmar clicado');
+                  print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] BotÃƒÆ’Ã‚Â£o Confirmar clicado');
                   Navigator.of(context).pop();
-                  print('🎯 [DEBUG] Modal fechado, chamando _avancarTier()');
+                  print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] Modal fechado, chamando _avancarTier()');
                   _avancarTier();
                 },
                 child: Text(
                   isAndar10
-                    ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
+                    ? ((historiaAtual?.score ?? 0) > 50 ? 'AvanÃƒÆ’Ã‚Â§ar e Resetar' : 'AvanÃƒÆ’Ã‚Â§ar (Score Mantido)')
                     : 'Confirmar'
                 ),
               ),
@@ -1256,7 +1317,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Ícone de aventura expirada
+              // ÃƒÆ’Ã‚Âcone de aventura expirada
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1271,7 +1332,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Título
+              // TÃƒÆ’Ã‚Â­tulo
               const Text(
                 'Aventura Expirada',
                 style: TextStyle(
@@ -1285,7 +1346,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
               // Mensagem explicativa
               const Text(
-                'Sua aventura expirou após a meia-noite (horário de Brasília). Para continuar jogando, você precisa sortear novos monstros e começar uma nova aventura.',
+                'Sua aventura expirou apÃƒÆ’Ã‚Â³s a meia-noite (horÃƒÆ’Ã‚Â¡rio de BrasÃƒÆ’Ã‚Â­lia). Para continuar jogando, vocÃƒÆ’Ã‚Âª precisa sortear novos monstros e comeÃƒÆ’Ã‚Â§ar uma nova aventura.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.black54,
@@ -1294,7 +1355,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Container de informação adicional
+              // Container de informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o adicional
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1308,7 +1369,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
-                        'Aventuras são válidas apenas durante o dia em que foram criadas.',
+                        'Aventuras sÃƒÆ’Ã‚Â£o vÃƒÆ’Ã‚Â¡lidas apenas durante o dia em que foram criadas.',
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
@@ -1321,7 +1382,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Botão para voltar à tela de aventura
+              // BotÃƒÆ’Ã‚Â£o para voltar ÃƒÆ’Ã‚Â  tela de aventura
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1350,11 +1411,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-  /// Verifica se pode refresh do andar (não houve batalhas no andar atual e tem refreshs restantes)
+  /// Verifica se pode refresh do andar (nÃƒÆ’Ã‚Â£o houve batalhas no andar atual e tem refreshs restantes)
   bool _podeRefreshAndar() {
     if (historiaAtual == null) return false;
 
-    // Verifica se há batalhas no tier atual
+    // Verifica se hÃƒÆ’Ã‚Â¡ batalhas no tier atual
     final batalhasNoTierAtual = historiaAtual!.historicoBatalhas
         .where((batalha) => batalha.tierNaBatalha == historiaAtual!.tier)
         .toList();
@@ -1388,7 +1449,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Ícone de refresh animado
+                // ÃƒÆ’Ã‚Âcone de refresh animado
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1403,7 +1464,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Título
+                // TÃƒÆ’Ã‚Â­tulo
                 const Text(
                   'Resetando Andar',
                   style: TextStyle(
@@ -1433,7 +1494,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Container de informação adicional
+                // Container de informaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o adicional
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1450,7 +1511,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
-                              'Seu progresso no tier será mantido.',
+                              'Seu progresso no tier serÃƒÆ’Ã‚Â¡ mantido.',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -1467,7 +1528,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Refreshs restantes após este: ${(historiaAtual?.refreshsRestantes ?? 1) - 1}',
+                              'Refreshs restantes apÃƒÆ’Ã‚Â³s este: ${(historiaAtual?.refreshsRestantes ?? 1) - 1}',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -1496,7 +1557,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       // Gera novos monstros para o tier atual
       final novosMonstros = await repository.gerarMonstrosInimigosPorTier(historiaAtual!.tier);
 
-      // Atualiza a história com novos monstros e decrementa refreshs
+      // Atualiza a histÃƒÆ’Ã‚Â³ria com novos monstros e decrementa refreshs
       final historiaAtualizada = historiaAtual!.copyWith(
         monstrosInimigos: novosMonstros,
         refreshsRestantes: historiaAtual!.refreshsRestantes - 1,
@@ -1506,7 +1567,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
 
       // Salva no Drive
-      print('💾 [MapaAventura] Salvando refresh no Drive...');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¾ [MapaAventura] Salvando refresh no Drive...');
       await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
 
       // Atualiza o estado local
@@ -1519,11 +1580,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         Navigator.of(context).pop();
       }
 
-      print('🔄 [MapaAventura] Andar resetado! Novos monstros gerados para tier ${historiaAtualizada.tier}');
-      print('🔄 [MapaAventura] Refreshs restantes: ${historiaAtualizada.refreshsRestantes}');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Andar resetado! Novos monstros gerados para tier ${historiaAtualizada.tier}');
+      print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Refreshs restantes: ${historiaAtualizada.refreshsRestantes}');
 
     } catch (e) {
-      print('❌ [MapaAventura] Erro ao resetar andar: $e');
+      print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao resetar andar: $e');
 
       // Fecha o dialog de loading
       if (mounted) {
@@ -1536,7 +1597,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Erro'),
-            content: const Text('Não foi possível resetar o andar. Tente novamente.'),
+            content: const Text('NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel resetar o andar. Tente novamente.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -1549,3 +1610,4 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
   }
 }
+

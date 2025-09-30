@@ -6,6 +6,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/admin/presentation/regras_screen.dart';
+import '../../features/admin/presentation/config_aventura_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/monstros/monstros_menu_screen.dart';
@@ -36,26 +37,10 @@ class AppRouter {
       ),
       GoRoute(
         path: AppConstants.aventuraRoute,
-        builder: (context, state) => const AventuraScreen(),
-        routes: [
-          GoRoute(
-            path: 'mapa',
-            builder: (context, state) {
-              final historia = state.extra as HistoriaJogador?;
-              if (historia == null) {
-                return const Scaffold(
-                  body: Center(
-                    child: Text('Erro: História não encontrada'),
-                  ),
-                );
-              }
-              return MapaAventuraScreen(
-                mapaPath: historia.mapaAventura ?? '',
-                monstrosInimigos: historia.monstrosInimigos,
-              );
-            },
-          ),
-        ],
+        builder: (context, state) => const MapaAventuraScreen(
+          mapaPath: '',
+          monstrosInimigos: [],
+        ),
       ),
       GoRoute(
         path: AppConstants.rankingRoute,
@@ -89,6 +74,10 @@ class AppRouter {
           GoRoute(
             path: 'regras',
             builder: (context, state) => const RegrasScreen(),
+          ),
+          GoRoute(
+            path: 'aventura',
+            builder: (context, state) => const ConfigAventuraScreen(),
           ),
         ],
       ),

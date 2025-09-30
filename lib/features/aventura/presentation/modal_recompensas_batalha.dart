@@ -799,7 +799,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         crossAxisCount: 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.9,
+        childAspectRatio: 0.65,
       ),
       itemBuilder: (context, index) {
         final monstro = widget.timeJogador[index];
@@ -819,7 +819,6 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   ) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: selecionado
             ? destaque.withOpacity(0.2)
@@ -832,37 +831,238 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       ),
       child: Column(
         children: [
+          // Imagem do monstro e informações
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                monstro.imagem,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.catching_pokemon,
-                  color: destaque,
-                ),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        monstro.imagem,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.catching_pokemon,
+                          color: destaque,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    monstro.nome,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    'Lv. ${monstro.level}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: destaque,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          // Seção da mochila
+          if (monstro.itemEquipado != null)
+            GestureDetector(
+              onTap: () => _mostrarDetalhesItem(monstro.itemEquipado!),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                ),
+                child: Icon(
+                  Icons.backpack,
+                  color: monstro.itemEquipado!.raridade.cor,
+                  size: 20,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+
+  String _getImagemArmadura(Item item) {
+    final raridadeNome = item.raridade.nome.toLowerCase();
+    switch (raridadeNome) {
+      case 'inferior':
+        return 'assets/armaduras/armadura_inferior.png';
+      case 'normal':
+        return 'assets/armaduras/armadura_normal.png';
+      case 'rara':
+        return 'assets/armaduras/armadura_rara.png';
+      case 'épica':
+      case 'epica':
+        return 'assets/armaduras/armadura_epica.png';
+      case 'lendária':
+      case 'lendaria':
+        return 'assets/armaduras/armadura_lendaria.png';
+      default:
+        return 'assets/armaduras/armadura_normal.png';
+    }
+  }
+
+  void _mostrarDetalhesItem(Item item) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: item.raridade.cor, width: 3),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Imagem da armadura
+              Container(
+                width: 120,
+                height: 120,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: item.raridade.cor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: item.raridade.cor, width: 2),
+                ),
+                child: Image.asset(
+                  _getImagemArmadura(item),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.shield,
+                    color: item.raridade.cor,
+                    size: 60,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                item.nome,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade900,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${item.raridade.nome} • Tier ${item.tier}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bônus:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...item.atributos.entries.map((entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_right, size: 16, color: item.raridade.cor),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${entry.key}: +${entry.value}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fechar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatBox({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Column(
+        children: [
           Text(
-            monstro.nome,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            label,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 2),
           Text(
-            'Lv. ${monstro.level}',
+            value,
             style: TextStyle(
-              fontSize: 10,
-              color: destaque,
-              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -987,6 +1187,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               Column(
                 children: _monstroSelecionadoMagia!.habilidades.map((habilidade) {
                   final selecionada = _habilidadeSelecionada == habilidade;
+                  final valorCalculado = habilidade.valorEfetivo;
                   return GestureDetector(
                     onTap: () {
                       setState(() {
@@ -997,56 +1198,129 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: selecionada
-                            ? destaque.withOpacity(0.1)
-                            : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: selecionada ? destaque : Colors.grey.shade300,
-                          width: selecionada ? 2 : 1,
+                          width: selecionada ? 2.5 : 1.5,
                         ),
+                        boxShadow: selecionada ? [
+                          BoxShadow(
+                            color: destaque.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              if (selecionada)
-                                Icon(Icons.check_circle, color: destaque, size: 20)
-                              else
-                                Icon(Icons.circle_outlined, color: Colors.grey.shade400, size: 20),
-                              const SizedBox(width: 8),
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: selecionada ? destaque : Colors.grey.shade300,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  selecionada ? Icons.check : Icons.auto_fix_high,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
                               Expanded(
-                                child: Text(
-                                  habilidade.nome,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade800,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      habilidade.nome,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Image.asset(
+                                          habilidade.tipoElemental.iconAsset,
+                                          width: 14,
+                                          height: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Lv.${habilidade.level}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.amber.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: habilidade.tipo.cor.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            habilidade.tipo.nome,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: habilidade.tipo.cor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            habilidade.descricao,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              _buildInfoChip('Level', habilidade.level.toString(), habilidade.tipo.cor),
-                              _buildInfoChip('Tipo', habilidade.tipo.nome, habilidade.tipo.cor),
-                              _buildInfoChip('Efeito', habilidade.efeito.nome, Colors.orange),
-                              _buildInfoChip('Valor', habilidade.valor.toString(), Colors.red),
-                              _buildInfoChip('Custo', '${habilidade.custoEnergia} EN', Colors.blue),
-                            ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  habilidade.descricao,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatBox(
+                                        label: habilidade.efeito.nome,
+                                        value: valorCalculado.toString(),
+                                        color: Colors.orange.shade600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildStatBox(
+                                      label: 'Custo',
+                                      value: '${habilidade.custoEnergia} EN',
+                                      color: Colors.blue.shade600,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

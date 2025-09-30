@@ -1463,66 +1463,88 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = AventuraRepository();
 
-      // Carrega o histórico atual para obter o runId
-      print('🔍 [AventuraScreen] Carregando histórico para arquivar...');
+      // Carrega o historico atual para obter o runId
+      print('[AventuraScreen] Carregando historico para arquivar...');
       HistoriaJogador? historiaAtual;
       try {
         historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
       } catch (e) {
         if (e.toString().contains('401') || e.toString().contains('authentication')) {
-          print('🔄 [AventuraScreen] Erro 401 detectado, renovando autenticação...');
+          print('[AventuraScreen] Erro 401 detectado, renovando autenticacao...');
           await GoogleDriveService().inicializarConexao();
           historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
-          print('✅ [AventuraScreen] Histórico carregado após renovação da autenticação');
+          print('[AventuraScreen] Historico carregado apos renovacao da autenticacao');
         } else {
           throw e;
         }
       }
 
+      bool removeLocalSucesso = false;
+
       if (historiaAtual != null && historiaAtual.runId.isNotEmpty) {
-        print('📦 [AventuraScreen] RunID encontrado: ${historiaAtual.runId}, iniciando arquivamento...');
-        // Arquiva o histórico atual renomeando com o runId
+        print('[AventuraScreen] RunID encontrado: ${historiaAtual.runId}, iniciando arquivamento...');
+        // Arquiva o historico atual renomeando com o runId
         bool sucessoArquivamento = false;
         try {
           sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
         } catch (e) {
           if (e.toString().contains('401') || e.toString().contains('authentication')) {
-            print('🔄 [AventuraScreen] Erro 401 no arquivamento, renovando autenticação...');
+            print('[AventuraScreen] Erro 401 no arquivamento, renovando autenticacao...');
             await GoogleDriveService().inicializarConexao();
             sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
-            print('✅ [AventuraScreen] Arquivamento realizado após renovação da autenticação');
+            print('[AventuraScreen] Arquivamento realizado apos renovacao da autenticacao');
           } else {
             throw e;
           }
         }
 
         if (sucessoArquivamento) {
-          print('✅ [AventuraScreen] Histórico arquivado com sucesso com RunID: ${historiaAtual.runId}');
+          print('[AventuraScreen] Historico arquivado com sucesso com RunID: ${historiaAtual.runId}');
         } else {
-          print('❌ [AventuraScreen] FALHA ao arquivar histórico com RunID: ${historiaAtual.runId}');
+          print('[AventuraScreen] FALHA ao arquivar historico com RunID: ${historiaAtual.runId}');
         }
+
+        removeLocalSucesso = await _removerHistoricoLocal(repository, emailJogador);
       } else {
-        print('⚠️ [AventuraScreen] História nula ou sem RunID (${historiaAtual?.runId}), removendo histórico...');
-        // Se não tem runId, remove o histórico (fallback)
-        try {
-          await repository.removerHistoricoJogador(emailJogador);
-          print('✅ [AventuraScreen] Histórico removido (sem RunID)');
-        } catch (e) {
-          if (e.toString().contains('401') || e.toString().contains('authentication')) {
-            print('🔄 [AventuraScreen] Erro 401 na remoção, renovando autenticação...');
-            await GoogleDriveService().inicializarConexao();
-            await repository.removerHistoricoJogador(emailJogador);
-            print('✅ [AventuraScreen] Histórico removido após renovação da autenticação');
-          } else {
-            throw e;
-          }
-        }
+        print('[AventuraScreen] Historia nula ou sem RunID (${historiaAtual?.runId}), removendo historico...');
+        removeLocalSucesso = await _removerHistoricoLocal(repository, emailJogador);
       }
 
-      print('✅ [AventuraScreen] Primeira aventura disponível');
+      if (!removeLocalSucesso) {
+        throw Exception('Falha ao remover historico local do HIVE ao recomecar aventura');
+      }
+
+      print('[AventuraScreen] Primeira aventura disponivel');
 
     } catch (e) {
-      print('❌ [AventuraScreen] Erro ao finalizar e iniciar nova aventura: $e');
+      print('[AventuraScreen] Erro ao finalizar e iniciar nova aventura: $e');
+      throw e;
+    }
+  }
+
+  Future<bool> _removerHistoricoLocal(AventuraRepository repository, String emailJogador) async {
+    try {
+      final sucessoLocal = await repository.removerHistoricoJogador(emailJogador);
+      if (sucessoLocal) {
+        print('[AventuraScreen] Historico local removido do HIVE');
+      } else {
+        print('[AventuraScreen] Falha ao remover historico local do HIVE');
+      }
+      return sucessoLocal;
+    } catch (e) {
+      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        print('[AventuraScreen] Erro 401 ao remover historico local, renovando autenticacao...');
+        await GoogleDriveService().inicializarConexao();
+        final sucessoLocal = await repository.removerHistoricoJogador(emailJogador);
+        if (sucessoLocal) {
+          print('[AventuraScreen] Historico local removido do HIVE apos renovacao da autenticacao');
+        } else {
+          print('[AventuraScreen] Falha ao remover historico local do HIVE apos renovacao da autenticacao');
+        }
+        return sucessoLocal;
+      }
+
+      print('[AventuraScreen] Erro ao remover historico local do HIVE: $e');
       throw e;
     }
   }
