@@ -10,7 +10,14 @@ import 'modal_item_consumivel.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
-  const MochilaScreen({super.key});
+  final HistoriaJogador? historiaInicial;
+  final void Function(HistoriaJogador historiaAtualizada)? onHistoriaAtualizada;
+
+  const MochilaScreen({
+    super.key,
+    this.historiaInicial,
+    this.onHistoriaAtualizada,
+  });
 
   @override
   ConsumerState<MochilaScreen> createState() => _MochilaScreenState();
@@ -29,8 +36,19 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   @override
   void initState() {
     super.initState();
+    historiaAtual = widget.historiaInicial;
     _carregarMochila();
     _carregarHistoria();
+  }
+
+  @override
+  void didUpdateWidget(covariant MochilaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.historiaInicial != null && widget.historiaInicial != oldWidget.historiaInicial) {
+      setState(() {
+        historiaAtual = widget.historiaInicial;
+      });
+    }
   }
 
   Future<void> _carregarMochila() async {
@@ -76,11 +94,14 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       final repository = ref.read(aventuraRepositoryProvider);
       final historia = await repository.carregarHistoricoJogador(user.email!);
       if (!mounted) return;
-      setState(() {
-        historiaAtual = historia;
-      });
+      if (historia != null) {
+        setState(() {
+          historiaAtual = historia;
+        });
+        widget.onHistoriaAtualizada?.call(historia);
+      }
     } catch (e) {
-      print('[MochilaScreen] Erro ao carregar história: $e');
+      print('[MochilaScreen] Erro ao carregar historia: $e');
     }
   }
 
@@ -124,18 +145,18 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   Future<void> _usarPocao(int index, ItemConsumivel item) async {
     final porcentagem = _obterPorcentagemCura(item);
     if (porcentagem == null) {
-      _mostrarSnack('Não foi possível identificar o efeito desta poção.', erro: true);
+      _mostrarSnack('Nao foi possivel identificar o efeito desta pocao.', erro: true);
       return;
     }
 
     final carregado = await _garantirHistoriaCarregada();
     if (!carregado || historiaAtual == null) {
-      _mostrarSnack('Não foi possível carregar o time para usar a poção.', erro: true);
+      _mostrarSnack('Nao foi possivel carregar o time para usar a pocao.', erro: true);
       return;
     }
 
     if (historiaAtual!.monstros.isEmpty) {
-      _mostrarSnack('Nenhum monstro disponível para receber a cura.', erro: true);
+      _mostrarSnack('Nenhum monstro disponivel para receber a cura.', erro: true);
       return;
     }
 
@@ -217,8 +238,9 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     try {
       await repository.salvarHistoricoJogadorLocal(historia);
       await repository.salvarHistoricoEAtualizarRanking(historia);
+      widget.onHistoriaAtualizada?.call(historia);
     } catch (e) {
-      print('[MochilaScreen] Erro ao salvar história: $e');
+      print('[MochilaScreen] Erro ao salvar historia: $e');
       _mostrarSnack('Erro ao atualizar aventura. Tente novamente.', erro: true);
       rethrow;
     }

@@ -43,6 +43,14 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     'assets/mapas_aventura/vulcao.jpg',
   ];
 
+  String _aventuraTabKey() {
+    if (historiaAtual == null) {
+      return 'aventura_null';
+    }
+    final vidas = historiaAtual!.monstros.map((m) => m.vidaAtual).join('-');
+    return 'aventura_${historiaAtual!.tier}_${historiaAtual!.score}_' + vidas;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -269,13 +277,31 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 index: _abaAtual,
                 children: [
                   // ABA 0: EQUIPE (tela de seleção/início)
-                  const AventuraScreen(),
+                  AventuraScreen(
+                    key: ValueKey(_aventuraTabKey()),
+                  ),
 
                   // ABA 1: MAPA
                   _buildMapaView(),
 
                   // ABA 2: MOCHILA
-                  const MochilaScreen(),
+                  MochilaScreen(
+                    historiaInicial: historiaAtual,
+                    onHistoriaAtualizada: (historiaAtualizada) async {
+                      setState(() {
+                        historiaAtual = historiaAtualizada;
+                      });
+
+                      try {
+                        final repository = ref.read(aventuraRepositoryProvider);
+                        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+                        await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
+                        print('[Mochila] Historia atualizada apos uso de item');
+                      } catch (e) {
+                        print('[Mochila] Erro ao salvar historia: $e');
+                      }
+                    },
+                  ),
 
                   // ABA 3: LOJA
                   _buildLojaView(),
