@@ -80,50 +80,59 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.95,
-        height: MediaQuery.of(context).size.height * 0.9,
-        child: Stack(
-          children: [
-            // Fundo com efeito glassmorphism
-            GlassmorphicContainer(
-              width: double.infinity,
-              height: double.infinity,
-              borderRadius: 25,
-              blur: 20,
-              alignment: Alignment.bottomCenter,
-              border: 3,
-              linearGradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF2E2E2E).withOpacity(0.8),
-                  const Color(0xFF3A3A3A).withOpacity(0.9),
-                  const Color(0xFF4A4A4A).withOpacity(0.8),
-                ],
-              ),
-              borderGradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF6B6B6B).withOpacity(0.8),
-                  const Color(0xFF8B8B8B).withOpacity(0.6),
-                  const Color(0xFF6B6B6B).withOpacity(0.8),
-                ],
-              ),
-            ),
-            // Partículas flutuantes animadas
-            ...List.generate(15, (index) => _buildFloatingParticle(index)),
-            // Conteúdo principal
-            _buildMainContent(context),
+    final size = MediaQuery.of(context).size;
+
+    return Container(
+      width: size.width,
+      height: size.height,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1B1B2F),
+            Color(0xFF16213E),
+            Color(0xFF0F3460),
           ],
         ),
-      ).animate()
-        .scale(duration: 600.ms, curve: Curves.elasticOut)
-        .fadeIn(duration: 400.ms),
-    );
+      ),
+      child: Stack(
+        children: [
+          GlassmorphicContainer(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: 0,
+            blur: 20,
+            alignment: Alignment.bottomCenter,
+            border: 2,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF2E2E2E).withOpacity(0.6),
+                const Color(0xFF3A3A3A).withOpacity(0.6),
+                const Color(0xFF4A4A4A).withOpacity(0.6),
+              ],
+            ),
+            borderGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF6B6B6B).withOpacity(0.5),
+                const Color(0xFF8B8B8B).withOpacity(0.4),
+                const Color(0xFF6B6B6B).withOpacity(0.5),
+              ],
+            ),
+          ),
+          // Partículas flutuantes animadas
+          ...List.generate(15, (index) => _buildFloatingParticle(index)),
+          // Conteúdo principal
+          _buildMainContent(context),
+        ],
+      ),
+    ).animate()
+      .scale(duration: 600.ms, curve: Curves.easeOutBack)
+      .fadeIn(duration: 400.ms);
   }
 
   Widget _buildMainContent(BuildContext context) {
