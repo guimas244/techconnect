@@ -412,7 +412,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '${monstro.nome} • Level $levelAntes → $levelDepois',
+                  '${monstro.nome} - Level $levelAntes -> $levelDepois',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -555,7 +555,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     if (temMagia) {
       partesTitulo.add('MAGIA RECEBIDA');
     }
-    final titulo = partesTitulo.join(' • ');
+    final titulo = partesTitulo.join(' - ');
 
     return Container(
       decoration: BoxDecoration(
@@ -715,7 +715,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                   border: Border.all(color: destaque),
                 ),
                 child: Text(
-                  'Tier ${item.tier} • ${item.raridade.nome}',
+                  'Tier ${item.tier} - ${item.raridade.nome}',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -991,7 +991,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${item.raridade.nome} • Tier ${item.tier}',
+                '${item.raridade.nome} - Tier ${item.tier}',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,
@@ -1520,7 +1520,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Espaços disponíveis: $_slotsDisponiveisBase • Necessários: $mantidos',
+            'Espaços disponíveis: $_slotsDisponiveisBase - Necessários: $mantidos',
             style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
           ),
           if (faltaEspaco) ...[

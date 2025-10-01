@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_consumivel.dart';
 import '../models/mochila.dart';
+import '../models/historia_jogador.dart';
+import 'modal_cura_obtida.dart';
+import '../providers/aventura_provider.dart';
 import '../services/mochila_service.dart';
 import 'modal_item_consumivel.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -21,10 +24,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   Mochila? mochila;
   bool isLoading = true;
 
+  HistoriaJogador? historiaAtual;
+
   @override
   void initState() {
     super.initState();
     _carregarMochila();
+    _carregarHistoria();
   }
 
   Future<void> _carregarMochila() async {
@@ -60,6 +66,32 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     );
   }
 
+  Future<void> _carregarHistoria() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) {
+      return;
+    }
+
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      final historia = await repository.carregarHistoricoJogador(user.email!);
+      if (!mounted) return;
+      setState(() {
+        historiaAtual = historia;
+      });
+    } catch (e) {
+      print('[MochilaScreen] Erro ao carregar história: $e');
+    }
+  }
+
+  Future<bool> _garantirHistoriaCarregada() async {
+    if (historiaAtual != null) {
+      return true;
+    }
+    await _carregarHistoria();
+    return historiaAtual != null;
+  }
+
   void _mostrarDetalhesItem(ItemConsumivel item, int index) {
     showDialog(
       context: context,
@@ -81,32 +113,126 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     final item = mochila!.itens[index];
     if (item == null) return;
 
-    // TODO: Implementar lógica de uso do item
-
-    // Se tinha quantidade > 1, diminui
-    if (item.quantidade > 1) {
-      final novoItem = item.copyWith(quantidade: item.quantidade - 1);
-      setState(() {
-        mochila = mochila!.atualizarItem(index, novoItem);
-      });
-    } else {
-      // Remove o item
-      setState(() {
-        mochila = mochila!.removerItem(index);
-      });
+    if (item.tipo == TipoItemConsumivel.pocao) {
+      await _usarPocao(index, item);
+      return;
     }
+
+    await _consumirItem(index, item, mensagem: '${item.nome} usado!');
+  }
+
+  Future<void> _usarPocao(int index, ItemConsumivel item) async {
+    final porcentagem = _obterPorcentagemCura(item);
+    if (porcentagem == null) {
+      _mostrarSnack('Não foi possível identificar o efeito desta poção.', erro: true);
+      return;
+    }
+
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a poção.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível para receber a cura.', erro: true);
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalCuraObtida(
+        porcentagem: porcentagem,
+        monstrosDisponiveis: historiaAtual!.monstros,
+        onCurarMonstro: (monstro, porcentagemCura) async {
+          final curaTotal = (monstro.vida * porcentagemCura / 100).round();
+          final novaVidaAtual = (monstro.vidaAtual + curaTotal).clamp(0, monstro.vida);
+
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level) {
+              return m.copyWith(vidaAtual: novaVidaAtual);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome} recuperou $curaTotal de vida com ${item.nome}!',
+          );
+        },
+      ),
+    );
+  }
+
+  int? _obterPorcentagemCura(ItemConsumivel item) {
+    switch (item.id) {
+      case 'pocaoVidaPequena':
+        return 25;
+      case 'pocaoVidaGrande':
+        return 100;
+    }
+
+    final regex = RegExp(r'(\d+)%');
+    final match = regex.firstMatch(item.descricao);
+    if (match != null) {
+      return int.tryParse(match.group(1)!);
+    }
+    return null;
+  }
+
+  Future<void> _consumirItem(int index, ItemConsumivel item, {String? mensagem}) async {
+    if (mochila == null) return;
+
+    final quantidadeRestante = item.quantidade - 1;
+
+    setState(() {
+      if (quantidadeRestante > 0) {
+        mochila = mochila!.atualizarItem(index, item.copyWith(quantidade: quantidadeRestante));
+      } else {
+        mochila = mochila!.removerItem(index);
+      }
+    });
 
     await _salvarMochila();
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${item.nome} usado!'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+    if (mounted && mensagem != null && mensagem.isNotEmpty) {
+      _mostrarSnack(mensagem);
     }
+  }
+
+  Future<void> _salvarHistoria(HistoriaJogador historia) async {
+    final repository = ref.read(aventuraRepositoryProvider);
+    try {
+      await repository.salvarHistoricoJogadorLocal(historia);
+      await repository.salvarHistoricoEAtualizarRanking(historia);
+    } catch (e) {
+      print('[MochilaScreen] Erro ao salvar história: $e');
+      _mostrarSnack('Erro ao atualizar aventura. Tente novamente.', erro: true);
+      rethrow;
+    }
+  }
+
+  void _mostrarSnack(String mensagem, {bool erro = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: erro ? Colors.red.shade700 : Colors.green.shade600,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _descartarItem(int index) async {
