@@ -61,6 +61,17 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   }
 
   @override
+  void didUpdateWidget(CasaVigaristaModalV2 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Atualiza o score quando a história é atualizada
+    if (oldWidget.historia.score != widget.historia.score) {
+      setState(() {
+        _historiaAtual = widget.historia;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _particleController.dispose();
     _backgroundController.dispose();
@@ -321,36 +332,8 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
                   ),
                 ),
 
-                // Botão de fechar estilizado
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF6B6B6B),
-                          const Color(0xFF0F3460),
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6B6B6B).withOpacity(0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ).animate()
-                  .scale(delay: 600.ms, duration: 300.ms),
+                // Botão de fechar removido - a loja agora é uma aba
+                const SizedBox(width: 30), // Espaço para manter o layout simétrico
               ],
             ),
           ),
@@ -1587,6 +1570,8 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   void _apostarItem() async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
+    if (!mounted) return;
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -1594,23 +1579,34 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoAposta,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       final item = _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier);
-      _mostrarResultadoItem(item, historiaAtualizada);
+      if (mounted) {
+        _mostrarResultadoItem(item, historiaAtualizada);
+      }
     } catch (e) {
-      _mostrarErro('Erro ao processar aposta: $e');
+      if (mounted) {
+        _mostrarErro('Erro ao processar aposta: $e');
+      }
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      if (mounted) {
+      setState(() { _comprando = false; });
+    }
+    }
   }
 
   void _apostarMagia() async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -1618,9 +1614,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoAposta,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       final habilidade = _gerarHabilidadeAleatoria();
@@ -1630,12 +1628,15 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao processar aposta: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   void _apostarCura() async {
     if (_comprando || _historiaAtual.score < custoCura) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -1643,9 +1644,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoCura,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       final random = Random();
@@ -1657,7 +1660,9 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao processar aposta: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   Widget _buildMagiaPreview(String nome, Color cor) {
@@ -1700,6 +1705,7 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   void _abrirBiblioteca() async {
     if (_comprando || _historiaAtual.score < custoFeirao) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -1707,9 +1713,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoFeirao,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       // Gerar 3 magias aleatórias
@@ -1725,12 +1733,15 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao abrir biblioteca: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   void _abrirFeirao() async {
     if (_comprando || _historiaAtual.score < custoFeirao) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -1738,9 +1749,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoFeirao,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       List<Item> itensFeirao = [];
@@ -1755,7 +1768,9 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao abrir feirão: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   Habilidade _gerarHabilidadeAleatoria() {
@@ -1888,11 +1903,21 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
           }).toList();
 
           final historiaFinal = historia.copyWith(monstros: monstrosAtualizados);
+
+          if (mounted) {
+            setState(() {
+              _historiaAtual = historiaFinal;
+            });
+          }
           widget.onHistoriaAtualizada(historiaFinal);
 
-          Navigator.of(context).pop();
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
 
-          _mostrarMensagemSucesso('${monstro.tipo.displayName} foi curado em $porcentagemCura%!');
+          if (mounted) {
+            _mostrarMensagemSucesso('${monstro.tipo.displayName} foi curado em $porcentagemCura%!');
+          }
         },
       ),
     );
@@ -2639,6 +2664,7 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   void _comprarItemFeirao(Item item, HistoriaJogador historia) async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -2646,9 +2672,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoAposta,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       Navigator.of(context).pop();
@@ -2659,10 +2687,13 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao comprar item: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   void _mostrarMensagemSucesso(String mensagem) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
@@ -2675,6 +2706,7 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   void _comprarMagiaBiblioteca(Habilidade habilidade, HistoriaJogador historia) async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
+    if (!mounted) return;
     setState(() { _comprando = true; });
 
     try {
@@ -2682,9 +2714,11 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         score: _historiaAtual.score - custoAposta,
       );
 
-      setState(() {
-        _historiaAtual = historiaAtualizada;
-      });
+      if (mounted) {
+        setState(() {
+          _historiaAtual = historiaAtualizada;
+        });
+      }
       widget.onHistoriaAtualizada(historiaAtualizada);
 
       Navigator.of(context).pop();
@@ -2694,11 +2728,14 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       _mostrarErro('Erro ao comprar magia: $e');
     }
 
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
 
   void _mostrarErro(String mensagem) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensagem),
@@ -2706,7 +2743,9 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
         duration: const Duration(seconds: 3),
       ),
     );
-    setState(() { _comprando = false; });
+    if (mounted) {
+      setState(() { _comprando = false; });
+    }
   }
 
   Widget _buildItemIcon(RaridadeItem raridade) {

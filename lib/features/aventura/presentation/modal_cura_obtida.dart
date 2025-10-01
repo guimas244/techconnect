@@ -173,9 +173,11 @@ class _ModalCuraObtidaState extends State<ModalCuraObtida> {
               
               return GestureDetector(
                 onTap: () {
-                  setState(() {
-                    monstroSelecionado = monstro;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      monstroSelecionado = monstro;
+                    });
+                  }
                 },
                 child: Container(
                   width: 90,
@@ -263,7 +265,9 @@ class _ModalCuraObtidaState extends State<ModalCuraObtida> {
         // Botão Descartar
         TextButton.icon(
           onPressed: isCurando ? null : () {
-            Navigator.of(context).pop();
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           },
           icon: const Icon(Icons.close),
           label: const Text('Descartar'),
@@ -285,13 +289,15 @@ class _ModalCuraObtidaState extends State<ModalCuraObtida> {
             ),
           ),
           onPressed: (monstroSelecionado != null && podeUsar && !isCurando) ? () async {
+            if (!mounted) return;
+
             setState(() {
               isCurando = true;
             });
-            
+
             try {
               await widget.onCurarMonstro(monstroSelecionado!, widget.porcentagem);
-              if (mounted) {
+              if (mounted && Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
             } catch (e) {
@@ -300,12 +306,14 @@ class _ModalCuraObtidaState extends State<ModalCuraObtida> {
                 setState(() {
                   isCurando = false;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Erro ao curar monstro. Tente novamente.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (Navigator.of(context).canPop()) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Erro ao curar monstro. Tente novamente.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             }
           } : null,

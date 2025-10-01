@@ -7,6 +7,7 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/admin/presentation/regras_screen.dart';
 import '../../features/admin/presentation/config_aventura_screen.dart';
+import '../../features/aventura/presentation/admin_drops_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/monstros/monstros_menu_screen.dart';
@@ -78,6 +79,10 @@ class AppRouter {
           GoRoute(
             path: 'aventura',
             builder: (context, state) => const ConfigAventuraScreen(),
+          ),
+          GoRoute(
+            path: 'drops',
+            builder: (context, state) => const AdminDropsScreen(),
           ),
         ],
       ),

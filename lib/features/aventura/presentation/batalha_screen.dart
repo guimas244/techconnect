@@ -6,12 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
-import 'aventura_screen.dart';
 import '../models/batalha.dart';
 import '../models/habilidade.dart';
 import '../models/item.dart';
 import '../models/historia_jogador.dart';
 import '../models/magia_drop.dart';
+import '../models/drop.dart';
+import '../services/drops_service.dart';
 import '../models/progresso_diario.dart';
 import '../providers/aventura_provider.dart';
 import '../providers/progresso_bonus_provider.dart';
@@ -51,12 +52,14 @@ class _DropResultado {
   final int? tier;
   final RaridadeItem? raridade;
   final MagiaDrop? magia;
+  final List<ItemConsumivel> consumiveis;
 
   const _DropResultado({
     this.item,
     this.tier,
     this.raridade,
     this.magia,
+    this.consumiveis = const [],
   });
 }
 
@@ -1063,7 +1066,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       tierItem: drop.tier,
       raridadeItem: drop.raridade,
       magiaRecebida: drop.magia,
-      itensConsumiveisRecebidos: const [],
+      itensConsumiveisRecebidos: drop.consumiveis,
     );
 
     return _PacoteRecompensas(
@@ -1224,6 +1227,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
     itemGerado = true;
 
+    // DROPS: Sorteia os drops (poções/pedras) que irão para os slots especiais
+    // NÃO adiciona ainda - apenas sorteia e exibe no modal
+    // Só será salvo quando o jogador confirmar no modal de recompensas
+    final consumiveis = <ItemConsumivel>[];
+    try {
+      final dropConsumivel = await DropsService.sortearDrop();
+      if (dropConsumivel != null) {
+        // Verifica se há espaço disponível antes de mostrar no modal
+        final slotsLivres = await DropsService.slotsDisponiveis();
+        if (slotsLivres > 0) {
+          consumiveis.add(_converterDropConsumivel(dropConsumivel));
+          print('[BatalhaScreen] Drop consumivel sorteado: ${dropConsumivel.tipo.nome} - Slots disponíveis: $slotsLivres');
+        } else {
+          print('[BatalhaScreen] Drop consumivel ${dropConsumivel.tipo.nome} sorteado mas sem slots (mochila cheia)');
+        }
+      } else {
+        print('[BatalhaScreen] Nenhum drop consumivel sorteado desta vez');
+      }
+    } catch (e) {
+      print('[BatalhaScreen] Erro ao sortear drop consumivel: $e');
+    }
+
     final tierAtual = historia.tier;
     final chanceDrop = _random.nextInt(100);
 
@@ -1231,7 +1256,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magiaService = MagiaService();
       final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
       print('[BatalhaScreen] Magia gerada: ${magia.nome} (tier $tierAtual)');
-      return _DropResultado(magia: magia);
+      return _DropResultado(magia: magia, consumiveis: consumiveis);
     }
 
     final itemService = ItemService();
@@ -1252,6 +1277,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       item: item,
       tier: item.tier,
       raridade: item.raridade,
+      consumiveis: consumiveis,
     );
   }
 
@@ -1267,19 +1293,51 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     return Mochila();
   }
 
+  ItemConsumivel _converterDropConsumivel(Drop drop) {
+    TipoItemConsumivel tipoConsumivel;
+    switch (drop.tipo) {
+      case TipoDrop.pedraReforco:
+        tipoConsumivel = TipoItemConsumivel.joia;
+        break;
+      case TipoDrop.pocaoVidaPequena:
+      case TipoDrop.pocaoVidaGrande:
+      default:
+        tipoConsumivel = TipoItemConsumivel.pocao;
+        break;
+    }
+
+    return ItemConsumivel(
+      id: drop.tipo.id,
+      nome: drop.tipo.nome,
+      descricao: drop.tipo.descricao,
+      tipo: tipoConsumivel,
+      iconPath: drop.tipo.imagePath,
+      quantidade: drop.quantidade,
+      raridade: RaridadeConsumivel.comum,
+    );
+  }
+
+  /// Guarda os DROPS (consumíveis) na mochila comum
+  /// Adiciona os drops nos primeiros slots vazios disponíveis
   Future<void> _guardarItensNaMochila(
     String emailJogador,
     Mochila mochilaBase,
     List<ItemConsumivel> novosItens,
     Set<int> slotsParaLiberar,
   ) async {
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens para guardar');
+
     if (novosItens.isEmpty && slotsParaLiberar.isEmpty) {
+      print('[BatalhaScreen] Nenhum drop para salvar');
       return;
     }
 
+    // Inicia com a mochila base
     Mochila mochila = mochilaBase;
 
+    // Primeiro, libera os slots selecionados
     if (slotsParaLiberar.isNotEmpty) {
+      print('[BatalhaScreen] 🗑️ Liberando ${slotsParaLiberar.length} slots');
       final indicesOrdenados = slotsParaLiberar.toList()..sort();
       for (final index in indicesOrdenados.reversed) {
         if (index >= 0 && index < Mochila.totalSlots) {
@@ -1288,21 +1346,41 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
 
+    // Agora adiciona os novos drops nos primeiros slots vazios
     for (final item in novosItens) {
-      final existe = mochila.itens.any((slot) => slot?.id == item.id);
-      if (existe) {
-        print('[BatalhaScreen] Item ${item.nome} ja esta na mochila, descartado por duplicidade');
-        continue;
-      }
-      final mochilaAtualizada = mochila.adicionarItem(item);
-      if (identical(mochilaAtualizada, mochila)) {
-        print('[BatalhaScreen] Sem espaco para guardar ${item.nome}, item descartado');
-      } else {
-        mochila = mochilaAtualizada;
+      try {
+        print('[BatalhaScreen] 🔄 Adicionando drop à mochila: ${item.nome} (iconPath: ${item.iconPath})');
+
+        final mochilaAtualizada = mochila.adicionarItem(item);
+
+        if (mochilaAtualizada != null) {
+          mochila = mochilaAtualizada;
+          print('[BatalhaScreen] ✅ Drop ${item.nome} adicionado à mochila!');
+        } else {
+          print('[BatalhaScreen] ❌ Mochila cheia, não foi possível adicionar ${item.nome}');
+        }
+      } catch (e, stack) {
+        print('[BatalhaScreen] ❌ Erro ao adicionar drop ${item.nome}: $e');
+        print(stack);
       }
     }
 
+    // Salva a mochila atualizada
+    print('[BatalhaScreen] 💾 Salvando mochila atualizada...');
     await MochilaService.salvarMochila(context, emailJogador, mochila);
+    print('[BatalhaScreen] ✅ Mochila salva com sucesso! Slots ocupados: ${mochila.itensOcupados}/${mochila.slotsDesbloqueados}');
+  }
+
+  /// Converte um ItemConsumivel de volta para Drop
+  /// para poder salvar no DropsService
+  Drop _converterItemConsumivelParaDrop(ItemConsumivel item) {
+    // Identifica o tipo pelo ID
+    final tipo = TipoDrop.values.firstWhere(
+      (t) => t.id == item.id,
+      orElse: () => TipoDrop.pocaoVidaPequena, // Fallback
+    );
+
+    return Drop(tipo: tipo, quantidade: item.quantidade);
   }
 
   Future<void> _equiparItemEMonstro(
@@ -1406,7 +1484,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     await _salvarResultadoLocal();
     print('? [BatalhaScreen] Resultado final salvo com sucesso!');
 
-    // Mostra botão para voltar manualmente
+    // Mostra botão para voltar manualmente (jogador pode ler o histórico antes)
     print('?? [BatalhaScreen] Ativando botão "Voltar para Aventura"');
     if (mounted) {
       setState(() {
@@ -2120,9 +2198,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           if (podeVoltarParaAventura)
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => AventuraScreen()),
-                );
+                print('[BatalhaScreen] 🏠 Voltando para aventura...');
+                // Sai da batalha, voltando para a seleção de monstro
+                // que por sua vez volta automaticamente para a aventura
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop(true); // Retorna true para indicar que terminou
+                }
               },
               icon: Icon(Icons.arrow_back),
               label: Text('Voltar para Aventura'),
@@ -2422,6 +2503,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // ==========================================
 
 }
+
 
 
 

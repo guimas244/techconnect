@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/config/developer_config.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -60,6 +61,12 @@ class AdminScreen extends StatelessWidget {
                   color: Colors.blueGrey.shade500,
                   onTap: () => context.push('/admin/aventura'),
                 ),
+                _MenuBlock(
+                  icon: Icons.card_giftcard,
+                  label: 'Drops',
+                  color: Colors.blueGrey.shade600,
+                  onTap: () => context.push('/admin/drops'),
+                ),
               ],
             ),
           ),
@@ -73,7 +80,7 @@ class _MenuBlock extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _MenuBlock({
     required this.icon,

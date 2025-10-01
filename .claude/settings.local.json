@@ -29,7 +29,8 @@
       "Bash(dir:*)",
       "Bash(ren:*)",
       "Bash(q)",
-      "Bash(r)"
+      "Bash(r)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

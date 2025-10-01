@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
@@ -556,8 +556,8 @@ class SelecaoMonstroScreen extends ConsumerWidget {
     }
   }
 
-  void _selecionarMonstro(BuildContext context, MonstroAventura monstro, WidgetRef ref) {
-    Navigator.push(
+  Future<void> _selecionarMonstro(BuildContext context, MonstroAventura monstro, WidgetRef ref) async {
+    final resultado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => BatalhaScreen(
@@ -566,6 +566,10 @@ class SelecaoMonstroScreen extends ConsumerWidget {
         ),
       ),
     );
+
+    if (resultado == true && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   void _mostrarDetalheMonstro(BuildContext context, MonstroAventura monstro) {
@@ -583,3 +587,5 @@ class SelecaoMonstroScreen extends ConsumerWidget {
   }
 
 }
+
+

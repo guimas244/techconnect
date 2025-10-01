@@ -110,6 +110,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     return true;
   }
 
+  // DROPS vão para a mochila comum, então verificamos o espaço disponível
   int get _slotsDisponiveisBase =>
       widget.mochilaAtual.slotsDesbloqueados - widget.mochilaAtual.itensOcupados;
 
@@ -249,6 +250,8 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     required bool salvarItens,
     required bool faltaEspaco,
   }) async {
+    print('[ModalRecompensas] 🚀 Concluindo recompensas - salvarItens=$salvarItens, faltaEspaco=$faltaEspaco');
+
     if (!_podeFechar) {
       _mostrarSnack(
         'Resolva primeiro os itens obrigatórios (equipamento ou magia).',
@@ -273,22 +276,38 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       }
     }
 
+    print('[ModalRecompensas] 📦 Total de itens: ${_itensParaGuardar.length}');
+    print('[ModalRecompensas] 📦 Itens descartados: ${_novosItensDescartados.length}');
+    print('[ModalRecompensas] ✅ Itens para guardar: ${itensParaGuardar.length}');
+    for (var item in itensParaGuardar) {
+      print('[ModalRecompensas]    - ${item.nome} (iconPath: ${item.iconPath})');
+    }
+
     setState(() {
       _processandoSalvarItens = true;
     });
 
     try {
       if (salvarItens) {
+        print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
         );
+        print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
+      } else {
+        print('[ModalRecompensas] ⏭️ Pulando salvamento (salvarItens=false)');
       }
+      print('[ModalRecompensas] 🏁 Chamando onConcluir...');
       await widget.onConcluir();
+      print('[ModalRecompensas] ✅ onConcluir concluído');
+      print('[ModalRecompensas] 🚪 Fechando modal de recompensas...');
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // Apenas fecha o modal, não sai da batalha
       }
-    } catch (e) {
+    } catch (e, stack) {
+      print('[ModalRecompensas] ❌ Erro ao finalizar: $e');
+      print(stack);
       _mostrarSnack('Erro ao finalizar recompensas: $e', erro: true);
     } finally {
       if (mounted) {
@@ -1370,6 +1389,9 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     );
   }
 
+  /// Seção retrátil para exibir os DROPS obtidos na batalha
+  /// DROPS são itens consumíveis como poções e pedras de reforço
+  /// que vão direto para os 3 slots especiais de drops na mochila (não são itens comuns)
   Widget _buildItensRetratil() {
     final faltaEspaco = _faltamSlotsParaNovosItens;
     final totalNovos = _itensParaGuardar.length;
@@ -1379,7 +1401,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.purple.shade700, width: 2),
+        border: Border.all(color: Colors.amber.shade700, width: 2), // Cor amber para drops
       ),
       child: Column(
         children: [
@@ -1394,16 +1416,16 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               child: Row(
                 children: [
                   Icon(
-                    faltaEspaco ? Icons.warning_amber : Icons.backpack,
+                    faltaEspaco ? Icons.warning_amber : Icons.card_giftcard, // Ícone de presente para drops
                     color: faltaEspaco
                         ? Colors.orangeAccent
-                        : Colors.purple.shade300,
+                        : Colors.amber.shade700,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'ITENS DE MOCHILA ($mantidos/$totalNovos)',
+                      'DROPS ($mantidos/$totalNovos)', // Nome alterado para DROPS
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1474,12 +1496,14 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               crossAxisCount: 4,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
-              childAspectRatio: 1,
+              childAspectRatio: 0.75, // Ajustado para acomodar imagem + ícone + nome
             ),
             itemCount: _itensParaGuardar.length,
             itemBuilder: (context, index) {
               final item = _itensParaGuardar[index];
               final descartado = _novosItensDescartados.contains(index);
+
+              // Exibe cada drop obtido com opção de guardar ou descartar
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -1490,41 +1514,13 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                     }
                   });
                 },
-                child: Stack(
-                  children: [
-                    Opacity(
-                      opacity: descartado ? 0.35 : 1,
-                      child: _buildItemConsumivel(item, index),
-                    ),
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: descartado
-                              ? Colors.redAccent
-                              : Colors.purple.shade700,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          descartado ? 'DESCARTADO' : 'GUARDAR',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: _buildDropCard(item, index, descartado),
               );
             },
           ),
           const SizedBox(height: 12),
           Text(
-            'Espaços disponíveis: $_slotsDisponiveisBase • Necessários após escolhas: $mantidos',
+            'Espaços disponíveis: $_slotsDisponiveisBase • Necessários: $mantidos',
             style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
           ),
           if (faltaEspaco) ...[
@@ -1538,7 +1534,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                 border: Border.all(color: Colors.red.shade700),
               ),
               child: Text(
-                'Libere ao menos $necessarios espaço(s) na mochila ou descarte itens novos.',
+                'Libere ao menos $necessarios espaço(s) na mochila ou descarte drops novos.',
                 style: const TextStyle(fontSize: 12, color: Colors.redAccent),
               ),
             ),
@@ -1556,6 +1552,71 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           _buildMochilaGrid(),
         ],
       ),
+    );
+  }
+
+  /// Widget que exibe um DROP (poção/pedra) com imagem de assets/drops/
+  /// Nome fora do quadrado e imagem dentro do quadrado
+  Widget _buildDropCard(ItemConsumivel item, int index, bool descartado) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Quadrado com a imagem do drop
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: descartado ? Colors.grey.shade200 : Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: descartado ? Colors.grey.shade400 : Colors.amber.shade700,
+                width: 2,
+              ),
+            ),
+            padding: const EdgeInsets.all(8),
+            child: Center(
+              child: Opacity(
+                opacity: descartado ? 0.4 : 1.0,
+                child: item.iconPath.isNotEmpty
+                    ? Image.asset(
+                        item.iconPath, // Usa o iconPath que vem de drop.tipo.imagePath
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          _getIconForType(item.tipo),
+                          size: 32,
+                          color: Colors.amber.shade700,
+                        ),
+                      )
+                    : Icon(
+                        _getIconForType(item.tipo),
+                        size: 32,
+                        color: Colors.amber.shade700,
+                      ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Ícone de guardar/descartar
+        Icon(
+          descartado ? Icons.delete : Icons.inventory_2,
+          size: 14,
+          color: descartado ? Colors.red.shade600 : Colors.green.shade600,
+        ),
+        const SizedBox(height: 2),
+        // Nome do item FORA do quadrado
+        Text(
+          item.nome,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: descartado ? Colors.grey.shade600 : Colors.grey.shade800,
+            height: 1.1,
+          ),
+        ),
+      ],
     );
   }
 
