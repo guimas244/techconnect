@@ -297,9 +297,7 @@ class _ModalCuraObtidaState extends State<ModalCuraObtida> {
 
             try {
               await widget.onCurarMonstro(monstroSelecionado!, widget.porcentagem);
-              if (mounted && Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
+              // O modal será fechado pelo callback do onCurarMonstro
             } catch (e) {
               print('❌ [ModalCuraObtida] Erro ao curar monstro: $e');
               if (mounted) {

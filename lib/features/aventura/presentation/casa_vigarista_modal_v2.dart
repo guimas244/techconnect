@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'dart:math';
 import '../models/historia_jogador.dart';
 import '../models/item.dart';
@@ -63,8 +64,9 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
   @override
   void didUpdateWidget(CasaVigaristaModalV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Atualiza o score quando a história é atualizada
-    if (oldWidget.historia.score != widget.historia.score) {
+    // Atualiza apenas se o score ou tier mudaram (não atualiza por mudança de monstros)
+    if (oldWidget.historia.score != widget.historia.score ||
+        oldWidget.historia.tier != widget.historia.tier) {
       setState(() {
         _historiaAtual = widget.historia;
       });
@@ -73,6 +75,23 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
 
   @override
   void dispose() {
+    // Verifica se houve mudanças (score ou vida dos monstros)
+    final scoreMudou = _historiaAtual.score != widget.historia.score;
+
+    final monstrosMudaram = _historiaAtual.monstros.any((m) {
+      final original = widget.historia.monstros.firstWhere(
+        (om) => om.tipo == m.tipo && om.level == m.level,
+        orElse: () => m,
+      );
+      return m.vidaAtual != original.vidaAtual;
+    });
+
+    // Se houve qualquer mudança, salva ao fechar
+    if (scoreMudou || monstrosMudaram) {
+      // Salva em background sem bloquear o dispose
+      Future.microtask(() => widget.onHistoriaAtualizada(_historiaAtual));
+    }
+
     _particleController.dispose();
     _backgroundController.dispose();
     super.dispose();
@@ -1649,28 +1668,35 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
     setState(() { _comprando = true; });
 
     try {
+      // 1. Debita o score
       final historiaAtualizada = _historiaAtual.copyWith(
         score: _historiaAtual.score - custoCura,
       );
 
+      // 2. Atualiza o estado local (UI atualiza imediatamente)
       if (mounted) {
         setState(() {
           _historiaAtual = historiaAtualizada;
         });
       }
-      widget.onHistoriaAtualizada(historiaAtualizada);
 
+      // 3. Gera porcentagem de cura
       final random = Random();
       final porcentagemCura = random.nextInt(100) + 1;
 
-      _mostrarResultadoCura(porcentagemCura, historiaAtualizada);
+      // 4. Abre o modal imediatamente (não aguarda saves)
+      if (mounted) {
+        _mostrarResultadoCura(porcentagemCura, historiaAtualizada);
+      }
+
+      // OBS: O salvamento será feito pelo dispose() quando o modal fechar
 
     } catch (e) {
       _mostrarErro('Erro ao processar aposta: $e');
-    }
-
-    if (mounted) {
-      setState(() { _comprando = false; });
+    } finally {
+      if (mounted) {
+        setState(() { _comprando = false; });
+      }
     }
   }
 
@@ -1899,32 +1925,30 @@ class _CasaVigaristaModalV2State extends State<CasaVigaristaModalV2>
       barrierDismissible: false,
       builder: (context) => ModalCuraObtida(
         porcentagem: porcentagem,
-        monstrosDisponiveis: historia.monstros,
+        monstrosDisponiveis: _historiaAtual.monstros,
         onCurarMonstro: (monstro, porcentagemCura) async {
           final curaTotal = (monstro.vida * porcentagemCura / 100).round();
           final novaVidaAtual = (monstro.vidaAtual + curaTotal).clamp(0, monstro.vida);
 
-          final monstrosAtualizados = historia.monstros.map((m) {
+          final monstrosAtualizados = _historiaAtual.monstros.map((m) {
             if (m.tipo == monstro.tipo && m.level == monstro.level) {
               return m.copyWith(vidaAtual: novaVidaAtual);
             }
             return m;
           }).toList();
 
-          final historiaFinal = historia.copyWith(monstros: monstrosAtualizados);
+          final historiaFinal = _historiaAtual.copyWith(monstros: monstrosAtualizados);
 
+          // Atualiza o estado local
           if (mounted) {
             setState(() {
               _historiaAtual = historiaFinal;
             });
-          }
-          widget.onHistoriaAtualizada(historiaFinal);
 
-          if (mounted && Navigator.of(context).canPop()) {
+            // Fecha o modal
             Navigator.of(context).pop();
-          }
 
-          if (mounted) {
+            // Mostra mensagem de sucesso
             _mostrarMensagemSucesso('${monstro.tipo.displayName} foi curado em $porcentagemCura%!');
           }
         },
