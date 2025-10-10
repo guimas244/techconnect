@@ -1997,6 +1997,8 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           ),
           const SizedBox(height: 8),
           _buildMochilaGrid(),
+          const SizedBox(height: 12),
+          _buildBotaoDescartarTodosRow(),
         ],
       ),
     );
@@ -2192,7 +2194,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   Widget _buildMochilaSlot(ItemConsumivel? item, bool selecionado) {
     final corBorda = selecionado ? Colors.redAccent : Colors.grey.shade300;
     final corpo = Container(
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: selecionado
             ? Colors.red.withOpacity(0.2)
@@ -2208,36 +2210,25 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               child: Icon(
                 Icons.add_box_outlined,
                 color: Colors.grey.shade300,
-                size: 20,
+                size: 24,
               ),
             )
-          : Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: item.iconPath.isNotEmpty
-                      ? Image.asset(
-                          item.iconPath,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.inventory_2,
-                            color: Colors.grey.shade600,
-                          ),
-                        )
-                      : Icon(
-                          Icons.inventory_2,
-                          color: Colors.grey.shade600,
-                        ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.nome,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+          : Center(
+              child: item.iconPath.isNotEmpty
+                  ? Image.asset(
+                      item.iconPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.inventory_2,
+                        color: Colors.grey.shade600,
+                        size: 32,
+                      ),
+                    )
+                  : Icon(
+                      Icons.inventory_2,
+                      color: Colors.grey.shade600,
+                      size: 32,
+                    ),
             ),
     );
 
@@ -2268,6 +2259,33 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBotaoDescartarTodosRow() {
+    return Center(
+      child: SizedBox(
+        width: 200,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            setState(() {
+              // Descarta todos os drops recebidos (marca todos como descartados)
+              for (int i = 0; i < widget.recompensas.itensConsumiveisRecebidos.length; i++) {
+                if (!_novosItensDescartados.contains(i)) {
+                  _novosItensDescartados.add(i);
+                }
+              }
+            });
+          },
+          icon: const Icon(Icons.delete_forever),
+          label: const Text('Descartar Todos os Drops'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+      ),
     );
   }
 

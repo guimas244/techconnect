@@ -24,9 +24,12 @@ enum AtributoJogo {
   evolucaoGanhoVida(min: 25, max: 25), // Ganho de vida por evolução
   evolucaoGanhoEnergia(min: 1, max: 1), // Ganho de energia por evolução
 
-  // Sistema de descoberta de monstros raros da nova coleção
-  chanceMonstroColecoRaro(min: 1, max: 1), // 1% de chance de aparecer monstro raro
-  tierMinimoMonstroColecoRaro(min: 3, max: 3); // A partir do tier 3
+  // Sistema de descoberta de monstros raros da nova coleção (Nostálgicos)
+  // Tier 3-10: 2% de chance | Tier 11+: 3% de chance
+  chanceMonstroColecoRaro(min: 2, max: 2), // 2% de chance base (tier 3-10)
+  chanceMonstroColecoRaroTier11Plus(min: 4, max: 4), // 4% de chance (tier 11+)
+  tierMinimoMonstroColecoRaro(min: 3, max: 3), // A partir do tier 3
+  tierBoostMonstroColecoRaro(min: 11, max: 11); // Boost de chance a partir do tier 11
 
   final int min;
   final int max;
@@ -58,23 +61,41 @@ enum AtributoJogo {
 
   String get rangeTexto => '$min a $max';
 
-  /// Verifica se o tier atual permite monstros raros da nova coleção
+  /// Verifica se o tier atual permite monstros raros da nova coleção (Nostálgicos)
+  ///
+  /// Monstros nostálgicos podem aparecer a partir do tier 3
   static bool podeGerarMonstroRaro(int tier) {
     return tier >= AtributoJogo.tierMinimoMonstroColecoRaro.min;
   }
 
-  /// Obtém a chance (em %) de gerar monstro raro
-  static int get chanceMonstroColecoRaroPercent => AtributoJogo.chanceMonstroColecoRaro.min;
+  /// Obtém a chance (em %) de gerar monstro raro baseada no tier
+  ///
+  /// - Tier 3-10: 2% de chance
+  /// - Tier 11+: 3% de chance (boost no endgame)
+  static int chanceMonstroColecoRaroPercent(int tier) {
+    if (tier >= AtributoJogo.tierBoostMonstroColecoRaro.min) {
+      return AtributoJogo.chanceMonstroColecoRaroTier11Plus.min; // 3% tier 11+
+    }
+    return AtributoJogo.chanceMonstroColecoRaro.min; // 2% tier 3-10
+  }
 
-  /// Verifica se deve gerar monstro raro baseado na chance
+  /// Verifica se deve gerar monstro raro (Nostálgico) baseado na chance do tier
+  ///
+  /// Exemplos:
+  /// - Tier 5: 2% de chance (sorteio 0-99, sucesso se < 2)
+  /// - Tier 11: 3% de chance (sorteio 0-99, sucesso se < 3)
+  /// - Tier 15: 3% de chance (sorteio 0-99, sucesso se < 3)
   static bool deveGerarMonstroRaro(Random random, int tier) {
     if (!podeGerarMonstroRaro(tier)) {
       print('🌟 [AtributoJogo] Tier $tier menor que o mínimo ${tierMinimoMonstroColecoRaro.min}');
       return false;
     }
+
+    final chanceAtual = chanceMonstroColecoRaroPercent(tier);
     final sorteio = random.nextInt(100);
-    final resultado = sorteio < chanceMonstroColecoRaroPercent;
-    print('🌟 [AtributoJogo] Sorteio: $sorteio < $chanceMonstroColecoRaroPercent = $resultado');
+    final resultado = sorteio < chanceAtual;
+
+    print('🌟 [AtributoJogo] Tier $tier - Chance: $chanceAtual% | Sorteio: $sorteio < $chanceAtual = $resultado');
     return resultado;
   }
 }

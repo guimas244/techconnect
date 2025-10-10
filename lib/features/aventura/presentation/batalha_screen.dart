@@ -1327,28 +1327,36 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
 
     final tierAtual = historia.tier;
+    final itemService = ItemService();
+
+    // ELITE: Sempre dropa item épico (nunca magia)
+    if (widget.inimigo.isElite) {
+      final item = itemService.gerarItemComRaridade(
+        RaridadeItem.epico,
+        tierAtual: tierAtual,
+      );
+      print('[BatalhaScreen] 🏆 Drop ÉPICO garantido por inimigo ELITE: ${item.nome}');
+      return _DropResultado(
+        item: item,
+        tier: item.tier,
+        raridade: item.raridade,
+        consumiveis: consumiveis,
+      );
+    }
+
+    // NÃO-ELITE: 30% magia, 70% item
     final chanceDrop = _random.nextInt(100);
 
     if (chanceDrop < 30) {
       final magiaService = MagiaService();
       final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
-      print('[BatalhaScreen] Magia gerada: ${magia.nome} (tier $tierAtual)');
+      print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (tier $tierAtual)');
       return _DropResultado(magia: magia, consumiveis: consumiveis);
     }
 
-    final itemService = ItemService();
-    final Item item;
-
-    if (widget.inimigo.isElite) {
-      item = itemService.gerarItemComRaridade(
-        RaridadeItem.epico,
-        tierAtual: tierAtual,
-      );
-      print('[BatalhaScreen] Drop epico garantido por inimigo elite: ${item.nome}');
-    } else {
-      item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-      print('[BatalhaScreen] Item gerado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
-    }
+    // Item comum/raro/épico/lendário aleatório
+    final item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
+    print('[BatalhaScreen] 🎒 Item gerado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
 
     return _DropResultado(
       item: item,

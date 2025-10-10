@@ -7,7 +7,9 @@ import 'modal_cura_obtida.dart';
 import '../providers/aventura_provider.dart';
 import '../services/mochila_service.dart';
 import 'modal_item_consumivel.dart';
+import 'modal_selecao_monstro_reforco.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../services/item_service.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -140,6 +142,11 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
+    if (item.tipo == TipoItemConsumivel.joia) {
+      await _usarPedraReforco(index, item);
+      return;
+    }
+
     await _consumirItem(index, item, mensagem: '${item.nome} usado!');
   }
 
@@ -192,6 +199,70 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
             index,
             item,
             mensagem: '${monstro.nome} recuperou $curaTotal de vida com ${item.nome}!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarPedraReforco(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a pedra.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Filtra apenas monstros que têm item equipado
+    final monstrosComItem = historiaAtual!.monstros.where((m) => m.itemEquipado != null).toList();
+
+    if (monstrosComItem.isEmpty) {
+      _mostrarSnack('Nenhum monstro tem equipamento para reforçar!', erro: true);
+      return;
+    }
+
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: monstrosComItem,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          final itemAtual = monstro.itemEquipado!;
+          final itemService = ItemService();
+
+          // Gera novo item com o tier atual mantendo a raridade
+          final itemReforcado = itemService.gerarItemComRaridade(
+            itemAtual.raridade,
+            tierAtual: historiaAtual!.tier,
+          );
+
+          // Atualiza o monstro com o item reforcado
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return m.copyWith(itemEquipado: itemReforcado);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome}: ${itemAtual.nome} (Tier ${itemAtual.tier}) -> ${itemReforcado.nome} (Tier ${itemReforcado.tier})!',
           );
         },
       ),

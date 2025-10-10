@@ -716,7 +716,7 @@ class AventuraRepository {
     // 🌟 NOVO: Gera monstro raro da nova coleção se atender aos critérios
     print('🌟 [Repository] Verificando spawn de monstro raro no tier $tierAtual...');
     print('🌟 [Repository] Pode gerar monstro raro? ${AtributoJogo.podeGerarMonstroRaro(tierAtual)}');
-    print('🌟 [Repository] Chance configurada: ${AtributoJogo.chanceMonstroColecoRaroPercent}%');
+    print('🌟 [Repository] Chance configurada: ${AtributoJogo.chanceMonstroColecoRaroPercent(tierAtual)}%');
 
     if (AtributoJogo.deveGerarMonstroRaro(random, tierAtual)) {
       print('🌟 [Repository] ✅ SORTEIO VENCEU! Gerando monstro RARO da nova coleção');
