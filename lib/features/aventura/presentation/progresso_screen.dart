@@ -43,15 +43,19 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
     _pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
 
     // Tenta carregar progresso salvo
+    // IMPORTANTE: A configuração de distribuição é preservada entre dias
     final progressoJson = prefs.getString('progresso_diario');
 
     if (progressoJson != null) {
       final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
       final progressoSalvo = ProgressoDiario.fromJson(progressoData);
 
-      // Se é do dia anterior, limpa e cria novo
+      // Se é do dia anterior, limpa os kills mas mantém a distribuição
       if (progressoSalvo.data != hoje) {
-        progressoAtual = ProgressoDiario(data: hoje);
+        progressoAtual = ProgressoDiario(
+          data: hoje,
+          distribuicaoAtributos: progressoSalvo.distribuicaoAtributos, // Preserva a configuração
+        );
         await _salvarProgresso(progressoAtual!);
       } else {
         progressoAtual = progressoSalvo;

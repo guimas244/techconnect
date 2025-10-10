@@ -30,7 +30,8 @@
       "Bash(ren:*)",
       "Bash(q)",
       "Bash(r)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(xxd:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,7 +10,7 @@ import '../models/monstro_aventura.dart';
 class RecompensasBatalha {
   final List<MonstroAventura> monstrosEvoluidos;
   final Map<MonstroAventura, Map<String, int>> ganhosAtributos;
-  final Map<MonstroAventura, String?> habilidadesEvoluidas;
+  final Map<MonstroAventura, Map<String, dynamic>?> habilidadesEvoluidas;
 
   final Item? itemRecebido;
   final int? tierItem;
@@ -91,9 +91,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   @override
   void initState() {
     super.initState();
-    _evolucaoExpandida = widget.recompensas.temEvolucao;
-    _equipamentoExpandido = widget.recompensas.temEquipamentoOuMagia;
-    _itensExpandido = widget.recompensas.temItensConsumiveis;
+    // Todos os menus começam retraídos
+    _evolucaoExpandida = false;
+    _equipamentoExpandido = false;
+    _itensExpandido = false;
 
     _itemResolvido = !widget.recompensas.temEquipamento;
     _magiaResolvida = !widget.recompensas.temMagia;
@@ -205,6 +206,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(17),
+          bottomRight: Radius.circular(17),
+        ),
         border: Border(
           top: BorderSide(color: Colors.amber.shade700, width: 2),
         ),
@@ -339,13 +344,95 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                   Icon(Icons.arrow_upward, color: Colors.green.shade600, size: 24),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'EVOLUÇÃO',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EVOLUÇÃO',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        if (widget.recompensas.monstrosEvoluidos.isNotEmpty)
+                          Builder(
+                            builder: (context) {
+                              final monstro = widget.recompensas.monstrosEvoluidos.first;
+                              final ganhos = widget.recompensas.ganhosAtributos[monstro] ?? {};
+                              final levelAntes = ganhos['levelAntes'] ?? (monstro.level - 1);
+                              final levelDepois = ganhos['levelDepois'] ?? monstro.level;
+
+                              return LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Calcula se o nome completo cabe
+                                  final nomeCompleto = monstro.nome;
+                                  final textPainter = TextPainter(
+                                    text: TextSpan(
+                                      text: nomeCompleto,
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                    ),
+                                    maxLines: 1,
+                                    textDirection: TextDirection.ltr,
+                                  )..layout(maxWidth: constraints.maxWidth - 80);
+
+                                  final fontSize = textPainter.didExceedMaxLines ? 11.0 : 13.0;
+
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          '$nomeCompleto - Level',
+                                          style: TextStyle(
+                                            fontSize: fontSize,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.green.shade400, width: 1),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '$levelAntes',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey.shade700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Icon(Icons.arrow_forward, size: 10, color: Colors.green.shade700),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              '$levelDepois',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
                   Icon(
@@ -371,7 +458,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     );
     final levelAntes = ganhos.remove('levelAntes') ?? (monstro.level - 1);
     final levelDepois = ganhos.remove('levelDepois') ?? monstro.level;
-    final habilidadeDescricao = widget.recompensas.habilidadesEvoluidas[monstro];
+    final habilidadeInfo = widget.recompensas.habilidadesEvoluidas[monstro];
     final ganhosPositivos = ganhos.entries
         .where((entry) => entry.value > 0)
         .toList();
@@ -411,62 +498,265 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  '${monstro.nome} - Level $levelAntes -> $levelDepois',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      monstro.nome,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.favorite, size: 14, color: Colors.red.shade400),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Vida recuperada: ${ganhos['vida'] ?? 0}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          // Status recebidos logo após a foto e vida recuperada
           if (ganhosPositivos.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Ganhos de atributos',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Wrap(
-              spacing: 8,
+              spacing: 6,
               runSpacing: 6,
               children: ganhosPositivos
                   .map((entry) => _buildAtributoChip(entry.key, entry.value))
                   .toList(),
             ),
           ],
-          if (habilidadeDescricao != null && habilidadeDescricao.isNotEmpty) ...[
+          // Habilidade evoluída com mais detalhes
+          if (habilidadeInfo != null && habilidadeInfo['evoluiu'] == true) ...[
             const SizedBox(height: 12),
-            Text(
-              'Habilidade evoluída',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
-              ),
-            ),
-            const SizedBox(height: 6),
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.purple.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple.shade300, width: 2),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.purple.shade400, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.purple.shade200.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Text(
-                habilidadeDescricao,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.purple.shade900,
-                ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.purple.shade600, Colors.purple.shade400],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // Row 1: Ícone + Texto com resize
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  const texto = 'HABILIDADE EVOLUÍDA';
+                                  final textPainter = TextPainter(
+                                    text: const TextSpan(
+                                      text: texto,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                    maxLines: 1,
+                                    textDirection: TextDirection.ltr,
+                                  )..layout(maxWidth: constraints.maxWidth);
+
+                                  final fontSize = textPainter.didExceedMaxLines ? 10.0 : 13.0;
+                                  final letterSpacing = textPainter.didExceedMaxLines ? 0.5 : 1.0;
+
+                                  return Text(
+                                    texto,
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: letterSpacing,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Row 2: Nome da habilidade com resize
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final nomeHabilidade = habilidadeInfo['nome'] ?? '';
+                            final textPainter = TextPainter(
+                              text: TextSpan(
+                                text: nomeHabilidade,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              maxLines: 1,
+                              textDirection: TextDirection.ltr,
+                            )..layout(maxWidth: constraints.maxWidth);
+
+                            final fontSize = textPainter.didExceedMaxLines ? 14.0 : 18.0;
+
+                            return Text(
+                              nomeHabilidade,
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Level centralizado
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Lv ${habilidadeInfo['levelAntes']}',
+                                style: TextStyle(
+                                  color: Colors.purple.shade700,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Icon(
+                                  Icons.arrow_forward,
+                                  color: Colors.purple.shade700,
+                                  size: 16,
+                                ),
+                              ),
+                              Text(
+                                'Lv ${habilidadeInfo['levelDepois']}',
+                                style: TextStyle(
+                                  color: Colors.purple.shade700,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Conteúdo
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Descrição (substitui o valor base pelo valor efetivo)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Builder(
+                            builder: (context) {
+                              final descricaoOriginal = habilidadeInfo['descricao'] ?? '';
+                              final valorBase = habilidadeInfo['valorAntes'];
+                              final valorEfetivo = habilidadeInfo['valorEfetivoDepois'];
+
+                              // Substitui o valor base pelo valor efetivo na descrição
+                              String descricaoAtualizada = descricaoOriginal;
+                              if (valorBase != null && valorEfetivo != null) {
+                                descricaoAtualizada = descricaoOriginal.replaceAll(
+                                  '$valorBase pontos',
+                                  '$valorEfetivo pontos',
+                                );
+                              }
+
+                              return Text(
+                                descricaoAtualizada,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade800,
+                                  height: 1.4,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Estatísticas reformuladas
+                        _buildCompactStatRow(
+                          'Pontuação',
+                          habilidadeInfo['valorEfetivoAntes'],
+                          habilidadeInfo['valorEfetivoDepois'],
+                          Icons.stars,
+                          Colors.amber.shade700,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -499,6 +789,111 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               color: Colors.green.shade900,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactStatRow(
+    String label,
+    int? valorAntes,
+    int? valorDepois,
+    IconData icon,
+    Color color,
+  ) {
+    if (valorAntes == null || valorDepois == null) return const SizedBox.shrink();
+
+    final diferenca = valorDepois - valorAntes;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Linha 1: Ícone + Pontuação (centralizado)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Linha 2: Formato "76 -> 114 ganho de +38"
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Text(
+                '$valorAntes',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward,
+                size: 20,
+                color: color,
+              ),
+              Text(
+                '$valorDepois',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              if (diferenca != 0) ...[
+                const SizedBox(width: 4),
+                Text(
+                  'ganho de',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: diferenca > 0 ? Colors.green : Colors.red,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    diferenca > 0 ? '+$diferenca' : '$diferenca',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -603,42 +998,48 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (temItem) ...[
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'NOVO EQUIPAMENTO',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
-                              ),
+                          Text(
+                            'NOVO EQUIPAMENTO',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
                             ),
                           ),
                           const SizedBox(height: 2),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Tier $tier ($raridade)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final texto = 'Tier $tier ($raridade)';
+                              final textPainter = TextPainter(
+                                text: TextSpan(
+                                  text: texto,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                maxLines: 1,
+                                textDirection: TextDirection.ltr,
+                              )..layout(maxWidth: constraints.maxWidth);
+
+                              final fontSize = textPainter.didExceedMaxLines ? 11.0 : 13.0;
+
+                              return Text(
+                                texto,
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  color: Colors.grey.shade600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
                           ),
                         ],
                         if (temMagia && !temItem) ...[
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              'NOVA MAGIA',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
-                              ),
+                          Text(
+                            'NOVA MAGIA',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
                             ),
                           ),
                         ],

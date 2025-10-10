@@ -120,7 +120,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             mapaEscolhido = historia.mapaAventura!;
             print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Usando mapa salvo: $mapaEscolhido');
           } else {
-            // Se nÃƒÆ’Ã‚Â£o há aventura iniciada, sorteia um mapa aleatório
+            // Se não há aventura iniciada, sorteia um mapa aleatório
             final random = math.Random();
             mapaEscolhido = mapasDisponiveis[random.nextInt(mapasDisponiveis.length)];
             print('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã‚ÂºÃƒÂ¯Ã‚Â¸Ã‚Â [MapaAventura] Sorteou novo mapa: $mapaEscolhido');
@@ -229,42 +229,47 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
         ),
         actions: [
-          // ÃƒÆ’Ã‚Âcone de refresh - só aparece quando aventura iniciada e sem batalhas no andar atual
-          if (historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _refreshAndar,
-                  tooltip: 'Resetar andar atual',
-                ),
-                Positioned(
-                  right: 6,
-                  top: 6,
+          // Ícone de refresh - só aparece na aba MAPA
+          if (_abaAtual == 1 && historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _refreshAndar,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green, width: 2),
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${historiaAtual?.refreshsRestantes ?? 0}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.refresh, color: Colors.green, size: 20),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${historiaAtual?.refreshsRestantes ?? 0}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
         ],
       ),
@@ -427,7 +432,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
             
-        // Overlay de loading quando avanÃƒÆ’Ã‚Â§ando tier
+        // Overlay de loading quando avançando tier
         if (isAdvancingTier)
           Positioned.fill(
             child: Container(
@@ -599,7 +604,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   duration: Duration(seconds: 2),
                 ),
               );
-              return; // Impede mudanÃƒÆ’Ã‚Â§a de aba
+              return; // Impede mudança de aba
             }
             setState(() {
               _abaAtual = index;
@@ -710,7 +715,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final monstro = monstros[index];
     final bool estaMorto = monstro.vidaAtual <= 0;
     
-    // Limita a posição máxima do topo para nÃƒÆ’Ã‚Â£o colar na borda inferior
+    // Limita a posição máxima do topo para não colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
     final maxTop = screenHeight * 0.85;
     final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
@@ -783,7 +788,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
     
     return Positioned(
-      left: MediaQuery.of(context).size.width * left - 35, // Centraliza o ÃƒÆ’Ã‚Â­cone
+      left: MediaQuery.of(context).size.width * left - 35, // Centraliza o ícone
       top: calcTop,
       child: GestureDetector(
         onTap: () => _mostrarCasaDoVigarista(podeAcessar, custoMinimo),
@@ -917,7 +922,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   Widget _buildMonstroColecao(MonstroInimigo monstro, double left, double top) {
     final bool estaMorto = monstro.vidaAtual <= 0;
 
-    // Limita a posição máxima do topo para nÃƒÆ’Ã‚Â£o colar na borda inferior
+    // Limita a posição máxima do topo para não colar na borda inferior
     final screenHeight = MediaQuery.of(context).size.height;
     final calcTop = math.min(screenHeight * top, screenHeight - 100);
 
@@ -994,7 +999,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         }
         print('ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬' * 60);
       } else {
-        print('ÃƒÂ¢Ã‚ÂÃ…â€™ [ERRO] NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel carregar dados de defesa para ${monstro.tipo.displayName}');
+        print('ÃƒÂ¢Ã‚ÂÃ…â€™ [ERRO] Não foi possível carregar dados de defesa para ${monstro.tipo.displayName}');
       }
     } catch (e) {
       print('ÃƒÂ¢Ã‚ÂÃ…â€™ [ERRO] Erro ao buscar dados de defesa: $e');
@@ -1051,7 +1056,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         print('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] historiaAtual ÃƒÆ’Ã‚Â© null, retornando');
         return;
       }
-      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] historiaAtual nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© null, continuando...');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] historiaAtual não ÃƒÆ’Ã‚Â© null, continuando...');
 
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
@@ -1060,7 +1065,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       int novoScore = historiaAtual!.score;
       if (historiaAtual!.tier == 10 && historiaAtual!.score > 50) {
         novoScore = 50;
-        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ $novoScore');
+        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} → $novoScore');
       } else if (historiaAtual!.tier == 10) {
         print('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€™ [MapaAventura] Score mantido no andar 10 (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤50): ${historiaAtual!.score}');
       }
@@ -1080,7 +1085,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         historiaAtual = historiaAtualizada;
       });
 
-      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [MapaAventura] Tier avanÃƒÆ’Ã‚Â§ado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
 
     } catch (e) {
       print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao avançar tier: $e');
@@ -1139,10 +1144,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        // Verificar se ÃƒÆ’Ã‚Â© o andar 10
+        // Verificar se é o andar 10
         bool isAndar10 = historiaAtual?.tier == 10;
 
-        // Verificar se ÃƒÆ’Ã‚Â© um dos tiers de aumento de dificuldade
+        // Verificar se é um dos tiers de aumento de dificuldade
         bool isTierDificuldade = podeAvancar && [19, 29, 39, 49].contains(historiaAtual?.tier);
 
         return AlertDialog(
@@ -1177,7 +1182,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             children: [
               if (podeAvancar) ...[
                 if (isTierDificuldade) ...[
-                  // Mensagens especÃƒÆ’Ã‚Â­ficas de aumento de dificuldade
+                  // Mensagens específicas de aumento de dificuldade
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1257,8 +1262,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                         const SizedBox(height: 8),
                         Text(
                           (historiaAtual?.score ?? 0) > 50
-                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Ficará: 50 pontos'
-                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Será mantido',
+                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos → Ficará: 50 pontos'
+                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos → Será mantido',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -1270,7 +1275,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Outras mudanças importantes:',
+                    '⚠️ Outras mudanças importantes:',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1278,13 +1283,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Monstros do andar 11+ darão 2 pontos por vitória'),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ A loja considerará preços como se fosse tier 2'),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Novos monstros mais fortes aparecerão'),
+                  const Text('• Monstros do andar 11+ darão 2 pontos por vitória'),
+                  const Text('• A loja considerará preços como se fosse tier 2'),
+                  const Text('• Novos monstros mais fortes aparecerão'),
                 ] else ...[
                   // Aviso normal para outros andares
                   const Text(
-                    'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â ATENÇÃO: Ao avançar para o próximo tier:',
+                    '⚠️ ATENÇÃO: Ao avançar para o próximo tier:',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1292,12 +1297,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Você nÃƒÆ’Ã‚Â£o poderá retornar ao tier anterior'),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Novos monstros mais fortes aparecerão'),
-                  const Text('ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Seu progresso atual serÃƒÆ’Ã‚Â¡ salvo'),
+                  const Text('• Você não poderá retornar ao tier anterior'),
+                  const Text('• Novos monstros mais fortes aparecerão'),
+                  const Text('• Seu progresso atual será salvo'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Seu score atual serÃƒÆ’Ã‚Â¡ mantido.',
+                    'Seu score atual será mantido.',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -1337,7 +1342,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
-                  print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] BotÃƒÆ’Ã‚Â£o Confirmar clicado');
+                  print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] Botão Confirmar clicado');
                   Navigator.of(context).pop();
                   print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] Modal fechado, chamando _avancarTier()');
                   _avancarTier();
@@ -1392,7 +1397,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
               const SizedBox(height: 16),
 
-              // TÃƒÆ’Ã‚Â­tulo
+              // Título
               const Text(
                 'Aventura Expirada',
                 style: TextStyle(
@@ -1406,7 +1411,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
               // Mensagem explicativa
               const Text(
-                'Sua aventura expirou após a meia-noite (horÃƒÆ’Ã‚Â¡rio de BrasÃƒÆ’Ã‚Â­lia). Para continuar jogando, vocÃƒÆ’Ã‚Âª precisa sortear novos monstros e comeÃƒÆ’Ã‚Â§ar uma nova aventura.',
+                'Sua aventura expirou após a meia-noite (horário de Brasília). Para continuar jogando, você precisa sortear novos monstros e começar uma nova aventura.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.black54,
@@ -1429,7 +1434,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
-                        'Aventuras sÃƒÆ’Ã‚Â£o vÃƒÆ’Ã‚Â¡lidas apenas durante o dia em que foram criadas.',
+                        'Aventuras são válidas apenas durante o dia em que foram criadas.',
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
@@ -1442,7 +1447,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               ),
               const SizedBox(height: 24),
 
-              // BotÃƒÆ’Ã‚Â£o para voltar ÃƒÆ’Ã‚Â  tela de aventura
+              // Botão para voltar ÃƒÆ’Ã‚Â  tela de aventura
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1471,7 +1476,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-  /// Verifica se pode refresh do andar (nÃƒÆ’Ã‚Â£o houve batalhas no andar atual e tem refreshs restantes)
+  /// Verifica se pode refresh do andar (não houve batalhas no andar atual e tem refreshs restantes)
   bool _podeRefreshAndar() {
     if (historiaAtual == null) return false;
 
@@ -1524,7 +1529,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // TÃƒÆ’Ã‚Â­tulo
+                // Título
                 const Text(
                   'Resetando Andar',
                   style: TextStyle(
@@ -1571,7 +1576,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                           const SizedBox(width: 8),
                           const Expanded(
                             child: Text(
-                              'Seu progresso no tier serÃƒÆ’Ã‚Â¡ mantido.',
+                              'Seu progresso no tier será mantido.',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -1657,7 +1662,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Erro'),
-            content: const Text('NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel resetar o andar. Tente novamente.'),
+            content: const Text('Não foi possível resetar o andar. Tente novamente.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),

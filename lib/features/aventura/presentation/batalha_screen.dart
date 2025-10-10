@@ -37,7 +37,7 @@ class _ResultadoEvolucao {
   final HistoriaJogador historiaAtualizada;
   final List<MonstroAventura> evoluidos;
   final Map<MonstroAventura, Map<String, int>> ganhos;
-  final Map<MonstroAventura, String?> habilidades;
+  final Map<MonstroAventura, Map<String, dynamic>?> habilidades;
 
   const _ResultadoEvolucao({
     required this.historiaAtualizada,
@@ -1095,7 +1095,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     var historiaAtualizada = historia;
     final evoluidos = <MonstroAventura>[];
     final ganhos = <MonstroAventura, Map<String, int>>{};
-    final habilidades = <MonstroAventura, String?>{};
+    final habilidades = <MonstroAventura, Map<String, dynamic>?>{};
 
     if (!podeEvoluir) {
       final resultadoHabilidade =
@@ -1120,9 +1120,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       );
       final habilidadeInfo =
           info['habilidadeEvoluida'] as Map<String, dynamic>? ?? {};
-      final mensagem = _descricaoHabilidade(habilidadeInfo);
-      if (mensagem != null) {
-        habilidades[monstroAtualizado] = mensagem;
+      if (habilidadeInfo.isNotEmpty && habilidadeInfo['evoluiu'] == true) {
+        // Buscar informações completas da habilidade antes e depois
+        final habilidadeAntes = resultadoHabilidade['habilidadeAntes'] as Habilidade?;
+        final habilidadeDepois = resultadoHabilidade['habilidadeDepois'] as Habilidade?;
+
+        if (habilidadeAntes != null && habilidadeDepois != null) {
+          habilidades[monstroAtualizado] = {
+            'evoluiu': true,
+            'nome': habilidadeDepois.nome,
+            'descricao': habilidadeDepois.descricao,
+            'tipo': habilidadeDepois.tipo.toString(),
+            'efeito': habilidadeDepois.efeito.toString(),
+            'levelAntes': habilidadeAntes.level,
+            'levelDepois': habilidadeDepois.level,
+            'valorAntes': habilidadeAntes.valor,
+            'valorDepois': habilidadeDepois.valor,
+            'valorEfetivoAntes': habilidadeAntes.valorEfetivo,
+            'valorEfetivoDepois': habilidadeDepois.valorEfetivo,
+            'custoEnergiaAntes': habilidadeAntes.custoEnergia,
+            'custoEnergiaDepois': habilidadeDepois.custoEnergia,
+          };
+        }
       }
 
       if (resultadoHabilidade['habilidadeEvoluiu'] == true) {
@@ -1169,9 +1188,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
     final habilidadeInfo =
         infoCompleta['habilidadeEvoluida'] as Map<String, dynamic>? ?? {};
-    final mensagemHabilidade = _descricaoHabilidade(habilidadeInfo);
-    if (mensagemHabilidade != null) {
-      habilidades[monstroEvoluido] = mensagemHabilidade;
+    if (habilidadeInfo.isNotEmpty && habilidadeInfo['evoluiu'] == true) {
+      // Buscar informações completas da habilidade antes e depois
+      final habilidadeAntes = resultadoEvolucao['habilidadeAntes'] as Habilidade?;
+      final habilidadeDepois = resultadoEvolucao['habilidadeDepois'] as Habilidade?;
+
+      if (habilidadeAntes != null && habilidadeDepois != null) {
+        habilidades[monstroEvoluido] = {
+          'evoluiu': true,
+          'nome': habilidadeDepois.nome,
+          'descricao': habilidadeDepois.descricao,
+          'tipo': habilidadeDepois.tipo.toString(),
+          'efeito': habilidadeDepois.efeito.toString(),
+          'levelAntes': habilidadeAntes.level,
+          'levelDepois': habilidadeDepois.level,
+          'valorAntes': habilidadeAntes.valor,
+          'valorDepois': habilidadeDepois.valor,
+          'valorEfetivoAntes': habilidadeAntes.valorEfetivo,
+          'valorEfetivoDepois': habilidadeDepois.valorEfetivo,
+          'custoEnergiaAntes': habilidadeAntes.custoEnergia,
+          'custoEnergiaDepois': habilidadeDepois.custoEnergia,
+        };
+      }
     }
 
     historiaAtualizada = historia.copyWith(
