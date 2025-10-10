@@ -278,43 +278,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           children: [
             // Conteúdo principal
             Expanded(
-              child: IndexedStack(
-                index: _abaAtual,
-                children: [
-                  // ABA 0: EQUIPE (tela de seleção/início)
-                  AventuraScreen(
-                    key: ValueKey(_aventuraTabKey()),
-                  ),
-
-                  // ABA 1: MAPA
-                  _buildMapaView(),
-
-                  // ABA 2: MOCHILA
-                  MochilaScreen(
-                    historiaInicial: historiaAtual,
-                    onHistoriaAtualizada: (historiaAtualizada) async {
-                      setState(() {
-                        historiaAtual = historiaAtualizada;
-                      });
-
-                      try {
-                        final repository = ref.read(aventuraRepositoryProvider);
-                        await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-                        await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
-                        print('[Mochila] Historia atualizada apos uso de item');
-                      } catch (e) {
-                        print('[Mochila] Erro ao salvar historia: $e');
-                      }
-                    },
-                  ),
-
-                  // ABA 3: LOJA
-                  _buildLojaView(),
-
-                  // ABA 4: PROGRESSO
-                  const ProgressoScreen(),
-                ],
-              ),
+              child: _buildAbaAtual(),
             ),
 
             // Barra de abas inferior
@@ -323,6 +287,50 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildAbaAtual() {
+    // Recarrega sempre que a aba muda - não usa IndexedStack para evitar cache
+    switch (_abaAtual) {
+      case 0:
+        // ABA 0: EQUIPE (tela de seleção/início)
+        return AventuraScreen(
+          key: ValueKey('aventura_$_aventuraTabKey'),
+        );
+      case 1:
+        // ABA 1: MAPA
+        return _buildMapaView();
+      case 2:
+        // ABA 2: MOCHILA
+        return MochilaScreen(
+          key: const ValueKey('mochila'),
+          historiaInicial: historiaAtual,
+          onHistoriaAtualizada: (historiaAtualizada) async {
+            setState(() {
+              historiaAtual = historiaAtualizada;
+            });
+
+            try {
+              final repository = ref.read(aventuraRepositoryProvider);
+              // Salva APENAS no Hive local (sem sincronizar com Drive ao usar item da mochila)
+              await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+              print('[Mochila] Historia atualizada apos uso de item (APENAS HIVE)');
+            } catch (e) {
+              print('[Mochila] Erro ao salvar historia: $e');
+            }
+          },
+        );
+      case 3:
+        // ABA 3: LOJA
+        return _buildLojaView();
+      case 4:
+        // ABA 4: PROGRESSO
+        return const ProgressoScreen(
+          key: ValueKey('progresso'),
+        );
+      default:
+        return const Center(child: Text('Aba inválida'));
+    }
   }
 
   Widget _buildMapaView() {

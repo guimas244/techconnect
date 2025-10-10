@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -117,5 +119,154 @@ class DriveClientFactory {
       print('❌ [DEBUG] Erro ao criar cliente HTTP: $e');
       rethrow;
     }
+  }
+}
+
+/// Extensão para adicionar métodos relacionados a mochila e coleção
+extension DriveClientMochilaExtension on drive.DriveApi {
+  /// Atualiza ou cria arquivo JSON na pasta "mochila"
+  Future<String> updateOrCreateJsonFileInMochila(String fileName, Map<String, dynamic> jsonData) async {
+    print('📦 [MochilaExtension] Iniciando updateOrCreate para: $fileName');
+
+    try {
+      // Busca ou cria a pasta "mochila" dentro de TECHTERRA
+      final folderId = await _getOrCreateFolder('mochila', DriveClientFactory.FOLDER_ID);
+      print('📁 [MochilaExtension] Pasta mochila ID: $folderId');
+
+      // Busca arquivo existente
+      print('🔍 [MochilaExtension] Buscando arquivo existente: $fileName');
+      final query = "name='$fileName' and '$folderId' in parents and trashed=false";
+      final fileList = await files.list(q: query, spaces: 'drive');
+
+      if (fileList.files != null && fileList.files!.isNotEmpty) {
+        // Arquivo existe - ATUALIZA
+        final fileId = fileList.files!.first.id!;
+        print('🔄 [MochilaExtension] Arquivo encontrado! Atualizando ID: $fileId');
+
+        final media = drive.Media(
+          Stream.value(utf8.encode(json.encode(jsonData))),
+          utf8.encode(json.encode(jsonData)).length,
+        );
+
+        final fileMetadata = drive.File()..mimeType = 'application/json';
+
+        await files.update(
+          fileMetadata,
+          fileId,
+          uploadMedia: media,
+        );
+
+        print('✅ [MochilaExtension] Arquivo ATUALIZADO com sucesso: $fileName');
+        return fileId;
+      } else {
+        // Arquivo não existe - CRIA
+        print('📝 [MochilaExtension] Arquivo não encontrado. Criando novo...');
+
+        final media = drive.Media(
+          Stream.value(utf8.encode(json.encode(jsonData))),
+          utf8.encode(json.encode(jsonData)).length,
+        );
+
+        final fileMetadata = drive.File()
+          ..name = fileName
+          ..parents = [folderId]
+          ..mimeType = 'application/json';
+
+        final file = await files.create(
+          fileMetadata,
+          uploadMedia: media,
+        );
+
+        print('✅ [MochilaExtension] Arquivo CRIADO com sucesso: $fileName (ID: ${file.id})');
+        return file.id!;
+      }
+    } catch (e, stack) {
+      print('❌ [MochilaExtension] Erro ao atualizar/criar arquivo: $e');
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta "colecao"
+  Future<String> createJsonFileInColecao(String fileName, Map<String, dynamic> jsonData) async {
+    print('🎨 [ColecaoExtension] Criando arquivo em coleção: $fileName');
+
+    try {
+      final folderId = await _getOrCreateFolder('colecao', DriveClientFactory.FOLDER_ID);
+
+      final media = drive.Media(
+        Stream.value(utf8.encode(json.encode(jsonData))),
+        utf8.encode(json.encode(jsonData)).length,
+      );
+
+      final fileMetadata = drive.File()
+        ..name = fileName
+        ..parents = [folderId]
+        ..mimeType = 'application/json';
+
+      final file = await files.create(
+        fileMetadata,
+        uploadMedia: media,
+      );
+
+      print('✅ [ColecaoExtension] Arquivo criado: $fileName (ID: ${file.id})');
+      return file.id!;
+    } catch (e) {
+      print('❌ [ColecaoExtension] Erro ao criar arquivo: $e');
+      rethrow;
+    }
+  }
+
+  /// Lista arquivos na pasta "mochila"
+  Future<List<drive.File>> listFilesInMochila() async {
+    print('📋 [MochilaExtension] Listando arquivos na pasta mochila');
+
+    try {
+      // Busca ou cria a pasta "mochila"
+      final folderId = await _getOrCreateFolder('mochila', DriveClientFactory.FOLDER_ID);
+      print('📁 [MochilaExtension] Pasta mochila ID: $folderId');
+
+      // Lista arquivos na pasta
+      final query = "'$folderId' in parents and trashed=false";
+      final fileList = await files.list(
+        q: query,
+        spaces: 'drive',
+        $fields: 'files(id,name,mimeType,modifiedTime)',
+        pageSize: 100,
+      );
+
+      final arquivos = fileList.files ?? [];
+      print('✅ [MochilaExtension] Encontrados ${arquivos.length} arquivos na pasta mochila');
+
+      for (final arquivo in arquivos) {
+        print('   - ${arquivo.name} (ID: ${arquivo.id})');
+      }
+
+      return arquivos;
+    } catch (e) {
+      print('❌ [MochilaExtension] Erro ao listar arquivos: $e');
+      return [];
+    }
+  }
+
+  /// Busca ou cria uma pasta dentro de um pai
+  Future<String> _getOrCreateFolder(String folderName, String parentId) async {
+    // Busca pasta existente
+    final query = "name='$folderName' and '$parentId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false";
+    final folderList = await files.list(q: query, spaces: 'drive');
+
+    if (folderList.files != null && folderList.files!.isNotEmpty) {
+      return folderList.files!.first.id!;
+    }
+
+    // Cria pasta
+    final folderMetadata = drive.File()
+      ..name = folderName
+      ..parents = [parentId]
+      ..mimeType = 'application/vnd.google-apps.folder';
+
+    final folder = await files.create(folderMetadata);
+    print('📁 Pasta criada: $folderName (ID: ${folder.id})');
+    return folder.id!;
   }
 }

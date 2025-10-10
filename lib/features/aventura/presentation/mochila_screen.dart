@@ -98,7 +98,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         setState(() {
           historiaAtual = historia;
         });
-        widget.onHistoriaAtualizada?.call(historia);
+        // NÃO chama onHistoriaAtualizada aqui - apenas ao USAR um item, não ao CARREGAR
+        print('[MochilaScreen] Historia carregada do Hive (sem callback)');
       }
     } catch (e) {
       print('[MochilaScreen] Erro ao carregar historia: $e');
@@ -236,9 +237,10 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   Future<void> _salvarHistoria(HistoriaJogador historia) async {
     final repository = ref.read(aventuraRepositoryProvider);
     try {
+      // Salva APENAS no Hive local (sem sincronizar com Drive ao usar item da mochila)
       await repository.salvarHistoricoJogadorLocal(historia);
-      await repository.salvarHistoricoEAtualizarRanking(historia);
       widget.onHistoriaAtualizada?.call(historia);
+      print('[MochilaScreen] Historia salva localmente (APENAS HIVE)');
     } catch (e) {
       print('[MochilaScreen] Erro ao salvar historia: $e');
       _mostrarSnack('Erro ao atualizar aventura. Tente novamente.', erro: true);

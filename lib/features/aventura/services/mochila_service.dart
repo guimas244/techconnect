@@ -1,108 +1,91 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/mochila.dart';
-import '../../../core/services/google_drive_service.dart';
 
 class MochilaService {
-  static final GoogleDriveService _driveService = GoogleDriveService();
+  static const String _boxName = 'mochila_box';
 
-  // Verifica se o Drive está disponível
-  static Future<bool> verificarDriveDisponivel(BuildContext context) async {
-    try {
-      final conectado = await _driveService.inicializarConexao();
-      if (!conectado) {
-        _mostrarErroModal(
-          context,
-          'Google Drive não autenticado',
-          'Faça login no Google Drive para usar a mochila.',
-        );
-        return false;
-      }
-      return true;
-    } catch (e) {
-      _mostrarErroModal(
-        context,
-        'Erro ao conectar com Drive',
-        'Não foi possível conectar ao Google Drive. Verifique sua conexão.',
-      );
-      return false;
-    }
-  }
-
-  // Carrega a mochila do Drive
+  /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
     try {
-      // Verifica disponibilidade do Drive
-      if (!await verificarDriveDisponivel(context)) {
-        return null;
-      }
+      print('📦 [MochilaService] Carregando mochila do Hive para: $email');
 
+      final box = await Hive.openBox(_boxName);
       final emailLimpo = email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-      final nomeArquivo = 'mochila_$emailLimpo';
+      final chave = 'mochila_$emailLimpo';
 
-      // Busca o arquivo no Drive (pasta mochila dentro de TECHTERRA)
-      final conteudo = await _driveService.baixarArquivoDaPasta(
-        nomeArquivo,
-        'mochila',
-      );
+      final conteudo = box.get(chave);
 
-      if (conteudo.isEmpty) {
-        print('⚠️ Mochila não encontrada, criando nova');
-        return Mochila();
+      if (conteudo == null) {
+        print('📭 [MochilaService] Mochila não encontrada, criando nova');
+        final mochilaNova = Mochila();
+        // Salva a mochila vazia
+        await _salvarNoHive(emailLimpo, mochilaNova);
+        return mochilaNova;
       }
 
-      final json = jsonDecode(conteudo) as Map<String, dynamic>;
-      return Mochila.fromJson(json);
-    } catch (e) {
-      print('⚠️ Erro ao carregar mochila (criando nova): $e');
-      // Se não encontrou, retorna mochila vazia
+      // Se for String, converte de JSON
+      if (conteudo is String) {
+        final json = jsonDecode(conteudo) as Map<String, dynamic>;
+        print('✅ [MochilaService] Mochila carregada do Hive (JSON)');
+        return Mochila.fromJson(json);
+      }
+
+      // Se for Map, usa direto
+      if (conteudo is Map) {
+        print('✅ [MochilaService] Mochila carregada do Hive (Map)');
+        return Mochila.fromJson(Map<String, dynamic>.from(conteudo));
+      }
+
+      print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
+      return Mochila();
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro ao carregar mochila: $e');
+      print(stack);
       return Mochila();
     }
   }
 
-  // Salva a mochila no Drive
+  /// Salva a mochila no Hive
   static Future<bool> salvarMochila(
     BuildContext context,
     String email,
     Mochila mochila,
   ) async {
     try {
-      // Verifica disponibilidade do Drive
-      if (!await verificarDriveDisponivel(context)) {
-        return false;
-      }
+      print('💾 [MochilaService] Salvando mochila no Hive para: $email');
 
       final emailLimpo = email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
-      final nomeArquivo = 'mochila_$emailLimpo';
+      await _salvarNoHive(emailLimpo, mochila);
 
-      // Converte para JSON
-      final conteudo = jsonEncode(mochila.toJson());
+      print('✅ [MochilaService] Mochila salva com sucesso no Hive');
+      return true;
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro ao salvar mochila: $e');
+      print(stack);
 
-      // Salva no Drive (pasta mochila dentro de TECHTERRA)
-      final sucesso = await _driveService.salvarArquivoEmPasta(
-        nomeArquivo,
-        conteudo,
-        'mochila',
-      );
-
-      if (sucesso) {
-        print('✅ Mochila salva com sucesso no Drive');
-      } else {
-        print('❌ Falha ao salvar mochila no Drive');
-      }
-
-      return sucesso;
-    } catch (e) {
-      print('❌ Erro ao salvar mochila no Drive: $e');
       if (context.mounted) {
         _mostrarErroModal(
           context,
           'Erro ao salvar',
-          'Não foi possível salvar a mochila no Drive.',
+          'Não foi possível salvar a mochila.',
         );
       }
       return false;
     }
+  }
+
+  /// Salva diretamente no Hive (método auxiliar privado)
+  static Future<void> _salvarNoHive(String emailLimpo, Mochila mochila) async {
+    final box = await Hive.openBox(_boxName);
+    final chave = 'mochila_$emailLimpo';
+
+    // Salva como JSON string para garantir consistência
+    final json = jsonEncode(mochila.toJson());
+    await box.put(chave, json);
+
+    print('💾 [MochilaService] Dados salvos no Hive com chave: $chave');
   }
 
   static void _mostrarErroModal(

@@ -801,34 +801,27 @@ class DriveService {
       pastaAtualId = subpastaId;
     }
 
-    // Verificar e limpar TODOS os arquivos relacionados (com e sem timestamp)
+    // Verificar se arquivo já existe na pasta final
     final arquivos = await _listFilesInFolder(pastaAtualId);
-    final baseFilename = filename.replaceAll('.json', '');
+    final arquivoExistente = arquivos.where((file) =>
+      file.name != null && file.name == filename
+    ).firstOrNull;
 
-    // Encontrar todos os arquivos que começam com o nome base (ex: historico_email)
-    final arquivosParaDeletar = arquivos.where((file) =>
-      file.name != null && file.name!.startsWith(baseFilename)
-    ).toList();
-
-    if (arquivosParaDeletar.isNotEmpty) {
-      print('🗑️ [HISTORIAS-LOG] Encontrados ${arquivosParaDeletar.length} arquivos para deletar:');
-
-      for (final arquivo in arquivosParaDeletar) {
-        try {
-          print('   - Deletando: ${arquivo.name} (ID: ${arquivo.id})');
-          await api.files.delete(arquivo.id!);
-          print('   ✅ Deletado com sucesso');
-        } catch (e) {
-          print('   ❌ Erro ao deletar ${arquivo.name}: $e');
-          // Continue mesmo se não conseguir deletar
-        }
+    if (arquivoExistente != null && arquivoExistente.id != null) {
+      // Arquivo já existe, ATUALIZAR ao invés de criar novo
+      print('🔄 [HISTORIAS-LOG] Arquivo já existe, atualizando: $filename (ID: ${arquivoExistente.id})');
+      try {
+        await _updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [HISTORIAS-LOG] Arquivo atualizado com sucesso em HISTORIAS/$path: $filename');
+        return arquivoExistente.id; // Retorna ID do arquivo atualizado
+      } catch (e) {
+        print('❌ [HISTORIAS-LOG] Erro ao atualizar arquivo: $e');
+        rethrow;
       }
-      print('✅ [HISTORIAS-LOG] Limpeza de arquivos concluída');
-    } else {
-      print('📭 [HISTORIAS-LOG] Nenhum arquivo anterior encontrado para deletar');
     }
-    
-    // Criar novo arquivo na pasta final
+
+    // Arquivo não existe, criar novo
+    print('💾 [HISTORIAS-LOG] Arquivo não existe, criando novo: $filename');
     final file = drive.File();
     file.name = filename;
     file.parents = [pastaAtualId];

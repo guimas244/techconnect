@@ -347,6 +347,9 @@ class GoogleDriveService {
         }
       } else if (pasta == 'colecao') {
         arquivos = await _driveService!.listInColecaoFolder();
+      } else if (pasta == 'mochila') {
+        print('🎒 [GoogleDriveService] Buscando na pasta MOCHILA');
+        arquivos = await _driveService!.api.listFilesInMochila();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
@@ -412,7 +415,7 @@ class GoogleDriveService {
       if (conteudo.startsWith('{') || conteudo.startsWith('[')) {
         // É JSON
         final dadosJson = json.decode(conteudo);
-        
+
         if (pasta == 'tipagens') {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
@@ -428,6 +431,10 @@ class GoogleDriveService {
           }
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
+        } else if (pasta == 'mochila') {
+          // Suporte à pasta de mochila - ATUALIZA arquivo existente
+          print('✅ [GoogleDriveService] Usando pasta MOCHILA para: $pasta');
+          await _driveService!.api.updateOrCreateJsonFileInMochila(nomeArquivo, dadosJson);
         } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
           // Suporte a subpastas de rankings (rankings/2025-09-04)
           print('✅ [GoogleDriveService] Usando pasta RANKINGS para: $pasta');
@@ -452,7 +459,7 @@ class GoogleDriveService {
       } else {
         // É texto simples - converter para JSON
         final dadosJson = {'conteudo': conteudo};
-        
+
         if (pasta == 'tipagens') {
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         } else if (pasta == 'historias' || pasta.startsWith('historias/')) {
@@ -468,6 +475,10 @@ class GoogleDriveService {
           }
         } else if (pasta == 'drops') {
           await _driveService!.createJsonFileInDrops(nomeArquivo, dadosJson);
+        } else if (pasta == 'mochila') {
+          // Suporte à pasta de mochila - ATUALIZA arquivo existente
+          print('✅ [GoogleDriveService] Usando pasta MOCHILA para: $pasta (texto simples)');
+          await _driveService!.api.updateOrCreateJsonFileInMochila(nomeArquivo, dadosJson);
         } else if (pasta == 'rankings' || pasta.startsWith('rankings/')) {
           // Suporte a subpastas de rankings (rankings/2025-09-04)
           print('✅ [GoogleDriveService] Usando pasta RANKINGS para: $pasta');
