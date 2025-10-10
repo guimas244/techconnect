@@ -1890,16 +1890,12 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
           ),
           const SizedBox(height: 8),
-          GridView.builder(
+          // Lista vertical de drops (não grid)
+          ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.75, // Ajustado para acomodar imagem + ícone + nome
-            ),
             itemCount: _itensParaGuardar.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final item = _itensParaGuardar[index];
               final descartado = _novosItensDescartados.contains(index);
@@ -1956,68 +1952,90 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     );
   }
 
-  /// Widget que exibe um DROP (poção/pedra) com imagem de assets/drops/
-  /// Nome fora do quadrado e imagem dentro do quadrado
+  /// Widget que exibe um DROP (poção/pedra) com imagem maior de assets/drops/
+  /// Imagem grande em Row com texto e descrição ao lado
   Widget _buildDropCard(ItemConsumivel item, int index, bool descartado) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Quadrado com a imagem do drop
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: descartado ? Colors.grey.shade200 : Colors.amber.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: descartado ? Colors.grey.shade400 : Colors.amber.shade700,
-                width: 2,
-              ),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Center(
-              child: Opacity(
-                opacity: descartado ? 0.4 : 1.0,
-                child: item.iconPath.isNotEmpty
-                    ? Image.asset(
-                        item.iconPath, // Usa o iconPath que vem de drop.tipo.imagePath
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(
-                          _getIconForType(item.tipo),
-                          size: 32,
-                          color: Colors.amber.shade700,
+    return Container(
+      decoration: BoxDecoration(
+        color: descartado ? Colors.grey.shade200 : Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: descartado ? Colors.grey.shade400 : Colors.amber.shade700,
+          width: 2,
+        ),
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Imagem MAIOR do drop (assets/drops/)
+          Opacity(
+            opacity: descartado ? 0.4 : 1.0,
+            child: item.iconPath.isNotEmpty
+                ? Image.asset(
+                    item.iconPath,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(
+                      _getIconForType(item.tipo),
+                      size: 60,
+                      color: Colors.amber.shade700,
+                    ),
+                  )
+                : Icon(
+                    _getIconForType(item.tipo),
+                    size: 60,
+                    color: Colors.amber.shade700,
+                  ),
+          ),
+          const SizedBox(width: 12),
+          // Informações do item ao lado
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícone de status (guardar/descartar) + Nome
+                Row(
+                  children: [
+                    Icon(
+                      descartado ? Icons.delete : Icons.inventory_2,
+                      size: 16,
+                      color: descartado ? Colors.red.shade600 : Colors.green.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.nome,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: descartado ? Colors.grey.shade600 : Colors.grey.shade800,
                         ),
-                      )
-                    : Icon(
-                        _getIconForType(item.tipo),
-                        size: 32,
-                        color: Colors.amber.shade700,
                       ),
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Descrição do que o item faz
+                Text(
+                  item.descricao,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: descartado ? Colors.grey.shade500 : Colors.grey.shade600,
+                    height: 1.2,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        // Ícone de guardar/descartar
-        Icon(
-          descartado ? Icons.delete : Icons.inventory_2,
-          size: 14,
-          color: descartado ? Colors.red.shade600 : Colors.green.shade600,
-        ),
-        const SizedBox(height: 2),
-        // Nome do item FORA do quadrado
-        Text(
-          item.nome,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: descartado ? Colors.grey.shade600 : Colors.grey.shade800,
-            height: 1.1,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -80,6 +80,7 @@ enum TipoItemConsumivel {
 }
 
 enum RaridadeConsumivel {
+  inferior,
   comum,
   raro,
   epico,
@@ -89,6 +90,8 @@ enum RaridadeConsumivel {
 extension RaridadeConsumivelExtension on RaridadeConsumivel {
   String get nome {
     switch (this) {
+      case RaridadeConsumivel.inferior:
+        return 'Inferior';
       case RaridadeConsumivel.comum:
         return 'Comum';
       case RaridadeConsumivel.raro:
@@ -102,6 +105,8 @@ extension RaridadeConsumivelExtension on RaridadeConsumivel {
 
   Color get cor {
     switch (this) {
+      case RaridadeConsumivel.inferior:
+        return const Color(0xFF757575); // Cinza mais escuro
       case RaridadeConsumivel.comum:
         return const Color(0xFF9E9E9E); // Cinza
       case RaridadeConsumivel.raro:

@@ -493,12 +493,14 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                _buildLegendaRaridade(RaridadeConsumivel.inferior),
+                const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.comum),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.raro),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.epico),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.lendario),
               ],
             ),
