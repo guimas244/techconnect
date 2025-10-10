@@ -3,6 +3,7 @@ import 'dart:math';
 import '../models/ranking_entry.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../../../core/config/version_config.dart';
+import '../../../core/config/score_config.dart';
 import '../../../core/utils/date_folder_manager.dart';
 
 class RankingService {
@@ -45,13 +46,19 @@ class RankingService {
     required String runId,
     required String email,
     required int score,
+    required int tier,
     DateTime? dataHora,
   }) async {
     try {
       final dataHoraFinal = dataHora ?? agora;
       final dataSemHora = DateTime(dataHoraFinal.year, dataHoraFinal.month, dataHoraFinal.day);
-      
-      print('🏆 [RankingService] Atualizando ranking para $email - Score: $score - RunId: $runId');
+
+      // Aplica limite de score baseado no tier usando ScoreConfig
+      final scoreParaSalvar = ScoreConfig.calcularScoreSalvar(tier, score);
+
+      print('🏆 [RankingService] Atualizando ranking para $email - Tier: $tier');
+      print('   - Score bruto: $score');
+      print('   - Score salvo: $scoreParaSalvar (limite aplicado)');
       
       // Carrega o ranking individual do email para o dia
       final rankingDiario = await carregarRankingDiaEmail(dataSemHora, email);
@@ -109,11 +116,11 @@ class RankingService {
         versaoParaSalvar = VersionConfig.currentVersion;
       }
 
-      // Cria nova entrada de ranking
+      // Cria nova entrada de ranking (com score limitado)
       final novaEntrada = RankingEntry(
         runId: runId,
         email: emailComVersao,
-        score: score,
+        score: scoreParaSalvar,
         dataHora: dataHoraFinal,
         version: versaoParaSalvar,
       );

@@ -13,6 +13,8 @@ import '../presentation/casa_vigarista_modal_v2.dart';
 import '../presentation/mochila_screen.dart';
 import '../presentation/aventura_screen.dart';
 import '../presentation/progresso_screen.dart';
+import '../presentation/modal_tier11_transicao.dart';
+import '../../../core/config/score_config.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -1069,16 +1071,28 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
 
-      // Verifica se ÃƒÆ’Ã‚Â© o andar 10 para resetar score (só se tiver mais de 50)
+      // Verifica se está transitando do tier 10 para o tier 11 (transição especial)
+      final tierAtual = historiaAtual!.tier;
+      final estaTransitandoParaTier11 = tierAtual == (ScoreConfig.SCORE_TIER_TRANSICAO - 1);
+      final scoreAntesDaTransicao = historiaAtual!.score;
+
       int novoScore = historiaAtual!.score;
-      if (historiaAtual!.tier == 10 && historiaAtual!.score > 50) {
-        novoScore = 50;
-        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Reset de score no andar 10: ${historiaAtual!.score} → $novoScore');
-      } else if (historiaAtual!.tier == 10) {
-        print('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€™ [MapaAventura] Score mantido no andar 10 (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤50): ${historiaAtual!.score}');
+
+      if (estaTransitandoParaTier11) {
+        // TRANSIÇÃO TIER 10 → 11: Salva score atual no ranking antes do reset
+        print('🏆 [MapaAventura] Transição tier $tierAtual → ${ScoreConfig.SCORE_TIER_TRANSICAO}');
+        print('   - Score antes: $scoreAntesDaTransicao');
+        print('   - Salvando no ranking com ${ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11} pontos garantidos...');
+
+        // Salva score atual no ranking (será limitado a 50 pontos pelo sistema)
+        await repository.atualizarRankingPorScore(historiaAtual!);
+
+        // Reseta score para 0 (sistema tier 11+ começa do zero)
+        novoScore = 0;
+        print('   - Score resetado para: $novoScore');
       }
 
-      // Atualiza a história com novo tier, novos monstros e score (resetado se tier 10)
+      // Atualiza a história com novo tier, novos monstros e score (resetado se transição tier 11)
       final historiaAtualizada = historiaAtual!.copyWith(
         tier: historiaAtual!.tier + 1,
         monstrosInimigos: novosMonstros,
@@ -1093,7 +1107,23 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         historiaAtual = historiaAtualizada;
       });
 
-      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+      print('🏯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+
+      // Mostra modal de transição tier 11 se aplicável
+      if (estaTransitandoParaTier11 && mounted) {
+        print('📢 [MapaAventura] Mostrando modal de transição para tier ${ScoreConfig.SCORE_TIER_TRANSICAO}');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              barrierDismissible: false, // Usuário deve ler a mensagem
+              builder: (context) => ModalTier11Transicao(
+                scoreAtual: scoreAntesDaTransicao,
+              ),
+            );
+          }
+        });
+      }
 
     } catch (e) {
       print('ÃƒÂ¢Ã‚ÂÃ…â€™ [MapaAventura] Erro ao avançar tier: $e');

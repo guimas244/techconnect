@@ -28,6 +28,8 @@ import '../../jogador/services/vantagens_service.dart';
 import 'modal_monstro_desbloqueado.dart';
 import '../models/item_consumivel.dart';
 import '../models/mochila.dart';
+import '../../../core/config/score_config.dart';
+import 'modal_limite_score.dart';
 import '../services/mochila_service.dart';
 import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
@@ -771,12 +773,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Carrega história atual para atualizar score
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       if (historia != null) {
-        // Calcula score ganho: tier atual ou 2 pontos se tier >= 11
-        final scoreGanho = historia.tier >= 11 ? 2 : historia.tier;
-        final novoScore = historia.score + scoreGanho;
-        
-        print('?? [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
-        print('?? [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
+        // Calcula score ganho baseado no tier
+        final scoreGanho = ScoreConfig.ehPosTransicao(historia.tier)
+            ? ScoreConfig.SCORE_PONTOS_POR_VITORIA_TIER_11_PLUS
+            : historia.tier;
+
+        // Calcula novo score com limite de pontos extras
+        int novoScore = historia.score + scoreGanho;
+
+        // Se tier 11+, aplica limite máximo de pontos extras (100)
+        if (ScoreConfig.ehPosTransicao(historia.tier)) {
+          final scoreMaximoExtras = ScoreConfig.scoreMaximoExtras;
+          if (novoScore > scoreMaximoExtras) {
+            novoScore = scoreMaximoExtras;
+            print('⚠️ [BatalhaScreen] Score limitado ao máximo de extras: $scoreMaximoExtras');
+          }
+        }
+
+        print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        print('📊 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
         
         // Cria registro da batalha
         final registroBatalha = RegistroBatalha(
@@ -795,15 +810,39 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           scoreGanho: scoreGanho,
         );
         
+        // Verifica se deve mostrar modal de limite de 50 pontos
+        bool mostrarModalLimite = false;
+        if (ScoreConfig.ehPreTransicao(historia.tier) &&
+            novoScore >= ScoreConfig.SCORE_LIMITE_PRE_TIER_11 &&
+            !historia.mensagemLimite50Mostrada) {
+          mostrarModalLimite = true;
+        }
+
         // Atualiza história com novo score e histórico da batalha
         final historiaComScore = historia.copyWith(
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
+          mensagemLimite50Mostrada: mostrarModalLimite ? true : historia.mensagemLimite50Mostrada,
         );
         // Salva histórico apenas no HIVE (SEM atualizar ranking em vitórias)
         await repository.salvarHistoricoJogadorLocal(historiaComScore);
 
         print('? [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
+
+        // Mostra modal de limite se necessário (após salvar)
+        if (mostrarModalLimite && mounted) {
+          print('⚠️ [BatalhaScreen] Score atingiu ${ScoreConfig.SCORE_LIMITE_PRE_TIER_11} - Mostrando modal de alerta');
+          // Aguarda um frame para garantir que o widget está montado
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (context) => const ModalLimiteScore(),
+              );
+            }
+          });
+        }
       }
 
       // ?? Processa cura pós-batalha da coleção nostálgica

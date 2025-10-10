@@ -913,6 +913,7 @@ class AventuraRepository {
           runId: historia.runId,
           email: historia.email,
           score: historia.score,
+          tier: historia.tier,
         );
         print('✅ [Repository] Ranking atualizado com sucesso');
       } else {

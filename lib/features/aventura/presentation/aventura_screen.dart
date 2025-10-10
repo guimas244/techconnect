@@ -15,6 +15,7 @@ import '../data/aventura_repository.dart';
 import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/developer_config.dart';
+import '../../../core/config/score_config.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -1298,7 +1299,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Score atual: ${historiaAtual?.score ?? 0} pontos',
+                        'Score atual: ${historiaAtual != null ? ScoreConfig.formatarScoreExibicao(historiaAtual!.tier, historiaAtual!.score) : "0"} pontos',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

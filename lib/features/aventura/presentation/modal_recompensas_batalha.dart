@@ -795,6 +795,56 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     );
   }
 
+  Widget _buildAtributoLinha(String atributo, int valor) {
+    Color cor = _getCorAtributo(atributo);
+    IconData icon = _getIconeAtributo(atributo);
+    String nome = _nomeAtributo(atributo);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: cor, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            nome,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: cor,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '+$valor',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getCorAtributo(String atributo) {
+    switch (atributo) {
+      case 'vida':
+        return Colors.red;
+      case 'energia':
+        return Colors.blue;
+      case 'ataque':
+        return Colors.orange;
+      case 'defesa':
+        return Colors.green;
+      case 'agilidade':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildCompactStatRow(
     String label,
     int? valorAntes,
@@ -1087,9 +1137,13 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        gradient: LinearGradient(
+          colors: [destaque.withOpacity(0.15), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: destaque, width: 1),
+        border: Border.all(color: destaque, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1129,22 +1183,18 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           if (item.atributos.values.any((valor) => valor != 0)) ...[
             const SizedBox(height: 12),
             Text(
-              'Bônus do equipamento',
+              'Bônus do equipamento:',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey.shade800,
               ),
             ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: item.atributos.entries
-                  .where((entry) => entry.value != 0)
-                  .map((entry) => _buildAtributoChip(entry.key, entry.value))
-                  .toList(),
-            ),
+            const SizedBox(height: 8),
+            ...item.atributos.entries
+                .where((entry) => entry.value != 0)
+                .map((entry) => _buildAtributoLinha(entry.key, entry.value))
+                .toList(),
           ],
           const SizedBox(height: 12),
           Text(

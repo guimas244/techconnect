@@ -11,6 +11,7 @@ import 'modal_item_obtido.dart';
 import 'modal_magia_obtida.dart';
 import 'modal_cura_obtida.dart';
 import '../models/magia_drop.dart';
+import '../../../core/config/score_config.dart';
 
 class CasaVigaristaModal extends StatefulWidget {
   final HistoriaJogador historia;
@@ -605,7 +606,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                 Icon(Icons.monetization_on, color: const Color(0xFFD4AF37), size: 20),
                 const SizedBox(width: 6),
                 Text(
-                  'Ouro: ${_historiaAtual.score}',
+                  'Ouro: ${ScoreConfig.formatarScoreExibicao(_historiaAtual.tier, _historiaAtual.score)}',
                   style: const TextStyle(
                     color: Color(0xFFD4AF37),
                     fontSize: 18,
@@ -1064,7 +1065,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                           Icon(Icons.monetization_on, color: const Color(0xFFD4AF37), size: 20),
                           const SizedBox(width: 6),
                           Text(
-                            'Ouro: ${_historiaAtual.score}',
+                            'Ouro: ${ScoreConfig.formatarScoreExibicao(_historiaAtual.tier, _historiaAtual.score)}',
                             style: const TextStyle(
                               color: Color(0xFFD4AF37),
                               fontSize: 16,
