@@ -16,6 +16,7 @@ import '../presentation/modal_item_obtido.dart';
 import '../presentation/modal_magia_obtida.dart';
 import '../presentation/modal_cura_obtida.dart';
 import '../presentation/modal_feirao.dart';
+import '../presentation/modal_biblioteca.dart';
 import '../models/magia_drop.dart';
 import '../models/habilidade.dart';
 import '../presentation/mochila_screen.dart';
@@ -1206,9 +1207,56 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     List<MagiaDrop> magias,
     HistoriaJogador historia,
   ) async {
-    // TODO: Implementar modal de biblioteca (escolher 1 magia das 3)
-    print('⚠️ [Loja] Modal de Biblioteca ainda não implementado');
-    print('✨ [Loja] Magias disponíveis: ${magias.map((m) => m.nome).join(", ")}');
+    print('📚 [Loja] Abrindo modal da Biblioteca com ${magias.length} magias');
+
+    final custoAposta = 2 * (historia.tier >= 11 ? 2 : historia.tier);
+
+    final magiaEscolhida = await showDialog<MagiaDrop>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalBiblioteca(
+        magias: magias,
+        custoAposta: custoAposta,
+        scoreAtual: historia.score,
+      ),
+    );
+
+    if (magiaEscolhida == null) {
+      print('❌ [Loja] Usuário saiu da Biblioteca sem comprar');
+      return;
+    }
+
+    print('💰 [Loja] Magia escolhida na Biblioteca: ${magiaEscolhida.nome}');
+
+    // Debita o custo da magia
+    final historiaAtualizada = historia.copyWith(
+      score: historia.score - custoAposta,
+    );
+
+    // Salva apenas localmente (Hive)
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+      print('✅ [Loja] Score debitado e salvo (Biblioteca)');
+    } catch (e) {
+      print('❌ [Loja] Erro ao salvar após compra da Biblioteca: $e');
+    }
+
+    // Atualiza estado local
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+    }
+
+    // Aguarda um frame
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    // Abre modal de equipar magia
+    if (mounted) {
+      print('✨ [Loja] Abrindo modal de equipar magia da Biblioteca');
+      await _mostrarModalEquiparMagia(magiaEscolhida, historiaAtualizada);
+    }
   }
 
   Widget _buildMonstroColecao(MonstroInimigo monstro, double left, double top) {
