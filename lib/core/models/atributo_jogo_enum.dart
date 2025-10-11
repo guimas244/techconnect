@@ -29,7 +29,47 @@ enum AtributoJogo {
   chanceMonstroColecoRaro(min: 2, max: 2), // 2% de chance base (tier 3-10)
   chanceMonstroColecoRaroTier11Plus(min: 4, max: 4), // 4% de chance (tier 11+)
   tierMinimoMonstroColecoRaro(min: 3, max: 3), // A partir do tier 3
-  tierBoostMonstroColecoRaro(min: 11, max: 11); // Boost de chance a partir do tier 11
+  tierBoostMonstroColecoRaro(min: 11, max: 11), // Boost de chance a partir do tier 11
+
+  // ========================================
+  // SISTEMA DE DROPS - ITENS CONSUMÍVEIS
+  // ========================================
+  // Chances de drop de itens consumíveis após vencer batalhas
+  // Valores em porcentagem (0-100)
+  // Localização: lib/features/aventura/services/drops_service.dart
+
+  dropPocaoVidaPequena(min: 5, max: 5), // 5% de chance de drop por batalha vencida
+  dropPocaoVidaGrande(min: 1, max: 1), // 10% de chance de drop por batalha vencida
+  dropPedraReforco(min: 1, max: 1), // 5% de chance de drop por batalha vencida
+
+  // ========================================
+  // SISTEMA DE RECOMPENSAS POR SCORE
+  // ========================================
+  // Mecânica de recompensas baseadas no score acumulado em batalhas
+  // Localização: lib/features/aventura/services/recompensa_service.dart
+
+  // Drops adicionais: cada 1 de score = 3% de chance de item extra
+  // Exemplo: Score 10 = 30%, Score 34 = 102% (1 garantido + 2% restante)
+  recompensaChancePorScore(min: 3, max: 3), // 3% por ponto de score
+
+  // Super Drop: dobra todos os itens recebidos
+  // Chance: 1% por cada 2 pontos de score (máx 100%)
+  // Exemplo: Score 100 = 50% de chance de Super Drop
+  recompensaSuperDropPorScore(min: 1, max: 1), // 1% por cada 2 de score
+
+  // Chance de receber Magia ao invés de Item comum
+  recompensaChanceMagia(min: 30, max: 30), // 30% magia, 70% item
+
+  // Boost de Qualidade: melhora a raridade de itens
+  // Cada 10 de score = +1 boost (cada boost = chance de subir raridade)
+  // Exemplo: Score 50 = 5 tentativas de upgrade
+  recompensaScorePorBoostQualidade(min: 10, max: 10), // Dividir score por 10
+
+  // Boost de Level em Magias: aumenta o level das magias recebidas
+  // Cada 20 de score = 1 tentativa de 10% de +1 level (máximo +3 levels)
+  // Exemplo: Score 60 = 3 tentativas de 10% cada
+  recompensaScorePorBoostLevelMagia(min: 20, max: 20), // Dividir score por 20
+  recompensaChanceBoostLevelMagia(min: 10, max: 10); // 10% por tentativa
 
   final int min;
   final int max;

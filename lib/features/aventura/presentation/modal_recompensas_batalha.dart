@@ -6,6 +6,7 @@ import '../models/item_consumivel.dart';
 import '../models/magia_drop.dart';
 import '../models/mochila.dart';
 import '../models/monstro_aventura.dart';
+import 'widgets/gerenciador_equipamentos_monstros.dart';
 
 class RecompensasBatalha {
   final List<MonstroAventura> monstrosEvoluidos;
@@ -1206,14 +1207,16 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             ),
           ),
           const SizedBox(height: 8),
-          _buildTimeJogadorGrid(
-            selecionado: _monstroSelecionadoItem,
-            destaque: destaque,
-            onSelect: (monstro) {
+          GerenciadorEquipamentosMonstros(
+            monstros: widget.timeJogador,
+            monstroSelecionado: _monstroSelecionadoItem,
+            corDestaque: destaque,
+            onSelecionarMonstro: (monstro) {
               setState(() {
                 _monstroSelecionadoItem = monstro;
               });
             },
+            onVisualizarEquipamento: _mostrarDetalhesItem,
           ),
           const SizedBox(height: 12),
           Row(
@@ -1255,121 +1258,6 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       ),
     );
   }
-
-  Widget _buildTimeJogadorGrid({
-    required MonstroAventura? selecionado,
-    required Color destaque,
-    required ValueChanged<MonstroAventura> onSelect,
-  }) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: widget.timeJogador.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.65,
-      ),
-      itemBuilder: (context, index) {
-        final monstro = widget.timeJogador[index];
-        final selecionadoAtual = selecionado == monstro;
-        return GestureDetector(
-          onTap: () => onSelect(monstro),
-          child: _buildMonstroCard(monstro, selecionadoAtual, destaque),
-        );
-      },
-    );
-  }
-
-  Widget _buildMonstroCard(
-    MonstroAventura monstro,
-    bool selecionado,
-    Color destaque,
-  ) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      decoration: BoxDecoration(
-        color: selecionado
-            ? destaque.withOpacity(0.2)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: selecionado ? destaque : Colors.grey.shade300,
-          width: selecionado ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Imagem do monstro e informações
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        monstro.imagem,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.catching_pokemon,
-                          color: destaque,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    monstro.nome,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  Text(
-                    'Lv. ${monstro.level}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: destaque,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Seção da mochila
-          if (monstro.itemEquipado != null)
-            GestureDetector(
-              onTap: () => _mostrarDetalhesItem(monstro.itemEquipado!),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                    bottomRight: Radius.circular(12),
-                  ),
-                ),
-                child: Icon(
-                  Icons.backpack,
-                  color: monstro.itemEquipado!.raridade.cor,
-                  size: 20,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
 
   String _getImagemArmadura(Item item) {
     final raridadeNome = item.raridade.nome.toLowerCase();
@@ -1619,15 +1507,17 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             ),
           ),
           const SizedBox(height: 8),
-          _buildTimeJogadorGrid(
-            selecionado: _monstroSelecionadoMagia,
-            destaque: destaque,
-            onSelect: (monstro) {
+          GerenciadorEquipamentosMonstros(
+            monstros: widget.timeJogador,
+            monstroSelecionado: _monstroSelecionadoMagia,
+            corDestaque: destaque,
+            onSelecionarMonstro: (monstro) {
               setState(() {
                 _monstroSelecionadoMagia = monstro;
                 _habilidadeSelecionada = null;
               });
             },
+            onVisualizarEquipamento: _mostrarDetalhesItem,
           ),
           if (_monstroSelecionadoMagia != null) ...[
             const SizedBox(height: 12),

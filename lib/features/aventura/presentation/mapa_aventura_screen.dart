@@ -4,12 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 import '../models/monstro_inimigo.dart';
 import '../models/historia_jogador.dart';
+import '../models/item.dart';
 import '../providers/aventura_provider.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../presentation/modal_monstro_inimigo.dart';
 import '../presentation/selecao_monstro_screen.dart';
-import '../presentation/casa_vigarista_modal_v2.dart';
+import '../presentation/casa_vigarista_screen.dart';
+import '../presentation/models/resultado_loja.dart';
+import '../presentation/modal_item_obtido.dart';
+import '../presentation/modal_magia_obtida.dart';
+import '../presentation/modal_cura_obtida.dart';
+import '../presentation/modal_feirao.dart';
+import '../models/magia_drop.dart';
+import '../models/habilidade.dart';
 import '../presentation/mochila_screen.dart';
 import '../presentation/aventura_screen.dart';
 import '../presentation/progresso_screen.dart';
@@ -501,21 +509,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       );
     }
 
-    return CasaVigaristaModalV2(
+    return CasaVigaristaScreen(
       key: ValueKey('loja_${historiaAtual!.score}_${historiaAtual!.tier}'),
       historia: historiaAtual!,
-      onHistoriaAtualizada: (historiaAtualizada) async {
-        setState(() {
-          historiaAtual = historiaAtualizada;
-        });
-
-        try {
-          final repository = ref.read(aventuraRepositoryProvider);
-          await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-          await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
-          print('🎾 [Loja] História atualizada após compra');
-        } catch (e) {
-          print('❌ [Loja] Erro ao salvar história: $e');
+      onResultado: (ResultadoLoja resultado) async {
+        print('📥 [Mapa] Recebeu resultado da loja inline: ${resultado.tipo}');
+        if (resultado.tipo != TipoResultado.nenhum && mounted) {
+          await _processarResultadoLoja(resultado);
         }
       },
     );
@@ -839,7 +839,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-  void _mostrarCasaDoVigarista(bool podeAcessar, int custoMinimo) {
+  void _mostrarCasaDoVigarista(bool podeAcessar, int custoMinimo) async {
     if (!podeAcessar) {
       showDialog(
         context: context,
@@ -896,37 +896,314 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       return;
     }
 
-    if (historiaAtual == null) return;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return CasaVigaristaModalV2(
-          historia: historiaAtual!,
-          onHistoriaAtualizada: (historiaAtualizada) async {
-            // Atualiza o estado local
-            setState(() {
-              historiaAtual = historiaAtualizada;
-            });
-
-            // Salva no repositório
-            try {
-              final repository = ref.read(aventuraRepositoryProvider);
-              // Salva localmente primeiro
-              await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
-
-              // Salva no Drive e atualiza ranking após compra na loja
-              print('🎾 [MapaAventura] Salvando compra no Drive e atualizando ranking...');
-              await repository.salvarHistoricoEAtualizarRanking(historiaAtualizada);
-
-              print('🎾 [MapaAventura] História atualizada após compra na Casa do Vigarista (HIVE + Drive)');
-            } catch (e) {
-              print('❌ [MapaAventura] Erro ao salvar história: $e');
-            }
-          },
-        );
-      },
+    // Abre a Casa do Vigarista como tela normal e aguarda resultado
+    final resultado = await Navigator.of(context).push<ResultadoLoja>(
+      MaterialPageRoute(
+        builder: (context) => CasaVigaristaScreen(historia: historiaAtual!),
+        fullscreenDialog: true,
+      ),
     );
+
+    // Processa o resultado
+    if (resultado != null && resultado.tipo != TipoResultado.nenhum && mounted) {
+      await _processarResultadoLoja(resultado);
+    }
+  }
+
+  Future<void> _processarResultadoLoja(ResultadoLoja resultado) async {
+    print('🛒 [Loja] Processando resultado: ${resultado.tipo}');
+
+    // 1. Salva apenas localmente (HIVE) - SEM Drive
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      await repository.salvarHistoricoJogadorLocal(resultado.historiaAtualizada);
+      print('✅ [Loja] História salva localmente (Hive apenas)');
+    } catch (e) {
+      print('❌ [Loja] Erro ao salvar história local: $e');
+    }
+
+    // 2. Atualiza estado local
+    if (mounted) {
+      setState(() {
+        historiaAtual = resultado.historiaAtualizada;
+      });
+    }
+
+    // 3. Aguarda um frame para garantir que a UI está estável
+    print('⏳ [Loja] Aguardando UI estabilizar...');
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    if (!mounted) {
+      print('❌ [Loja] Widget desmontado, não abre modal');
+      return;
+    }
+
+    // 4. Abre o modal apropriado baseado no tipo
+    print('🎯 [Loja] Abrindo modal para tipo: ${resultado.tipo}');
+    switch (resultado.tipo) {
+      case TipoResultado.item:
+        if (resultado.item != null) {
+          print('📦 [Loja] Abrindo modal de equipar item: ${resultado.item!.nome}');
+          await _mostrarModalEquiparItem(resultado.item!, resultado.historiaAtualizada);
+        } else {
+          print('❌ [Loja] Item é null!');
+        }
+        break;
+
+      case TipoResultado.magia:
+        if (resultado.habilidade != null) {
+          await _mostrarModalEquiparMagia(resultado.habilidade!, resultado.historiaAtualizada);
+        }
+        break;
+
+      case TipoResultado.cura:
+        if (resultado.porcentagemCura != null) {
+          await _mostrarModalCura(resultado.porcentagemCura!, resultado.historiaAtualizada);
+        }
+        break;
+
+      case TipoResultado.abrirFeirao:
+        if (resultado.itensFeirao != null) {
+          await _mostrarModalFeirao(resultado.itensFeirao!, resultado.historiaAtualizada);
+        }
+        break;
+
+      case TipoResultado.abrirBiblioteca:
+        if (resultado.magiasBiblioteca != null) {
+          await _mostrarModalBiblioteca(resultado.magiasBiblioteca!, resultado.historiaAtualizada);
+        }
+        break;
+
+      case TipoResultado.nenhum:
+        break;
+    }
+  }
+
+  Future<void> _mostrarModalEquiparItem(
+    Item item,
+    HistoriaJogador historia,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalItemObtido(
+        item: item,
+        monstrosDisponiveis: historia.monstros,
+        onEquiparItem: (monstro, itemObtido) async {
+          // Atualiza o monstro com o item equipado
+          final monstrosAtualizados = historia.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level) {
+              return m.copyWith(itemEquipado: itemObtido);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historia.copyWith(
+            monstros: monstrosAtualizados,
+          );
+
+          // Salva a história com o item equipado (apenas Hive)
+          try {
+            final repository = ref.read(aventuraRepositoryProvider);
+            await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+            if (mounted) {
+              setState(() {
+                historiaAtual = historiaAtualizada;
+              });
+            }
+
+            print('✅ [Loja] Item equipado e salvo localmente (Hive apenas)');
+          } catch (e) {
+            print('❌ [Loja] Erro ao salvar item equipado: $e');
+          }
+
+          // Fecha o modal
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _mostrarModalEquiparMagia(
+    MagiaDrop magia,
+    HistoriaJogador historia,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalMagiaObtida(
+        magia: magia,
+        monstrosDisponiveis: historia.monstros,
+        onEquiparMagia: (monstro, magiaObtida, habilidadeSubstituida) async {
+          // Encontra o monstro e substitui a habilidade
+          final monstrosAtualizados = historia.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level) {
+              // Remove a habilidade antiga e adiciona a nova com tipagem do monstro
+              final habilidadesAtualizadas = m.habilidades
+                  .where((h) => h != habilidadeSubstituida)
+                  .toList();
+
+              // Cria a nova habilidade com a tipagem do monstro
+              final novaHabilidade = Habilidade(
+                nome: magiaObtida.nome,
+                descricao: magiaObtida.descricao,
+                tipo: magiaObtida.tipo,
+                efeito: magiaObtida.efeito,
+                tipoElemental: m.tipo, // Usa o tipo do monstro
+                valor: magiaObtida.valor,
+                custoEnergia: magiaObtida.custoEnergia,
+                level: magiaObtida.level,
+              );
+
+              habilidadesAtualizadas.add(novaHabilidade);
+
+              return m.copyWith(habilidades: habilidadesAtualizadas);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historia.copyWith(
+            monstros: monstrosAtualizados,
+          );
+
+          // Salva a história com a magia equipada (apenas Hive)
+          try {
+            final repository = ref.read(aventuraRepositoryProvider);
+            await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+            if (mounted) {
+              setState(() {
+                historiaAtual = historiaAtualizada;
+              });
+            }
+
+            print('✅ [Loja] Magia equipada e salva localmente (Hive apenas)');
+          } catch (e) {
+            print('❌ [Loja] Erro ao salvar magia equipada: $e');
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _mostrarModalCura(
+    int porcentagemCura,
+    HistoriaJogador historia,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalCuraObtida(
+        porcentagem: porcentagemCura,
+        monstrosDisponiveis: historia.monstros,
+        onCurarMonstro: (monstro, porcentagem) async {
+          // Calcula a cura
+          final vidaRecuperada = (monstro.vida * porcentagem / 100).round();
+          final novaVida = (monstro.vidaAtual + vidaRecuperada).clamp(0, monstro.vida);
+
+          // Atualiza o monstro com a vida curada
+          final monstrosAtualizados = historia.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level) {
+              return m.copyWith(vidaAtual: novaVida);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historia.copyWith(
+            monstros: monstrosAtualizados,
+          );
+
+          // Salva a história com a vida curada (apenas Hive)
+          try {
+            final repository = ref.read(aventuraRepositoryProvider);
+            await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+            if (mounted) {
+              setState(() {
+                historiaAtual = historiaAtualizada;
+              });
+            }
+
+            print('✅ [Loja] Monstro curado e salvo localmente (Hive apenas)');
+
+            // Fecha o modal
+            if (mounted && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          } catch (e) {
+            print('❌ [Loja] Erro ao salvar cura: $e');
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _mostrarModalFeirao(
+    List<Item> itens,
+    HistoriaJogador historia,
+  ) async {
+    print('🏪 [Loja] Abrindo modal do Feirão com ${itens.length} itens');
+
+    final custoAposta = 2 * (historia.tier >= 11 ? 2 : historia.tier);
+
+    final itemEscolhido = await showDialog<Item>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalFeirao(
+        itens: itens,
+        custoAposta: custoAposta,
+        scoreAtual: historia.score,
+      ),
+    );
+
+    if (itemEscolhido == null) {
+      print('❌ [Loja] Usuário saiu do Feirão sem comprar');
+      return;
+    }
+
+    print('💰 [Loja] Item escolhido no Feirão: ${itemEscolhido.nome}');
+
+    // Debita o custo do item
+    final historiaAtualizada = historia.copyWith(
+      score: historia.score - custoAposta,
+    );
+
+    // Salva apenas localmente (Hive)
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+      print('✅ [Loja] Score debitado e salvo (Feirão)');
+    } catch (e) {
+      print('❌ [Loja] Erro ao salvar após compra do Feirão: $e');
+    }
+
+    // Atualiza estado local
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+    }
+
+    // Aguarda um frame
+    await Future.delayed(const Duration(milliseconds: 50));
+
+    // Abre modal de equipar item
+    if (mounted) {
+      print('📦 [Loja] Abrindo modal de equipar item do Feirão');
+      await _mostrarModalEquiparItem(itemEscolhido, historiaAtualizada);
+    }
+  }
+
+  Future<void> _mostrarModalBiblioteca(
+    List<MagiaDrop> magias,
+    HistoriaJogador historia,
+  ) async {
+    // TODO: Implementar modal de biblioteca (escolher 1 magia das 3)
+    print('⚠️ [Loja] Modal de Biblioteca ainda não implementado');
+    print('✨ [Loja] Magias disponíveis: ${magias.map((m) => m.nome).join(", ")}');
   }
 
   Widget _buildMonstroColecao(MonstroInimigo monstro, double left, double top) {
@@ -1079,13 +1356,16 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       int novoScore = historiaAtual!.score;
 
       if (estaTransitandoParaTier11) {
-        // TRANSIÇÃO TIER 10 → 11: Salva score atual no ranking antes do reset
+        // TRANSIÇÃO TIER 10 → 11: Conquista! Salva 50 pontos garantidos no ranking
         print('🏆 [MapaAventura] Transição tier $tierAtual → ${ScoreConfig.SCORE_TIER_TRANSICAO}');
         print('   - Score antes: $scoreAntesDaTransicao');
-        print('   - Salvando no ranking com ${ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11} pontos garantidos...');
+        print('   - Salvando no ranking com ${ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11} pontos GARANTIDOS (conquista tier 11)');
 
-        // Salva score atual no ranking (será limitado a 50 pontos pelo sistema)
-        await repository.atualizarRankingPorScore(historiaAtual!);
+        // Cria cópia temporária com score fixado em 50 para salvar no ranking
+        final historiaComScoreConquista = historiaAtual!.copyWith(
+          score: ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11,
+        );
+        await repository.atualizarRankingPorScore(historiaComScoreConquista);
 
         // Reseta score para 0 (sistema tier 11+ começa do zero)
         novoScore = 0;
@@ -1291,21 +1571,17 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          (historiaAtual?.score ?? 0) > 50
-                            ? 'Ao avançar do andar 10 para o 11, seu score será resetado para 50 pontos.'
-                            : 'Ao avançar do andar 10 para o 11, seu score será mantido (≤50 pontos).',
-                          style: const TextStyle(fontSize: 14),
+                        const Text(
+                          'Ao avançar para o andar 11:\n• Seu score será ZERADO (volta para 0)\n• Será salvo 50 pontos no ranking (conquista tier 11!)',
+                          style: TextStyle(fontSize: 14),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          (historiaAtual?.score ?? 0) > 50
-                            ? 'Score atual: ${historiaAtual?.score ?? 0} pontos → Ficará: 50 pontos'
-                            : 'Score atual: ${historiaAtual?.score ?? 0} pontos → Será mantido',
+                          'Score atual: ${historiaAtual?.score ?? 0} pontos → Ficará: 0 pontos\nRanking: ${historiaAtual?.score ?? 0} pontos → Será salvo: 50 pontos',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: (historiaAtual?.score ?? 0) > 50 ? Colors.red.shade700 : Colors.green.shade700,
+                            color: Colors.orange.shade700,
                           ),
                         ),
                       ],

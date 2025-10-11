@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 import '../models/item.dart';
 import '../models/monstro_aventura.dart';
+import 'widgets/gerenciador_equipamentos_monstros.dart';
 
 class ModalItemObtido extends StatefulWidget {
   final Item item;
@@ -98,7 +99,26 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
             const SizedBox(height: 18),
 
             // Monster selection
-            _buildMonstroSelection(),
+            Text(
+              'Selecione um monstro para equipar:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GerenciadorEquipamentosMonstros(
+              monstros: widget.monstrosDisponiveis,
+              monstroSelecionado: monstroSelecionado,
+              corDestaque: widget.item.raridade.cor,
+              onSelecionarMonstro: (monstro) {
+                setState(() {
+                  monstroSelecionado = monstro;
+                });
+              },
+              onVisualizarEquipamento: _mostrarDetalhesItem,
+            ),
             const SizedBox(height: 18),
 
             // Action buttons
@@ -164,99 +184,6 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
     );
   }
 
-  Widget _buildMonstroSelection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Selecione um monstro para equipar:',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: widget.monstrosDisponiveis.length,
-            itemBuilder: (context, index) {
-              final monstro = widget.monstrosDisponiveis[index];
-              final isSelected = monstroSelecionado == monstro;
-              
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    monstroSelecionado = monstro;
-                  });
-                },
-                child: Container(
-                  width: 90,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? widget.item.raridade.cor : Colors.grey.shade300,
-                      width: isSelected ? 3 : 1,
-                    ),
-                    gradient: isSelected ? LinearGradient(
-                      colors: [
-                        widget.item.raridade.cor.withOpacity(0.1),
-                        Colors.white,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ) : null,
-                  ),
-                  child: Column(
-                    children: [
-                      // Imagem do monstro
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
-                            color: monstro.tipo.cor.withOpacity(0.2),
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              monstro.imagem,
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Nome do monstro
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          monstro.tipo.monsterName,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? widget.item.raridade.cor : Colors.grey.shade700,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildActionButtons() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -292,9 +219,7 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
             
             try {
               await widget.onEquiparItem(monstroSelecionado!, widget.item);
-              if (mounted) {
-                Navigator.of(context).pop();
-              }
+              // Não faz pop aqui, o callback já fecha o modal
             } catch (e) {
               print('❌ [ModalItemObtido] Erro ao equipar item: $e');
               if (mounted) {
@@ -323,6 +248,138 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
           label: Text(isEquipando ? 'Equipando...' : 'Equipar'),
         ),
       ],
+    );
+  }
+
+  String _getImagemArmadura(Item item) {
+    final raridadeNome = item.raridade.nome.toLowerCase();
+    switch (raridadeNome) {
+      case 'inferior':
+        return 'assets/armaduras/armadura_inferior.png';
+      case 'normal':
+        return 'assets/armaduras/armadura_normal.png';
+      case 'rara':
+        return 'assets/armaduras/armadura_rara.png';
+      case 'épica':
+      case 'epica':
+        return 'assets/armaduras/armadura_epica.png';
+      case 'lendária':
+      case 'lendaria':
+        return 'assets/armaduras/armadura_lendaria.png';
+      default:
+        return 'assets/armaduras/armadura_normal.png';
+    }
+  }
+
+  void _mostrarDetalhesItem(Item item) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: item.raridade.cor, width: 3),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Imagem da armadura
+              Container(
+                width: 120,
+                height: 120,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: item.raridade.cor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: item.raridade.cor, width: 2),
+                ),
+                child: Image.asset(
+                  _getImagemArmadura(item),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.shield,
+                    color: item.raridade.cor,
+                    size: 60,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                item.nome,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade900,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${item.raridade.nome} - Tier ${item.tier}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bônus:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...item.atributos.entries.map((entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_right, size: 16, color: item.raridade.cor),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${entry.key}: +${entry.value}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Fechar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

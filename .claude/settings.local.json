@@ -31,7 +31,10 @@
       "Bash(q)",
       "Bash(r)",
       "Bash(cat:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(if not exist deprecated mkdir deprecated)",
+      "Bash(move casa_vigarista_screen.dart deprecatedcasa_vigarista_screen_old.dart)",
+      "Bash(move casa_vigarista_screen.dart deprecatedcasa_vigarista_screen_callback.dart)"
     ],
     "deny": [],
     "ask": []
