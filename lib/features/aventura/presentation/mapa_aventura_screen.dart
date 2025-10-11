@@ -695,10 +695,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final posicoes = [
       (0.2, 0.2),   // Ponto 1 - Superior esquerdo
       (0.7, 0.15),  // Ponto 2 - Superior direito
-      (0.5, 0.45),  // Ponto 3 - Centro
-      (0.25, 0.65), // Ponto 4 - Inferior esquerdo
-      (0.75, 0.68), // Ponto 5 - Inferior direito
-      (0.5, 0.75),  // Ponto 6 - Elite (terceira linha, centro-inferior)
+      (0.5, 0.27),  // Ponto 3 - Centro
+      (0.25, 0.38), // Ponto 4 - Inferior esquerdo
+      (0.75, 0.47), // Ponto 5 - Inferior direito
+      (0.5, 0.57),  // Ponto 6 - Elite (terceira linha, centro-inferior)
     ];
 
     // Adiciona pontos dos monstros normais
@@ -712,7 +712,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     // Adiciona monstros de coleção 3 centímetros abaixo do mercado
     for (int i = 0; i < monstrosColecao.length; i++) {
       final posX = 0.2 + (i * 0.6); // Posições 0.2, 0.8, etc. para múltiplos monstros
-      pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.35)); // 0.25 + ~0.10 = 3cm abaixo
+      pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.50)); // 0.25 + ~0.10 = 3cm abaixo
     }
 
     return pontos;
@@ -727,8 +727,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final bool estaMorto = monstro.vidaAtual <= 0;
     
     // Limita a posição máxima do topo para não colar na borda inferior
+    // Ajustado para 0.75 para evitar sobreposição com a barra de abas
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxTop = screenHeight * 0.85;
+    final maxTop = screenHeight * 0.65;
     final calcTop = (screenHeight * top).clamp(0, maxTop).toDouble();
     return Positioned(
       left: MediaQuery.of(context).size.width * left,

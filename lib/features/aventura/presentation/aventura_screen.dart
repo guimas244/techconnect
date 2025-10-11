@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
@@ -666,38 +667,88 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
               ),
             ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                
-                // Título
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Bem-vindo à Aventura TechConnect!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
+          child: Column(
+            children: [
+              // Título de boas-vindas (sempre visível quando não iniciada)
+              if (historiaAtual?.aventuraIniciada != true)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Bem-vindo à Aventura TechConnect!',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
                   ),
                 ),
-                
-                const SizedBox(height: 30),
-                
-                // Conteúdo baseado no estado
-                Expanded(
+
+              // Conteúdo baseado no estado
+              Expanded(
+                child: Padding(
+                  padding: historiaAtual?.aventuraIniciada == true
+                    ? const EdgeInsets.fromLTRB(16, 20, 16, 0)
+                    : const EdgeInsets.symmetric(horizontal: 16),
                   child: _buildConteudoPorEstado(estado),
                 ),
-              ],
-            ),
+              ),
+
+              // Footer com Score e Tier (só aparece quando aventura iniciada)
+              if (historiaAtual?.aventuraIniciada == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                    border: Border(
+                      top: BorderSide(
+                        color: const Color(0xFFf4a261).withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Score: ',
+                            style: TextStyle(fontSize: 14, color: Colors.white70),
+                          ),
+                          Text(
+                            '${historiaAtual?.score ?? 0}',
+                            style: GoogleFonts.pressStart2p(
+                              fontSize: 16,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Tier ${historiaAtual?.tier ?? 1}',
+                        style: GoogleFonts.pressStart2p(
+                          fontSize: 14,
+                          color: const Color(0xFFf4a261),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
           ),
