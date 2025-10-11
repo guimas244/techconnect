@@ -32,7 +32,41 @@ class ColecaoService {
         print('📥 [ColecaoService] Coleção encontrada no Drive, salvando no HIVE');
 
         final dados = jsonDecode(conteudo) as Map<String, dynamic>;
-        final colecao = Map<String, bool>.from(dados['monstros'] ?? {});
+
+        // Suporta ambos os formatos: antigo (monstros) e novo (colecoes)
+        Map<String, bool> colecao;
+
+        if (dados.containsKey('colecoes')) {
+          // Novo formato com arrays separados
+          print('📊 [ColecaoService] Carregando formato novo (com arrays separados)');
+
+          colecao = {};
+          final colecoes = dados['colecoes'] as Map<String, dynamic>;
+
+          // Carrega coleção inicial
+          if (colecoes.containsKey('inicial')) {
+            final inicial = Map<String, bool>.from(colecoes['inicial']);
+            colecao.addAll(inicial);
+          }
+
+          // Carrega coleção nostálgica
+          if (colecoes.containsKey('nostalgica')) {
+            final nostalgica = Map<String, bool>.from(colecoes['nostalgica']);
+            colecao.addAll(nostalgica);
+          }
+
+          // Carrega coleção Halloween (adiciona prefixo 'halloween_')
+          if (colecoes.containsKey('halloween')) {
+            final halloween = Map<String, bool>.from(colecoes['halloween']);
+            for (final entry in halloween.entries) {
+              colecao['halloween_${entry.key}'] = entry.value;
+            }
+          }
+        } else {
+          // Formato antigo (compatibilidade)
+          print('📊 [ColecaoService] Carregando formato antigo (array único)');
+          colecao = Map<String, bool>.from(dados['monstros'] ?? {});
+        }
 
         // Salva no HIVE para próximas consultas
         await _hiveService.salvarColecao(email, colecao);
@@ -69,11 +103,32 @@ class ColecaoService {
 
       print('✅ [ColecaoService] Coleção salva no HIVE');
 
-      // 2º: Salva no Drive (sincronização)
+      // 2º: Salva no Drive (sincronização) com novo formato
       try {
+        // Separa as coleções em arrays diferentes
+        final colecaoInicial = <String, bool>{};
+        final colecaoNostalgica = <String, bool>{};
+        final colecaoHalloween = <String, bool>{};
+
+        for (final entry in colecao.entries) {
+          if (entry.key.startsWith('halloween_')) {
+            // Remove o prefixo 'halloween_' para salvar no Drive
+            final tipo = entry.key.replaceFirst('halloween_', '');
+            colecaoHalloween[tipo] = entry.value;
+          } else if (ColecaoHiveService.monstrosNostalgicos.contains(entry.key)) {
+            colecaoNostalgica[entry.key] = entry.value;
+          } else {
+            colecaoInicial[entry.key] = entry.value;
+          }
+        }
+
         final dados = {
           'email': email,
-          'monstros': colecao,
+          'colecoes': {
+            'inicial': colecaoInicial,
+            'nostalgica': colecaoNostalgica,
+            'halloween': colecaoHalloween,
+          },
           'ultima_atualizacao': DateTime.now().toIso8601String(),
         };
 
@@ -86,6 +141,7 @@ class ColecaoService {
           // Marca como sincronizada se salvar no Drive
           await _hiveService.marcarComoSincronizada(email);
           print('✅ [ColecaoService] Coleção salva no Drive e marcada como sincronizada');
+          print('📊 [ColecaoService] Inicial: ${colecaoInicial.length}, Nostálgica: ${colecaoNostalgica.length}, Halloween: ${colecaoHalloween.length}');
         } else {
           print('⚠️ [ColecaoService] Falha ao salvar no Drive, mas dados salvos localmente');
         }

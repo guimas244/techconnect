@@ -192,14 +192,13 @@ class ColecaoHiveService {
     'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
   ];
 
-  /// Lista dos 30 monstros de Halloween
+  /// Lista dos 30 monstros de Halloween (mesmos tipos da roleta)
   static List<String> get monstrosHalloween => [
-    'abobora', 'aranha', 'bruxa', 'caldeira', 'caveira',
-    'cemiterio', 'corvo', 'espantalho', 'esqueleto', 'foice',
-    'gato_preto', 'grimorio', 'lobisomem', 'lua_cheia', 'mansao',
-    'mascara', 'morcego', 'morto_vivo', 'mumia', 'noite',
-    'olho', 'ouija', 'pocao', 'sombra', 'tesoura',
-    'tumba', 'vampiro', 'vassoura', 'vela', 'veneno'
+    'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
+    'eletrico', 'fantasma', 'fogo', 'gelo', 'inseto', 'luz',
+    'magico', 'marinho', 'mistico', 'normal', 'nostalgico', 'pedra',
+    'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo', 'terrestre',
+    'trevas', 'venenoso', 'vento', 'voador', 'zumbi', 'fera',
   ];
 
   /// Cria uma coleção inicial com todos os monstros bloqueados

@@ -9,6 +9,7 @@ enum TipoResultado {
   cura,
   abrirFeirao,
   abrirBiblioteca,
+  roleta,
   nenhum,
 }
 

@@ -1,10 +1,14 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/historia_jogador.dart';
+import '../models/monstro_aventura.dart';
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
 import 'models/resultado_loja.dart';
+import 'roleta_halloween_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../shared/models/tipo_enum.dart';
+import '../models/habilidade.dart';
 
 /// Casa do Vigarista - Nova implementação seguindo REESTRUTURACAO_LOJA.md
 /// Retorna ResultadoLoja via Navigator.pop() ou callback se inline
@@ -32,6 +36,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
   int get custoCura => 1 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
   int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
+  int get custoRoleta => 0; // Roleta é gratuita
 
   @override
   void initState() {
@@ -143,7 +148,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        // Row 2: Loja de Itens + Loja de Magias
+        // Row 2: Loja de Itens + Roleta + Loja de Magias
         Row(
           children: [
             Expanded(
@@ -154,6 +159,16 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
                 color: const Color(0xFFf4a261),
                 onTap: _abrirFeirao,
                 badge: 'x3',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildOptionCard(
+                title: 'Roleta de Sorteio',
+                iconAsset: 'assets/icons_gerais/roleta.png',
+                cost: custoRoleta,
+                color: const Color(0xFFe76f51),
+                onTap: _abrirRoleta,
               ),
             ),
             const SizedBox(width: 8),
@@ -949,6 +964,140 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
       }
     } catch (e) {
       print('❌ Erro ao abrir biblioteca: $e');
+      if (mounted) {
+        setState(() => _comprando = false);
+      }
+    }
+  }
+
+  /// Abre a roleta de Halloween com cartas
+  Future<void> _abrirRoleta() async {
+    print('🎰 [Roleta] Iniciando roleta de sorteio...');
+
+    // Modal de confirmação
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a2e),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/icons_gerais/roleta.png',
+              width: 32,
+              height: 32,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Roleta de Sorteio',
+              style: TextStyle(color: Color(0xFFe76f51)),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Deseja girar a roleta?',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Custo: $custoRoleta (GRÁTIS)',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'A roleta sorteará 3 monstros de Halloween!\nDepois você escolhe 1 carta.',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFe76f51),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Girar'),
+          ),
+        ],
+      ),
+    );
+
+    // Se cancelou, retorna
+    if (confirmacao != true) return;
+
+    setState(() => _comprando = true);
+
+    try {
+      print('🎰 [Roleta] Navegando para roleta de Halloween...');
+
+      // Desliga loading enquanto a roleta roda
+      setState(() => _comprando = false);
+
+      // Navega para tela de roleta de Halloween
+      final monstroRetornado = await Navigator.of(context).push<MonstroAventura>(
+        MaterialPageRoute(
+          builder: (context) => const RoletaHalloweenScreen(),
+        ),
+      );
+
+      // Se retornou um monstro, adiciona à equipe
+      if (monstroRetornado != null && mounted) {
+        print('🎰 [Roleta] Monstro escolhido: ${monstroRetornado.tipo.monsterName}');
+        print('🎰 [Roleta] Adicionando monstro à equipe...');
+
+        // Adiciona monstro à lista de monstros
+        final monstrosAtualizados = [..._historiaAtual.monstros, monstroRetornado];
+
+        final resultado = ResultadoLoja(
+          tipo: TipoResultado.roleta,
+          historiaAtualizada: _historiaAtual.copyWith(
+            monstros: monstrosAtualizados,
+            score: _historiaAtual.score - custoRoleta, // 0
+          ),
+        );
+
+        // Atualiza estado local
+        setState(() {
+          _historiaAtual = resultado.historiaAtualizada;
+        });
+
+        // Se tem callback (inline), chama ele
+        if (widget.onResultado != null) {
+          print('🔄 [Roleta] Usando callback inline');
+          widget.onResultado!(resultado);
+        } else {
+          // Está como modal, usa Navigator.pop
+          print('📤 [Roleta] Modal - usando Navigator.pop');
+          if (mounted) {
+            Navigator.of(context).pop(resultado);
+          }
+        }
+      } else {
+        print('🎰 [Roleta] Usuário cancelou ou não retornou monstro');
+      }
+    } catch (e) {
+      print('❌ Erro ao abrir roleta: $e');
       if (mounted) {
         setState(() => _comprando = false);
       }

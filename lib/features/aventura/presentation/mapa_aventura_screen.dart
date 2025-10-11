@@ -976,6 +976,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         }
         break;
 
+      case TipoResultado.roleta:
+        // TODO: Implementar modal/tela da roleta de sorteio
+        print('🎰 [Roleta] Resultado da roleta recebido');
+        break;
+
       case TipoResultado.nenhum:
         break;
     }
