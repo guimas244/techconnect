@@ -120,8 +120,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     // Verifica se é item permanente de evento (não pode ser descartado)
     final podeDescartar = item.tipo != TipoItemConsumivel.ovoEvento &&
                           item.tipo != TipoItemConsumivel.moedaEvento;
-    // Verifica se pode usar (apenas se quantidade > 0)
-    final podeUsar = item.quantidade > 0;
+    // Moeda de evento não pode ser usada, apenas ovos (se quantidade > 0)
+    final podeUsar = item.tipo != TipoItemConsumivel.moedaEvento && item.quantidade > 0;
 
     showDialog(
       context: context,

@@ -10,6 +10,7 @@ import '../../../shared/models/tipo_enum.dart';
 import '../../../core/providers/user_provider.dart';
 import '../models/monstro_aventura.dart';
 import '../services/colecao_service.dart';
+import '../services/mochila_service.dart';
 
 /// Tela da Roleta de Halloween - Sorteia 3 monstros de Halloween
 class RoletaHalloweenScreen extends ConsumerStatefulWidget {
@@ -551,79 +552,150 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
 
     print('🎃 [Halloween] Carta selecionada: ${tipoSorteado.name}');
 
-    // 1º: Salva no Drive (prioridade)
-    await _salvarNaColecaoHalloween(tipoSorteado);
+    // 1º: Verifica ANTES de salvar se é duplicado
+    final email = ref.read(validUserEmailProvider);
+    final colecaoAtual = await _colecaoService.carregarColecaoJogador(email);
+    final chave = 'halloween_${tipoSorteado.name}';
+    final ehDuplicado = colecaoAtual[chave] == true;
+
+    print('🎃 [Halloween] Verificando duplicado ANTES de salvar: $chave = ${colecaoAtual[chave]}');
+
+    // 2º: Salva no Drive apenas se NÃO for duplicado
+    if (!ehDuplicado) {
+      await _salvarNaColecaoHalloween(tipoSorteado);
+    } else {
+      print('🥚 [Halloween] Monstro JÁ existe na coleção - não salvando novamente');
+    }
 
     if (!mounted) return;
 
-    // 2º: Esconde loading e mostra carta
+    // 3º: Esconde loading e mostra carta
     setState(() {
       _salvando = false;
       _revelando = true;
     });
 
-    // 3º: Revela a carta com animação
+    // 4º: Revela a carta com animação
     _flipControllers[index].reverse().then((_) {
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
-          _retornarMonstro(tipoSorteado);
+          _retornarMonstro(tipoSorteado, ehDuplicado);
         }
       });
     });
   }
 
-  Future<void> _retornarMonstro(Tipo tipoSorteado) async {
-    // Cria o monstro
-    final random = Random();
-    final outrosTipos = Tipo.values.where((t) => t != tipoSorteado).toList();
-    outrosTipos.shuffle(random);
+  Future<void> _retornarMonstro(Tipo tipoSorteado, bool ehDuplicado) async {
+    print('🎃 [Halloween] Mostrando resultado: ${tipoSorteado.name} - Duplicado: $ehDuplicado');
 
-    final monstro = MonstroAventura(
-      tipo: tipoSorteado,
-      tipoExtra: outrosTipos.first,
-      imagem: 'assets/monstros_aventura/colecao_halloween/${tipoSorteado.name}.png',
-      vida: 75 + random.nextInt(76),
-      energia: 20 + random.nextInt(21),
-      agilidade: 10 + random.nextInt(11),
-      ataque: 10 + random.nextInt(11),
-      defesa: 40 + random.nextInt(21),
-      habilidades: [],
-      level: 1,
-    );
+    if (ehDuplicado) {
+      // É duplicado - dar ovo de evento
+      print('🥚 [Halloween] Monstro duplicado! Dando ovo de evento...');
 
-    // Mostra o modal de detalhes do monstro (estilo catálogo)
-    await showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.72)),
-            ),
-            Positioned.fill(
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                  child: Container(color: Colors.black.withOpacity(0.04)),
+      // Adiciona 1 ovo na mochila
+      await _adicionarOvoNaMochila();
+
+      // Mostra o modal do ovo
+      await showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(color: Colors.black.withOpacity(0.72)),
+              ),
+              Positioned.fill(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(color: Colors.black.withOpacity(0.04)),
+                  ),
                 ),
               ),
-            ),
-            Center(
-              child: _buildMonstroDetalheCard(
-                context: context,
-                monstro: monstro,
+              Center(
+                child: _buildOvoDetalheCard(context: context),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    // Após fechar o modal, retorna o monstro
-    if (mounted) {
-      Navigator.of(context).pop(monstro);
+      // Retorna sem monstro (já tinha)
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } else {
+      // Não é duplicado - criar e mostrar o monstro
+      final random = Random();
+      final outrosTipos = Tipo.values.where((t) => t != tipoSorteado).toList();
+      outrosTipos.shuffle(random);
+
+      final monstro = MonstroAventura(
+        tipo: tipoSorteado,
+        tipoExtra: outrosTipos.first,
+        imagem: 'assets/monstros_aventura/colecao_halloween/${tipoSorteado.name}.png',
+        vida: 75 + random.nextInt(76),
+        energia: 20 + random.nextInt(21),
+        agilidade: 10 + random.nextInt(11),
+        ataque: 10 + random.nextInt(11),
+        defesa: 40 + random.nextInt(21),
+        habilidades: [],
+        level: 1,
+      );
+
+      // Mostra o modal de detalhes do monstro (estilo catálogo)
+      await showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(color: Colors.black.withOpacity(0.72)),
+              ),
+              Positioned.fill(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(color: Colors.black.withOpacity(0.04)),
+                  ),
+                ),
+              ),
+              Center(
+                child: _buildMonstroDetalheCard(
+                  context: context,
+                  monstro: monstro,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Após fechar o modal, retorna o monstro
+      if (mounted) {
+        Navigator.of(context).pop(monstro);
+      }
+    }
+  }
+
+  Future<void> _adicionarOvoNaMochila() async {
+    try {
+      final email = ref.read(validUserEmailProvider);
+      if (email.isEmpty) return;
+
+      final mochila = await MochilaService.carregarMochila(context, email);
+      if (mochila == null) return;
+
+      final mochilaAtualizada = mochila.adicionarOvoEvento(1);
+      await MochilaService.salvarMochila(context, email, mochilaAtualizada);
+
+      print('✅ [Halloween] Ovo de evento adicionado à mochila!');
+    } catch (e) {
+      print('❌ [Halloween] Erro ao adicionar ovo: $e');
     }
   }
 
@@ -740,16 +812,21 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
       child: Row(
         children: [
           Image.asset(
-            'assets/icons_gerais/carta_verso.jpg',
+            'assets/icons_gerais/carta_verso.jpeg',
             width: 40,
             height: 40,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.style, size: 40, color: Color(0xFFe76f51));
+            },
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Escolha sua Carta',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
               style: GoogleFonts.cinzel(
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFe76f51),
               ),
@@ -874,7 +951,7 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
       child: ClipRRect(
         borderRadius: BorderRadius.circular(13),
         child: Image.asset(
-          'assets/icons_gerais/carta_verso.jpg',
+          'assets/icons_gerais/carta_verso.jpeg',
           fit: BoxFit.cover,
         ),
       ),
@@ -1114,6 +1191,163 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOvoDetalheCard({required BuildContext context}) {
+    final size = MediaQuery.of(context).size;
+    final width = math.min(size.width * 0.85, 420.0);
+    final height = math.min(size.height * 0.75, 520.0);
+    final baseColor = const Color(0xFFFF9800); // Laranja lendário
+
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        width: width,
+        constraints: BoxConstraints(maxHeight: height),
+        padding: const EdgeInsets.fromLTRB(28, 38, 28, 28),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [baseColor.withOpacity(0.95), baseColor.withOpacity(0.55)],
+          ),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white.withOpacity(0.22), width: 1.4),
+          boxShadow: [
+            BoxShadow(
+              color: baseColor.withOpacity(0.35),
+              blurRadius: 34,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: height * 0.46,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.18),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Image.asset(
+                          'assets/eventos/halloween/ovo_halloween.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.egg,
+                              size: 120,
+                              color: Colors.white,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Monstro Duplicado!',
+              textAlign: TextAlign.center,
+              style:
+                  textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                  ) ??
+                  const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Você ganhou 1 Ovo do Evento!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              decoration: BoxDecoration(
+                color: baseColor.withOpacity(0.35),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: baseColor.withOpacity(0.7), width: 1.3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.egg,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'RECOMPENSA',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.75),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const Text(
+                        'Ovo do Evento',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
