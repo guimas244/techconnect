@@ -1463,7 +1463,12 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_fix_high, color: destaque),
+              Image.asset(
+                _getImagemTipoMagia(magia),
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1492,7 +1497,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             children: [
               _buildInfoChip('Tipo', magia.tipo.nome, destaque),
               _buildInfoChip('Efeito', magia.efeito.nome, destaque),
-              _buildInfoChip('Valor', magia.valor.toString(), Colors.orangeAccent),
+              _buildInfoChip('Valor', magia.valorEfetivo.toString(), Colors.orangeAccent),
               _buildInfoChip('Level', magia.level.toString(), Colors.lightBlueAccent),
               _buildInfoChip('Custo', '${magia.custoEnergia} EN', Colors.greenAccent),
             ],
@@ -1584,11 +1589,22 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                                   color: selecionada ? destaque : Colors.grey.shade300,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  selecionada ? Icons.check : Icons.auto_fix_high,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
+                                child: selecionada
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 18,
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.all(6),
+                                      child: Image.asset(
+                                        _getImagemTipoHabilidade(habilidade),
+                                        width: 20,
+                                        height: 20,
+                                        fit: BoxFit.contain,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -2311,5 +2327,21 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
     }
+  }
+
+  String _getImagemTipoMagia(MagiaDrop magia) {
+    final tipo = magia.tipo.toString().toLowerCase();
+    if (tipo.contains('ofensiv')) return 'assets/icons_gerais/magia_ofensiva.png';
+    if (tipo.contains('cura')) return 'assets/icons_gerais/magia_cura.png';
+    if (tipo.contains('suporte')) return 'assets/icons_gerais/magia_suporte.png';
+    return 'assets/icons_gerais/magia.png';
+  }
+
+  String _getImagemTipoHabilidade(Habilidade hab) {
+    final tipo = hab.tipo.toString().toLowerCase();
+    if (tipo.contains('ofensiv')) return 'assets/icons_gerais/magia_ofensiva.png';
+    if (tipo.contains('cura')) return 'assets/icons_gerais/magia_cura.png';
+    if (tipo.contains('suporte')) return 'assets/icons_gerais/magia_suporte.png';
+    return 'assets/icons_gerais/magia.png';
   }
 }

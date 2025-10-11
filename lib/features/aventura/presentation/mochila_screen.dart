@@ -200,6 +200,11 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
             item,
             mensagem: '${monstro.nome} recuperou $curaTotal de vida com ${item.nome}!',
           );
+
+          // Fecha o modal
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         },
       ),
     );

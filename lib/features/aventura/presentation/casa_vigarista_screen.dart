@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/historia_jogador.dart';
 import '../services/item_service.dart';
@@ -99,17 +100,6 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
               ),
             ),
           ),
-          IconButton(
-            onPressed: _comprando
-                ? null
-                : () => Navigator.of(context).pop(ResultadoLoja(
-                      tipo: TipoResultado.nenhum,
-                      historiaAtualizada: _historiaAtual,
-                    )),
-            icon: const Icon(Icons.close),
-            color: Colors.white70,
-            iconSize: 28,
-          ),
         ],
       ),
     );
@@ -117,27 +107,33 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
 
   Widget _buildOptionsGrid() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Row 1: Item + Magia (centralizados)
+        // Row 1: Item + Cura + Magia
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
+            Expanded(
               child: _buildOptionCard(
+                title: 'Comprar Item',
                 iconAsset: 'assets/icons_gerais/bau.png',
                 cost: custoAposta,
                 color: const Color(0xFF9d4edd),
                 onTap: _apostarItem,
               ),
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 120,
-              height: 120,
+            const SizedBox(width: 8),
+            Expanded(
               child: _buildOptionCard(
+                title: 'Comprar Cura',
+                iconAsset: 'assets/icons_gerais/cura.png',
+                cost: custoCura,
+                color: const Color(0xFFe63946),
+                onTap: _apostarCura,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildOptionCard(
+                title: 'Comprar Magia',
                 iconAsset: 'assets/icons_gerais/magia.png',
                 cost: custoAposta,
                 color: const Color(0xFF457b9d),
@@ -146,28 +142,13 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Row 2: Cura (linha inteira)
-        SizedBox(
-          width: double.infinity,
-          height: 100,
-          child: _buildOptionCard(
-            iconAsset: 'assets/icons_gerais/cura.png',
-            cost: custoCura,
-            color: const Color(0xFFe63946),
-            onTap: _apostarCura,
-            isFullWidth: true,
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Row 3: Feirão + Biblioteca (centralizados)
+        const SizedBox(height: 8),
+        // Row 2: Loja de Itens + Loja de Magias
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 120,
-              height: 120,
+            Expanded(
               child: _buildOptionCard(
+                title: 'Abrir Loja de Itens',
                 iconAsset: 'assets/icons_gerais/bau.png',
                 cost: custoFeirao,
                 color: const Color(0xFFf4a261),
@@ -175,11 +156,10 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
                 badge: 'x3',
               ),
             ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 120,
-              height: 120,
+            const SizedBox(width: 8),
+            Expanded(
               child: _buildOptionCard(
+                title: 'Abrir Loja de Magias',
                 iconAsset: 'assets/icons_gerais/magia.png',
                 cost: custoFeirao,
                 color: const Color(0xFF2a9d8f),
@@ -194,91 +174,116 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   }
 
   Widget _buildOptionCard({
+    required String title,
     required String iconAsset,
     required int cost,
     required Color color,
     required VoidCallback onTap,
     String? badge,
-    bool isFullWidth = false,
   }) {
     final canAfford = _historiaAtual.score >= cost;
 
     return GestureDetector(
       onTap: canAfford && !_comprando ? onTap : null,
-      child: Container(
-        decoration: BoxDecoration(
-          color: (canAfford ? color : Colors.grey.shade800).withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: canAfford ? color : Colors.grey.shade700,
-            width: 2,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Ícone principal
-            Center(
-              child: Image.asset(
-                iconAsset,
-                width: isFullWidth ? 64 : 56,
-                height: isFullWidth ? 64 : 56,
-                fit: BoxFit.contain,
-                color: canAfford ? null : Colors.grey.shade600,
-              ),
+      child: AspectRatio(
+        aspectRatio: 0.7, // Cards verticais (mais altos que largos)
+        child: Container(
+          decoration: BoxDecoration(
+            color: (canAfford ? color : Colors.grey.shade800).withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: canAfford ? color : Colors.grey.shade700,
+              width: 2,
             ),
-            // Badge x3 no canto superior direito
-            if (badge != null)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+          ),
+          child: Column(
+            children: [
+              // Row 1: Nome (centralizado, multi-linha)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                width: double.infinity,
+                child: Center(
                   child: Text(
-                    badge,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: canAfford ? Colors.white : Colors.grey.shade600,
+                    title,
+                    style: GoogleFonts.cinzel(
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
+                      color: canAfford ? Colors.white : Colors.grey.shade500,
                     ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.visible,
                   ),
                 ),
               ),
-            // Preço no canto inferior direito
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
+              // Row 2: Imagem (área maior) com badge
+              Expanded(
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Image.asset(
+                          iconAsset,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.contain,
+                          color: canAfford ? null : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    // Badge x3 no canto superior direito da imagem
+                    if (badge != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: canAfford ? Colors.white.withValues(alpha: 0.3) : Colors.grey.shade700,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            badge,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: canAfford ? Colors.white : Colors.grey.shade600,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
+              // Row 3: Valor
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.monetization_on,
                       color: canAfford ? Colors.amber : Colors.grey.shade600,
-                      size: 16,
+                      size: 18,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '$cost',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.pressStart2p(
+                        fontSize: 16,
                         color: canAfford ? Colors.amber : Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -667,8 +672,9 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
 
       print('🛒 [Loja] Comprando cura...');
 
-      // Calcula porcentagem de cura
-      final porcentagemCura = 30 + (_historiaAtual.tier * 5);
+      // Sorteia porcentagem de cura aleatória (1-100%)
+      final random = Random();
+      final porcentagemCura = 1 + random.nextInt(100); // 1 a 100
 
       // Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
@@ -757,7 +763,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Você receberá 3 itens aleatórios para escolher.',
+              'Você poderá escolher e comprar 1 entre 3 itens aleatórios.',
               style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
             ),
           ],
@@ -873,7 +879,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Você receberá 3 magias aleatórias para escolher.',
+              'Você poderá escolher e comprar 1 entre 3 magias aleatórias.',
               style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
             ),
           ],
