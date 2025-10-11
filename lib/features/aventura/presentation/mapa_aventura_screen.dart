@@ -511,7 +511,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
 
     return CasaVigaristaScreen(
-      key: ValueKey('loja_${historiaAtual!.score}_${historiaAtual!.tier}'),
+      key: ValueKey('loja_${historiaAtual!.score}_${historiaAtual!.tier}_${historiaAtual!.monstros.map((m) => m.vidaAtual).join("_")}'),
       historia: historiaAtual!,
       onResultado: (ResultadoLoja resultado) async {
         print('📥 [Mapa] Recebeu resultado da loja inline: ${resultado.tipo}');
@@ -1134,13 +1134,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             }
 
             print('✅ [Loja] Monstro curado e salvo localmente (Hive apenas)');
-
-            // Fecha o modal
-            if (mounted && Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
           } catch (e) {
             print('❌ [Loja] Erro ao salvar cura: $e');
+          }
+
+          // Fecha o modal
+          if (mounted) {
+            Navigator.of(context).pop();
           }
         },
       ),
