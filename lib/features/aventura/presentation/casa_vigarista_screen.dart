@@ -53,10 +53,6 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        _buildVigaristaSection(),
-                        const SizedBox(height: 32),
-                        _buildWelcomeText(),
-                        const SizedBox(height: 32),
                         _buildOptionsGrid(),
                       ],
                     ),
@@ -86,10 +82,11 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.store,
-            color: Color(0xFFf4a261),
-            size: 28,
+          Image.asset(
+            'assets/npc/besta_Karma.png',
+            width: 32,
+            height: 32,
+            fit: BoxFit.contain,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -118,73 +115,29 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
     );
   }
 
-  Widget _buildVigaristaSection() {
-    return Container(
-      width: 140,
-      height: 140,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2a2a3e),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFFf4a261),
-          width: 3,
-        ),
-      ),
-      child: Center(
-        child: Image.asset(
-          'assets/npc/besta_Karma.png',
-          width: 110,
-          height: 110,
-          fit: BoxFit.contain,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeText() {
-    return Column(
-      children: [
-        Text(
-          'Olá, aventureiro!',
-          style: GoogleFonts.cinzel(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Tenho ofertas especiais para você...',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white70,
-            fontStyle: FontStyle.italic,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
   Widget _buildOptionsGrid() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Row 1: Item + Magia (centralizados)
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
+            SizedBox(
+              width: 120,
+              height: 120,
               child: _buildOptionCard(
-                title: 'Item Misterioso',
                 iconAsset: 'assets/icons_gerais/bau.png',
                 cost: custoAposta,
                 color: const Color(0xFF9d4edd),
                 onTap: _apostarItem,
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 120,
+              height: 120,
               child: _buildOptionCard(
-                title: 'Magia Ancestral',
                 iconAsset: 'assets/icons_gerais/magia.png',
                 cost: custoAposta,
                 color: const Color(0xFF457b9d),
@@ -193,37 +146,45 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        _buildOptionCard(
-          title: 'Cura da Vida',
-          iconAsset: 'assets/icons_gerais/cura.png',
-          cost: custoCura,
-          color: const Color(0xFFe63946),
-          onTap: _apostarCura,
-          fullWidth: true,
+        const SizedBox(height: 12),
+        // Row 2: Cura (linha inteira)
+        SizedBox(
+          width: double.infinity,
+          height: 100,
+          child: _buildOptionCard(
+            iconAsset: 'assets/icons_gerais/cura.png',
+            cost: custoCura,
+            color: const Color(0xFFe63946),
+            onTap: _apostarCura,
+            isFullWidth: true,
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        // Row 3: Feirão + Biblioteca (centralizados)
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
+            SizedBox(
+              width: 120,
+              height: 120,
               child: _buildOptionCard(
-                title: 'Feirão',
                 iconAsset: 'assets/icons_gerais/bau.png',
                 cost: custoFeirao,
                 color: const Color(0xFFf4a261),
                 onTap: _abrirFeirao,
-                badge: '3 itens',
+                badge: 'x3',
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 120,
+              height: 120,
               child: _buildOptionCard(
-                title: 'Biblioteca',
                 iconAsset: 'assets/icons_gerais/magia.png',
                 cost: custoFeirao,
                 color: const Color(0xFF2a9d8f),
                 onTap: _abrirBiblioteca,
-                badge: '3 magias',
+                badge: 'x3',
               ),
             ),
           ],
@@ -233,84 +194,89 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   }
 
   Widget _buildOptionCard({
-    required String title,
     required String iconAsset,
     required int cost,
     required Color color,
     required VoidCallback onTap,
-    bool fullWidth = false,
     String? badge,
+    bool isFullWidth = false,
   }) {
     final canAfford = _historiaAtual.score >= cost;
 
     return GestureDetector(
       onTap: canAfford && !_comprando ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: (canAfford ? color : Colors.grey.shade800).withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: canAfford ? color : Colors.grey.shade700,
             width: 2,
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Image.asset(
-              iconAsset,
-              width: 48,
-              height: 48,
-              fit: BoxFit.contain,
-              color: canAfford ? null : Colors.grey.shade600,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: GoogleFonts.cinzel(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: canAfford ? Colors.white : Colors.grey.shade500,
+            // Ícone principal
+            Center(
+              child: Image.asset(
+                iconAsset,
+                width: isFullWidth ? 64 : 56,
+                height: isFullWidth ? 64 : 56,
+                fit: BoxFit.contain,
+                color: canAfford ? null : Colors.grey.shade600,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            if (badge != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            // Badge x3 no canto superior direito
+            if (badge != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: canAfford ? Colors.white : Colors.grey.shade600,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            // Preço no canto inferior direito
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  badge,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: canAfford ? Colors.white : Colors.grey.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.monetization_on,
+                      color: canAfford ? Colors.amber : Colors.grey.shade600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$cost',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.monetization_on,
-                  color: canAfford ? Colors.amber : Colors.grey.shade600,
-                  size: 20,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '$cost',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: canAfford ? Colors.amber : Colors.grey.shade600,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -320,7 +286,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
 
   Widget _buildFooter() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.3),
         border: Border(
@@ -333,19 +299,16 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          Row(
             children: [
               const Text(
-                'Seu Score',
+                'Score: ',
                 style: TextStyle(fontSize: 14, color: Colors.white70),
               ),
-              const SizedBox(height: 4),
               Text(
                 '${_historiaAtual.score}',
                 style: GoogleFonts.pressStart2p(
-                  fontSize: 20,
+                  fontSize: 16,
                   color: Colors.amber,
                 ),
               ),
@@ -354,7 +317,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
           Text(
             'Tier ${_historiaAtual.tier}',
             style: GoogleFonts.pressStart2p(
-              fontSize: 16,
+              fontSize: 14,
               color: const Color(0xFFf4a261),
             ),
           ),
