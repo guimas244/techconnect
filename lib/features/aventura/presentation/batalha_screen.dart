@@ -1396,14 +1396,21 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   ItemConsumivel _converterDropConsumivel(Drop drop) {
     TipoItemConsumivel tipoConsumivel;
+    RaridadeConsumivel raridade;
+
     switch (drop.tipo) {
       case TipoDrop.pedraReforco:
         tipoConsumivel = TipoItemConsumivel.joia;
+        raridade = RaridadeConsumivel.lendario;
+        break;
+      case TipoDrop.pocaoVidaGrande:
+        tipoConsumivel = TipoItemConsumivel.pocao;
+        raridade = RaridadeConsumivel.epico;
         break;
       case TipoDrop.pocaoVidaPequena:
-      case TipoDrop.pocaoVidaGrande:
       default:
         tipoConsumivel = TipoItemConsumivel.pocao;
+        raridade = RaridadeConsumivel.comum;
         break;
     }
 
@@ -1414,7 +1421,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       tipo: tipoConsumivel,
       iconPath: drop.tipo.imagePath,
       quantidade: drop.quantidade,
-      raridade: RaridadeConsumivel.comum,
+      raridade: raridade,
     );
   }
 

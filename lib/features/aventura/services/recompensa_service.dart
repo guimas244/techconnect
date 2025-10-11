@@ -71,13 +71,7 @@ class RecompensaService {
   /// Tier 6-10: 5% de chance
   /// Tier 11+: 10% de chance fixo
   int _calcularDropMoedaEvento(int tier) {
-    // ========== MODO TESTE: 100% DE CHANCE ==========
-    // TODO: REMOVER ESTA LINHA APÓS TESTES
-    double chance = 100.0; // TESTE: sempre dropa
-
-    // ========== MODO PRODUÇÃO (COMENTADO PARA TESTE) ==========
-    // Descomente as linhas abaixo e remova a linha acima para voltar ao normal
-    /*
+    // ========== MODO PRODUÇÃO ==========
     double chance = 0.0;
 
     if (tier <= 5) {
@@ -87,8 +81,6 @@ class RecompensaService {
     } else {
       chance = 10.0; // 10% fixo tier 11+
     }
-    */
-    // ========== FIM MODO PRODUÇÃO ==========
 
     final roll = _random.nextDouble() * 100;
     final dropou = roll < chance;

@@ -16,10 +16,11 @@ class DropsService {
 
     if (configJson == null) {
       // Usa valores padrão se não houver configuração
+      // Ordem: do mais raro (menor %) para o menos raro (maior %)
       return _sortearComPorcentagens({
-        TipoDrop.pocaoVidaPequena: 30.0,
-        TipoDrop.pocaoVidaGrande: 10.0,
-        TipoDrop.pedraReforco: 5.0,
+        TipoDrop.pedraReforco: 1.0,        // 1% - Lendário (prioridade 1)
+        TipoDrop.pocaoVidaGrande: 2.0,     // 2% - Épico (prioridade 2)
+        TipoDrop.pocaoVidaPequena: 5.0,    // 5% - Inferior (prioridade 3)
       });
     }
 
