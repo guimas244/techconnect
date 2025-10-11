@@ -12,25 +12,25 @@ class RecompensaService {
   final MagiaService _magiaService = MagiaService();
 
   /// Gera recompensas baseadas no score do jogador
-  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool
+  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int
   Map<String, dynamic> gerarRecompensasPorScore(int score, int tierAtual) {
     print('🎁 [RecompensaService] Gerando recompensas para score: $score, tier: $tierAtual');
-    
+
     if (score < 1) {
       print('❌ [RecompensaService] Score insuficiente ($score < 1)');
-      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false};
+      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0};
     }
 
     // 1. Drop fixo garantido
     final recompensas = <dynamic>[];
     recompensas.add(_gerarItemOuMagia(tierAtual, score));
-    
+
     // 2. Drops adicionais baseados no score (3% por score)
     int dropsAdicionais = _calcularDropsAdicionais(score);
     for (int i = 0; i < dropsAdicionais; i++) {
       recompensas.add(_gerarItemOuMagia(tierAtual, score));
     }
-    
+
     // 3. Super Drop (dobrar quantidade) - 1% por 2 de score
     bool superDrop = _calcularSuperDrop(score);
     if (superDrop) {
@@ -40,11 +40,14 @@ class RecompensaService {
         recompensas.add(_gerarItemOuMagia(tierAtual, score));
       }
     }
-    
+
+    // 4. Moeda de Evento (chance independente baseada no tier)
+    int moedaEvento = _calcularDropMoedaEvento(tierAtual);
+
     // Separa itens e magias
     final itens = <Item>[];
     final magias = <MagiaDrop>[];
-    
+
     for (var recompensa in recompensas) {
       if (recompensa is Item) {
         itens.add(recompensa);
@@ -52,14 +55,50 @@ class RecompensaService {
         magias.add(recompensa);
       }
     }
-    
-    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop');
-    
+
+    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento');
+
     return {
       'itens': itens,
       'magias': magias,
       'superDrop': superDrop,
+      'moedaEvento': moedaEvento,
     };
+  }
+
+  /// Calcula drop de moeda de evento baseado no tier
+  /// Tier 1-5: 1-5% de chance
+  /// Tier 6-10: 5% de chance
+  /// Tier 11+: 10% de chance fixo
+  int _calcularDropMoedaEvento(int tier) {
+    // ========== MODO TESTE: 100% DE CHANCE ==========
+    // TODO: REMOVER ESTA LINHA APÓS TESTES
+    double chance = 100.0; // TESTE: sempre dropa
+
+    // ========== MODO PRODUÇÃO (COMENTADO PARA TESTE) ==========
+    // Descomente as linhas abaixo e remova a linha acima para voltar ao normal
+    /*
+    double chance = 0.0;
+
+    if (tier <= 5) {
+      chance = tier.toDouble(); // 1% no tier 1, 2% no tier 2, etc.
+    } else if (tier <= 10) {
+      chance = 5.0; // 5% fixo do tier 6 ao 10
+    } else {
+      chance = 10.0; // 10% fixo tier 11+
+    }
+    */
+    // ========== FIM MODO PRODUÇÃO ==========
+
+    final roll = _random.nextDouble() * 100;
+    final dropou = roll < chance;
+
+    if (dropou) {
+      print('🪙 [RecompensaService] MOEDA DE EVENTO DROPADA! (Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');
+      return 1;
+    }
+
+    return 0;
   }
 
   /// Calcula quantos drops adicionais baseado no score

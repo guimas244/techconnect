@@ -117,16 +117,22 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   }
 
   void _mostrarDetalhesItem(ItemConsumivel item, int index) {
+    // Verifica se é item permanente de evento (não pode ser descartado)
+    final podeDescartar = item.tipo != TipoItemConsumivel.ovoEvento &&
+                          item.tipo != TipoItemConsumivel.moedaEvento;
+    // Verifica se pode usar (apenas se quantidade > 0)
+    final podeUsar = item.quantidade > 0;
+
     showDialog(
       context: context,
       builder: (context) => ModalItemConsumivel(
         item: item,
-        onUsar: () {
+        onUsar: podeUsar ? () {
           _usarItem(index);
-        },
-        onDescartar: () {
+        } : null,
+        onDescartar: podeDescartar ? () {
           _descartarItem(index);
-        },
+        } : null,
       ),
     );
   }
@@ -147,7 +153,36 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
+    if (item.tipo == TipoItemConsumivel.ovoEvento) {
+      await _usarOvoEvento();
+      return;
+    }
+
     await _consumirItem(index, item, mensagem: '${item.nome} usado!');
+  }
+
+  Future<void> _usarOvoEvento() async {
+    if (mochila == null) return;
+
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) return;
+
+    // Remove 1 ovo
+    final mochilaAtualizada = mochila!.removerOvoEvento(1);
+    if (mochilaAtualizada == null) {
+      _mostrarSnack('Você não tem ovos suficientes!', erro: true);
+      return;
+    }
+
+    // Salva mochila
+    setState(() {
+      mochila = mochilaAtualizada;
+    });
+
+    await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
+
+    // TODO: Adicionar aqui a lógica de usar o ovo (abrir surpresa, etc)
+    _mostrarSnack('Ovo do Evento usado! (Em breve: surpresa)');
   }
 
   Future<void> _usarPocao(int index, ItemConsumivel item) async {
@@ -587,6 +622,266 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
   }
 
   Widget _buildSlot(ItemConsumivel? item, int index, bool isBloqueado) {
+    // Slot de ovo de evento (index 4) - sempre visível, clicável para detalhes
+    if (index == Mochila.slotOvoEvento) {
+      final ovo = item;
+      final quantidade = ovo?.quantidade ?? 0;
+
+      // Cria item temporário se não existir (para permitir clique mesmo com quantidade 0)
+      final ovoParaMostrar = ovo ?? ItemConsumivel(
+        id: 'ovo_evento',
+        nome: 'Ovo do Evento',
+        descricao: 'Ovo especial de evento que pode ser usado para surpresas!',
+        tipo: TipoItemConsumivel.ovoEvento,
+        iconPath: 'assets/eventos/halloween/ovo_halloween.png',
+        quantidade: 0,
+        raridade: RaridadeConsumivel.lendario,
+      );
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _mostrarDetalhesItem(ovoParaMostrar, index),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFFF9800), // Laranja lendário
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF9800).withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Imagem do ovo
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/eventos/halloween/ovo_halloween.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.egg,
+                          size: 30,
+                          color: Color(0xFF9C27B0),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                // Badge de quantidade estilo estrela de level
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFF9800),
+                          const Color(0xFFFFB74D),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: const Color(0xFFFFE0B2),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '$quantidade',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black,
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Ícone de permanente (canto superior esquerdo)
+                Positioned(
+                  left: 4,
+                  top: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock,
+                      size: 12,
+                      color: Color(0xFFFF9800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Slot de moeda de evento (index 3) - sempre visível, clicável para detalhes
+    if (index == Mochila.slotMoedaEvento) {
+      final moeda = item;
+      final quantidade = moeda?.quantidade ?? 0;
+
+      // Cria item temporário se não existir (para permitir clique mesmo com quantidade 0)
+      final moedaParaMostrar = moeda ?? ItemConsumivel(
+        id: 'moeda_evento',
+        nome: 'Moeda de Evento',
+        descricao: 'Moeda especial de evento usada na roleta de sorteio!',
+        tipo: TipoItemConsumivel.moedaEvento,
+        iconPath: 'assets/eventos/halloween/moeda_halloween.png',
+        quantidade: 0,
+        raridade: RaridadeConsumivel.lendario,
+      );
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _mostrarDetalhesItem(moedaParaMostrar, index),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFFFF9800), // Laranja lendário
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF9800).withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Stack(
+          children: [
+            // Imagem da moeda
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Image.asset(
+                  'assets/eventos/halloween/moeda_halloween.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.stars,
+                      size: 30,
+                      color: Color(0xFFFF9800),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Badge de quantidade estilo estrela de level
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFFF9800),
+                      const Color(0xFFFFB74D),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0xFFFFE0B2),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 4,
+                      offset: const Offset(1, 1),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$quantidade',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        offset: Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Ícone de permanente (canto superior esquerdo)
+            Positioned(
+              left: 4,
+              top: 4,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock,
+                  size: 12,
+                  color: Color(0xFFFF9800),
+                ),
+              ),
+            ),
+          ],
+        ),
+          ),
+        ),
+      );
+    }
+
     // Slot bloqueado
     if (isBloqueado) {
       return Container(
@@ -753,6 +1048,10 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         return Icons.science;
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
+      case TipoItemConsumivel.moedaEvento:
+        return Icons.stars;
+      case TipoItemConsumivel.ovoEvento:
+        return Icons.egg;
     }
   }
 }

@@ -1,18 +1,22 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
+import '../models/mochila.dart';
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
+import '../services/mochila_service.dart';
 import 'models/resultado_loja.dart';
 import 'roleta_halloween_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/habilidade.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Casa do Vigarista - Nova implementação seguindo REESTRUTURACAO_LOJA.md
 /// Retorna ResultadoLoja via Navigator.pop() ou callback se inline
-class CasaVigaristaScreen extends StatefulWidget {
+class CasaVigaristaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador historia;
   final Function(ResultadoLoja)? onResultado; // Callback para quando está inline na tab
 
@@ -23,25 +27,49 @@ class CasaVigaristaScreen extends StatefulWidget {
   });
 
   @override
-  State<CasaVigaristaScreen> createState() => _CasaVigaristaScreenState();
+  ConsumerState<CasaVigaristaScreen> createState() => _CasaVigaristaScreenState();
 }
 
-class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
+class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   final ItemService _itemService = ItemService();
   final MagiaService _magiaService = MagiaService();
   late HistoriaJogador _historiaAtual;
   bool _comprando = false;
+  Mochila? _mochila;
 
   // Custos dinâmicos baseados no tier
   int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
   int get custoCura => 1 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
   int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
-  int get custoRoleta => 0; // Roleta é gratuita
+  int get custoRoleta => 1; // Roleta custa 1 moeda de evento
 
   @override
   void initState() {
     super.initState();
     _historiaAtual = widget.historia;
+    _carregarMochila();
+  }
+
+  @override
+  void didUpdateWidget(covariant CasaVigaristaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega mochila se a história mudou (ex: voltou de uma batalha)
+    if (widget.historia != oldWidget.historia) {
+      _historiaAtual = widget.historia;
+      _carregarMochila();
+    }
+  }
+
+  Future<void> _carregarMochila() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) return;
+
+    final mochila = await MochilaService.carregarMochila(context, user.email!);
+    if (mounted) {
+      setState(() {
+        _mochila = mochila;
+      });
+    }
   }
 
   @override
@@ -169,6 +197,7 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
                 cost: custoRoleta,
                 color: const Color(0xFFe76f51),
                 onTap: _abrirRoleta,
+                customCostIcon: 'assets/eventos/halloween/moeda_halloween.png',
               ),
             ),
             const SizedBox(width: 8),
@@ -195,8 +224,12 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
     required Color color,
     required VoidCallback onTap,
     String? badge,
+    String? customCostIcon, // Ícone customizado para o custo
   }) {
-    final canAfford = _historiaAtual.score >= cost;
+    // Se tem ícone customizado, verifica moeda de evento. Caso contrário, verifica score.
+    final canAfford = customCostIcon != null
+        ? (_mochila?.quantidadeMoedaEvento ?? 0) >= cost
+        : _historiaAtual.score >= cost;
 
     return GestureDetector(
       onTap: canAfford && !_comprando ? onTap : null,
@@ -281,11 +314,26 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.monetization_on,
-                      color: canAfford ? Colors.amber : Colors.grey.shade600,
-                      size: 18,
-                    ),
+                    if (customCostIcon != null)
+                      Image.asset(
+                        customCostIcon,
+                        width: 20,
+                        height: 20,
+                        color: canAfford ? null : Colors.grey.shade600,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.monetization_on,
+                            color: canAfford ? Colors.amber : Colors.grey.shade600,
+                            size: 18,
+                          );
+                        },
+                      )
+                    else
+                      Icon(
+                        Icons.monetization_on,
+                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                        size: 18,
+                      ),
                     const SizedBox(width: 4),
                     Text(
                       '$cost',
@@ -974,6 +1022,18 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   Future<void> _abrirRoleta() async {
     print('🎰 [Roleta] Iniciando roleta de sorteio...');
 
+    // Verifica se tem moeda de evento
+    final temMoedas = (_mochila?.quantidadeMoedaEvento ?? 0) >= custoRoleta;
+    if (!temMoedas) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Você não tem moedas de evento suficientes!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Modal de confirmação
     final confirmacao = await showDialog<bool>(
       context: context,
@@ -1007,12 +1067,19 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                Image.asset(
+                  'assets/eventos/halloween/moeda_halloween.png',
+                  width: 24,
+                  height: 24,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.stars, color: Color(0xFFFF9800), size: 20);
+                  },
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'Custo: $custoRoleta (GRÁTIS)',
+                  'Custo: $custoRoleta Moeda de Evento',
                   style: const TextStyle(
-                    color: Colors.amber,
+                    color: Color(0xFFFF9800),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1049,7 +1116,36 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
     setState(() => _comprando = true);
 
     try {
-      print('🎰 [Roleta] Navegando para roleta de Halloween...');
+      print('🎰 [Roleta] Debitando moeda de evento...');
+
+      // Debita moeda de evento da mochila
+      final user = ref.read(currentUserProvider);
+      if (user == null || user.email == null || _mochila == null) {
+        print('❌ [Roleta] Erro: usuário ou mochila não encontrado');
+        setState(() => _comprando = false);
+        return;
+      }
+
+      final mochilaAtualizada = _mochila!.removerMoedaEvento(custoRoleta);
+      if (mochilaAtualizada == null) {
+        print('❌ [Roleta] Erro: não foi possível remover moeda de evento');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erro ao processar pagamento!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _comprando = false);
+        return;
+      }
+
+      // Salva mochila atualizada
+      await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
+      setState(() {
+        _mochila = mochilaAtualizada;
+      });
+
+      print('✅ [Roleta] Moeda debitada. Navegando para roleta de Halloween...');
 
       // Desliga loading enquanto a roleta roda
       setState(() => _comprando = false);

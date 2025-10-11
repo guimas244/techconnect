@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -589,7 +591,40 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
       level: 1,
     );
 
-    Navigator.of(context).pop(monstro);
+    // Mostra o modal de detalhes do monstro (estilo catálogo)
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(color: Colors.black.withOpacity(0.72)),
+            ),
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(color: Colors.black.withOpacity(0.04)),
+                ),
+              ),
+            ),
+            Center(
+              child: _buildMonstroDetalheCard(
+                context: context,
+                monstro: monstro,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Após fechar o modal, retorna o monstro
+    if (mounted) {
+      Navigator.of(context).pop(monstro);
+    }
   }
 
   Future<void> _salvarNaColecaoHalloween(Tipo tipo) async {
@@ -918,6 +953,166 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonstroDetalheCard({
+    required BuildContext context,
+    required MonstroAventura monstro,
+  }) {
+    final size = MediaQuery.of(context).size;
+    final width = math.min(size.width * 0.85, 420.0);
+    final height = math.min(size.height * 0.75, 520.0);
+    final baseColor = monstro.tipo.cor;
+
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        width: width,
+        constraints: BoxConstraints(maxHeight: height),
+        padding: const EdgeInsets.fromLTRB(28, 38, 28, 28),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [baseColor.withOpacity(0.95), baseColor.withOpacity(0.55)],
+          ),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white.withOpacity(0.22), width: 1.4),
+          boxShadow: [
+            BoxShadow(
+              color: baseColor.withOpacity(0.35),
+              blurRadius: 34,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: height * 0.46,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.18),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Image.asset(
+                          monstro.imagem,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '${monstro.tipo.monsterName} de Halloween',
+              textAlign: TextAlign.center,
+              style:
+                  textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                  ) ??
+                  const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 18),
+            _buildTipoChip(monstro.tipo),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTipoChip(Tipo tipo) {
+    final baseColor = tipo.cor;
+    final backgroundColor = baseColor.withOpacity(0.35);
+    final borderColor = baseColor.withOpacity(0.7);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: borderColor, width: 1.3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 32,
+            width: 32,
+            child: Image.asset(
+              tipo.iconAsset,
+              fit: BoxFit.contain,
+              errorBuilder:
+                  (_, __, ___) => Icon(
+                    tipo.icone,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'TIPO PRINCIPAL',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.75),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              Text(
+                tipo.displayName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

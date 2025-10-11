@@ -77,6 +77,8 @@ enum TipoItemConsumivel {
   pergaminho,
   elixir,
   fragmento,
+  moedaEvento, // Moeda de evento (Halloween, etc)
+  ovoEvento, // Ovo de evento (Halloween, etc)
 }
 
 enum RaridadeConsumivel {

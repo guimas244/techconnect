@@ -19,7 +19,7 @@ class MochilaService {
 
       if (conteudo == null) {
         print('📭 [MochilaService] Mochila não encontrada, criando nova');
-        final mochilaNova = Mochila();
+        final mochilaNova = Mochila().inicializarMoedaEvento().inicializarOvoEvento();
         // Salva a mochila vazia
         await _salvarNoHive(emailLimpo, mochilaNova);
         return mochilaNova;
@@ -29,21 +29,21 @@ class MochilaService {
       if (conteudo is String) {
         final json = jsonDecode(conteudo) as Map<String, dynamic>;
         print('✅ [MochilaService] Mochila carregada do Hive (JSON)');
-        return Mochila.fromJson(json);
+        return Mochila.fromJson(json).inicializarMoedaEvento().inicializarOvoEvento();
       }
 
       // Se for Map, usa direto
       if (conteudo is Map) {
         print('✅ [MochilaService] Mochila carregada do Hive (Map)');
-        return Mochila.fromJson(Map<String, dynamic>.from(conteudo));
+        return Mochila.fromJson(Map<String, dynamic>.from(conteudo)).inicializarMoedaEvento().inicializarOvoEvento();
       }
 
       print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
-      return Mochila();
+      return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
     } catch (e, stack) {
       print('❌ [MochilaService] Erro ao carregar mochila: $e');
       print(stack);
-      return Mochila();
+      return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
     }
   }
 

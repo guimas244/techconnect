@@ -21,6 +21,8 @@ class RecompensasBatalha {
 
   final List<ItemConsumivel> itensConsumiveisRecebidos;
 
+  final int moedaEvento; // Quantidade de moedas de evento recebidas
+
   const RecompensasBatalha({
     this.monstrosEvoluidos = const [],
     this.ganhosAtributos = const {},
@@ -30,6 +32,7 @@ class RecompensasBatalha {
     this.raridadeItem,
     this.magiaRecebida,
     this.itensConsumiveisRecebidos = const [],
+    this.moedaEvento = 0,
   });
 
   bool get temEvolucao => monstrosEvoluidos.isNotEmpty;
@@ -37,6 +40,7 @@ class RecompensasBatalha {
   bool get temMagia => magiaRecebida != null;
   bool get temEquipamentoOuMagia => temEquipamento || temMagia;
   bool get temItensConsumiveis => itensConsumiveisRecebidos.isNotEmpty;
+  bool get temMoedaEvento => moedaEvento > 0;
 }
 
 class ModalRecompensasBatalha extends StatefulWidget {
@@ -50,6 +54,7 @@ class ModalRecompensasBatalha extends StatefulWidget {
   final Future<void> Function(
     List<ItemConsumivel> itensParaGuardar,
     Set<int> slotsParaLiberar,
+    int moedaEvento,
   ) onGuardarItensNaMochila;
   final Future<void> Function() onConcluir;
 
@@ -294,15 +299,17 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     });
 
     try {
-      if (salvarItens) {
+      // SEMPRE salva se tiver moeda de evento, mesmo que descarte todos os itens
+      if (salvarItens || widget.recompensas.moedaEvento > 0) {
         print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
+          widget.recompensas.moedaEvento,
         );
         print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
       } else {
-        print('[ModalRecompensas] ⏭️ Pulando salvamento (salvarItens=false)');
+        print('[ModalRecompensas] ⏭️ Pulando salvamento (sem itens e sem moeda)');
       }
       print('[ModalRecompensas] 🏁 Chamando onConcluir...');
       await widget.onConcluir();
@@ -1822,7 +1829,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   }
 
   Widget _buildItensContent() {
-    if (_itensParaGuardar.isEmpty) {
+    final temItens = _itensParaGuardar.isNotEmpty;
+    final temMoeda = widget.recompensas.temMoedaEvento;
+
+    if (!temItens && !temMoeda) {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
@@ -1841,36 +1851,45 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Toque nos itens abaixo para alternar entre guardar ou descartar.',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-          ),
-          const SizedBox(height: 8),
-          // Lista vertical de drops (não grid)
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _itensParaGuardar.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final item = _itensParaGuardar[index];
-              final descartado = _novosItensDescartados.contains(index);
+          if (temItens)
+            Text(
+              'Toque nos itens abaixo para alternar entre guardar ou descartar.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          if (temItens) const SizedBox(height: 8),
 
-              // Exibe cada drop obtido com opção de guardar ou descartar
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (descartado) {
-                      _novosItensDescartados.remove(index);
-                    } else {
-                      _novosItensDescartados.add(index);
-                    }
-                  });
-                },
-                child: _buildDropCard(item, index, descartado),
-              );
-            },
-          ),
+          // Moeda de Evento (sempre coletada, não pode ser descartada)
+          if (temMoeda) ...[
+            _buildMoedaEventoCard(),
+            if (temItens) const SizedBox(height: 8),
+          ],
+
+          // Lista vertical de drops (não grid)
+          if (temItens)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _itensParaGuardar.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = _itensParaGuardar[index];
+                final descartado = _novosItensDescartados.contains(index);
+
+                // Exibe cada drop obtido com opção de guardar ou descartar
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (descartado) {
+                        _novosItensDescartados.remove(index);
+                      } else {
+                        _novosItensDescartados.add(index);
+                      }
+                    });
+                  },
+                  child: _buildDropCard(item, index, descartado),
+                );
+              },
+            ),
           const SizedBox(height: 12),
           Text(
             'Espaços disponíveis: $_slotsDisponiveisBase - Necessários: $mantidos',
@@ -1987,6 +2006,122 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                     fontSize: 11,
                     color: descartado ? Colors.grey.shade500 : Colors.grey.shade600,
                     height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoedaEventoCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0), // Fundo laranja claro para lendário
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFFFF9800), // Laranja para lendário
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF9800).withOpacity(0.3),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Imagem da moeda de evento
+          Image.asset(
+            'assets/eventos/halloween/moeda_halloween.png',
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.stars,
+              size: 60,
+              color: Color(0xFFFF9800),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Informações da moeda
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícone de coletado + Nome
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    const Expanded(
+                      child: Text(
+                        'Moeda de Evento',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    // Quantidade
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF9800),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'x${widget.recompensas.moedaEvento}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Descrição
+                const Text(
+                  'Moeda especial coletada automaticamente! Use na loja para roletas especiais.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Tag de raridade
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9800),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'LENDÁRIO',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -2326,6 +2461,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         return Icons.science;
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
+      case TipoItemConsumivel.moedaEvento:
+        return Icons.stars;
+      case TipoItemConsumivel.ovoEvento:
+        return Icons.egg;
     }
   }
 

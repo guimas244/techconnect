@@ -24,6 +24,7 @@ import '../services/item_service.dart';
 import '../services/evolucao_service.dart';
 import '../services/magia_service.dart';
 import '../services/colecao_service.dart';
+import '../services/recompensa_service.dart';
 import '../../jogador/services/vantagens_service.dart';
 import 'modal_monstro_desbloqueado.dart';
 import '../models/item_consumivel.dart';
@@ -55,6 +56,7 @@ class _DropResultado {
   final RaridadeItem? raridade;
   final MagiaDrop? magia;
   final List<ItemConsumivel> consumiveis;
+  final int moedaEvento; // Quantidade de moedas de evento
 
   const _DropResultado({
     this.item,
@@ -62,6 +64,7 @@ class _DropResultado {
     this.raridade,
     this.magia,
     this.consumiveis = const [],
+    this.moedaEvento = 0,
   });
 }
 
@@ -1051,12 +1054,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           onDescartarMagia: (magia) async {
             print('[BatalhaScreen] Magia descartada: ${magia.nome}');
           },
-          onGuardarItensNaMochila: (novosItens, slots) =>
+          onGuardarItensNaMochila: (novosItens, slots, moedaEvento) =>
               _guardarItensNaMochila(
                 pacote.emailJogador,
                 pacote.mochila,
                 novosItens,
                 slots,
+                moedaEvento: moedaEvento,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
         ),
@@ -1106,6 +1110,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       raridadeItem: drop.raridade,
       magiaRecebida: drop.magia,
       itensConsumiveisRecebidos: drop.consumiveis,
+      moedaEvento: drop.moedaEvento,
     );
 
     return _PacoteRecompensas(
@@ -1329,6 +1334,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final tierAtual = historia.tier;
     final itemService = ItemService();
 
+    // Calcula drop de moeda de evento (independente de outros drops)
+    final recompensaService = RecompensaService();
+    final resultadoRecompensas = recompensaService.gerarRecompensasPorScore(1, tierAtual);
+    final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+
     // ELITE: Sempre dropa item épico (nunca magia)
     if (widget.inimigo.isElite) {
       final item = itemService.gerarItemComRaridade(
@@ -1341,6 +1351,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         tier: item.tier,
         raridade: item.raridade,
         consumiveis: consumiveis,
+        moedaEvento: moedaEvento,
       );
     }
 
@@ -1351,7 +1362,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magiaService = MagiaService();
       final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
       print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (tier $tierAtual)');
-      return _DropResultado(magia: magia, consumiveis: consumiveis);
+      return _DropResultado(
+        magia: magia,
+        consumiveis: consumiveis,
+        moedaEvento: moedaEvento,
+      );
     }
 
     // Item comum/raro/épico/lendário aleatório
@@ -1363,6 +1378,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       tier: item.tier,
       raridade: item.raridade,
       consumiveis: consumiveis,
+      moedaEvento: moedaEvento,
     );
   }
 
@@ -1408,17 +1424,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     String emailJogador,
     Mochila mochilaBase,
     List<ItemConsumivel> novosItens,
-    Set<int> slotsParaLiberar,
-  ) async {
-    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens para guardar');
+    Set<int> slotsParaLiberar, {
+    int moedaEvento = 0,
+  }) async {
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas para guardar');
 
-    if (novosItens.isEmpty && slotsParaLiberar.isEmpty) {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0) {
       print('[BatalhaScreen] Nenhum drop para salvar');
       return;
     }
 
     // Inicia com a mochila base
     Mochila mochila = mochilaBase;
+
+    // Adiciona moeda de evento primeiro (slot fixo 3)
+    if (moedaEvento > 0) {
+      print('[BatalhaScreen] 🪙 Adicionando $moedaEvento moeda(s) de evento à mochila');
+      mochila = mochila.adicionarMoedaEvento(moedaEvento);
+      print('[BatalhaScreen] ✅ Moeda de evento adicionada! Total: ${mochila.quantidadeMoedaEvento}');
+    }
 
     // Primeiro, libera os slots selecionados
     if (slotsParaLiberar.isNotEmpty) {

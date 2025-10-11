@@ -294,6 +294,10 @@ class ModalItemConsumivel extends StatelessWidget {
         return Icons.science;
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
+      case TipoItemConsumivel.moedaEvento:
+        return Icons.stars;
+      case TipoItemConsumivel.ovoEvento:
+        return Icons.egg;
     }
   }
 
@@ -309,6 +313,10 @@ class ModalItemConsumivel extends StatelessWidget {
         return 'Elixir';
       case TipoItemConsumivel.fragmento:
         return 'Fragmento';
+      case TipoItemConsumivel.moedaEvento:
+        return 'Moeda de Evento';
+      case TipoItemConsumivel.ovoEvento:
+        return 'Ovo do Evento';
     }
   }
 }
