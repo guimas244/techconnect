@@ -127,14 +127,8 @@ class ColecaoService {
 
       final colecao = await carregarColecaoJogador(email);
 
-      // Lista dos 30 monstros nostálgicos (baseado nos assets)
-      final monstrosNostalgicos = [
-        'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
-        'eletrico', 'fantasma', 'fera', 'fogo', 'gelo', 'inseto',
-        'luz', 'magico', 'marinho', 'mistico', 'normal', 'nostalgico',
-        'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
-        'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
-      ];
+      // Usa a lista estática do ColecaoHiveService
+      final monstrosNostalgicos = ColecaoHiveService.monstrosNostalgicos;
 
       // Filtra apenas os monstros nostálgicos que estão desbloqueados
       final desbloqueados = monstrosNostalgicos.where((monstro) => colecao[monstro] == true).toList();
@@ -147,6 +141,38 @@ class ColecaoService {
       print('❌ [ColecaoService] Erro ao obter monstros nostálgicos: $e');
       return [];
     }
+  }
+
+  /// Retorna uma lista dos monstros Halloween desbloqueados
+  Future<List<String>> obterMonstrosHalloweenDesbloqueados(String email) async {
+    try {
+      print('🎃 [ColecaoService] Obtendo monstros Halloween desbloqueados para: $email');
+
+      final colecao = await carregarColecaoJogador(email);
+
+      // Usa a lista estática do ColecaoHiveService
+      final monstrosHalloween = ColecaoHiveService.monstrosHalloween;
+
+      // Filtra apenas os monstros Halloween que estão desbloqueados
+      // Lembra que eles têm prefixo 'halloween_'
+      final desbloqueados = monstrosHalloween
+          .where((monstro) => colecao['halloween_$monstro'] == true)
+          .toList();
+
+      print('✅ [ColecaoService] Monstros Halloween desbloqueados: ${desbloqueados.length}/30');
+      print('📋 [ColecaoService] Lista: $desbloqueados');
+
+      return desbloqueados;
+    } catch (e) {
+      print('❌ [ColecaoService] Erro ao obter monstros Halloween: $e');
+      return [];
+    }
+  }
+
+  /// Retorna o total de monstros Halloween desbloqueados (para cálculo de bônus)
+  Future<int> contarMonstrosHalloweenDesbloqueados(String email) async {
+    final desbloqueados = await obterMonstrosHalloweenDesbloqueados(email);
+    return desbloqueados.length;
   }
 
   /// Verifica se um monstro está desbloqueado

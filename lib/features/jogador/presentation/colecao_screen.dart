@@ -75,17 +75,26 @@ class ColecaoScreen extends StatefulWidget {
   State<ColecaoScreen> createState() => _ColecaoScreenState();
 }
 
-class _ColecaoScreenState extends State<ColecaoScreen> {
+class _ColecaoScreenState extends State<ColecaoScreen> with SingleTickerProviderStateMixin {
   String? monstroExpandido;
+  MonstroAventura? _monstroExpandidoData; // Guarda os dados do monstro clicado
   final ColecaoService _colecaoService = ColecaoService();
   final StorageService _storageService = StorageService();
   Map<String, bool> _colecaoAtual = {};
   bool _carregandoColecao = false;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _carregarColecao();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _carregarColecao() async {
@@ -153,6 +162,15 @@ class _ColecaoScreenState extends State<ColecaoScreen> {
                 _carregandoColecao ? 'Atualizando...' : 'Atualizar Coleção',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Global'),
+            Tab(text: 'Eventos'),
+          ],
+          indicatorColor: Colors.white,
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
       body: Stack(
         children: [
@@ -163,71 +181,23 @@ class _ColecaoScreenState extends State<ColecaoScreen> {
               fit: BoxFit.cover,
             ),
           ),
-          // Grid de monstros - Mostra TODOS os monstros das duas coleções
-          Consumer(
-            builder: (context, ref, _) {
-              final monstrosAsync = ref.watch(monstrosListProvider);
-              return monstrosAsync.when(
-                data: (monstros) {
-                  // Ordena monstros: primeiro coleção inicial, depois nostálgicos
-                  final monstrosOrdenados = List<MonstroAventura>.from(
-                    monstros,
-                  );
-                  monstrosOrdenados.sort((a, b) {
-                    // Primeiro ordena por coleção (inicial antes de nostálgicos)
-                    if (a.colecao != b.colecao) {
-                      return a.colecao == 'colecao_inicial' ? -1 : 1;
-                    }
-                    // Depois ordena por nome do tipo
-                    return a.tipo1.name.compareTo(b.tipo1.name);
-                  });
-
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.8,
-                        ),
-                    itemCount: monstrosOrdenados.length,
-                    itemBuilder: (context, index) {
-                      final monstro = monstrosOrdenados[index];
-                      final nomeArquivo = monstro.tipo1.name;
-                      // Coleção inicial sempre desbloqueada, outras usam HIVE
-                      final estaBloqueado =
-                          monstro.colecao == 'colecao_inicial'
-                              ? false
-                              : _colecaoAtual[nomeArquivo] != true;
-                      return _buildMonstroItem(
-                        nomeArquivo,
-                        monstro.tipo1,
-                        monstro,
-                        estaBloqueado,
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error:
-                    (error, stackTrace) => Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error, size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text('Erro ao carregar monstros: $error'),
-                        ],
-                      ),
-                    ),
-              );
-            },
+          // TabBarView com as duas abas
+          TabBarView(
+            controller: _tabController,
+            children: [
+              // Aba Nostálgicos
+              _buildAbaNostalgicos(),
+              // Aba Halloween
+              _buildAbaHalloween(),
+            ],
           ),
           // Imagem expandida
-          if (monstroExpandido != null)
+          if (monstroExpandido != null && _monstroExpandidoData != null)
             GestureDetector(
-              onTap: () => setState(() => monstroExpandido = null),
+              onTap: () => setState(() {
+                monstroExpandido = null;
+                _monstroExpandidoData = null;
+              }),
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -242,67 +212,15 @@ class _ColecaoScreenState extends State<ColecaoScreen> {
                     ),
                   ),
                   Center(
-                    child: Consumer(
-                      builder: (context, ref, _) {
-                        final monstrosAsync = ref.watch(monstrosListProvider);
-                        return monstrosAsync.when(
-                          data: (monstros) {
-                            final partesTag = monstroExpandido!.split('_');
-                            if (partesTag.length >= 2) {
-                              final colecao =
-                                  partesTag[0] == 'colecao' &&
-                                          partesTag.length >= 2
-                                      ? 'colecao_${partesTag[1]}'
-                                      : partesTag[0];
-                              final nomeArquivo =
-                                  partesTag.length > 2
-                                      ? partesTag.sublist(2).join('_')
-                                      : partesTag[1];
-
-                              final monstro = monstros.firstWhere(
-                                (m) =>
-                                    m.colecao == colecao &&
-                                    m.tipo1.name == nomeArquivo,
-                                orElse:
-                                    () =>
-                                        monstros.isNotEmpty
-                                            ? monstros.first
-                                            : MonstroAventura(
-                                              id: 'temp',
-                                              nome: 'Temp',
-                                              tipo1: Tipo.normal,
-                                              tipo2: Tipo.agua,
-                                              criadoEm: DateTime.now(),
-                                              colecao: 'colecao_inicial',
-                                              isBloqueado: false,
-                                            ),
-                              );
-
-                              final nomeArquivoCorreto = monstro.tipo1.name;
-                              final estaBloqueadoExpandido =
-                                  monstro.colecao == 'colecao_inicial'
-                                      ? false
-                                      : _colecaoAtual[nomeArquivoCorreto] !=
-                                          true;
-
-                              return _buildMonstroDetalheCard(
-                                context: context,
-                                monstro: monstro,
-                                estaBloqueado: estaBloqueadoExpandido,
-                                heroTag: monstroExpandido!,
-                              );
-                            }
-                            return const CircularProgressIndicator();
-                          },
-                          loading: () => const CircularProgressIndicator(),
-                          error:
-                              (_, __) => const Icon(
-                                Icons.error,
-                                color: Colors.red,
-                                size: 64,
-                              ),
-                        );
-                      },
+                    child: _buildMonstroDetalheCard(
+                      context: context,
+                      monstro: _monstroExpandidoData!,
+                      estaBloqueado: _monstroExpandidoData!.colecao == 'colecao_inicial'
+                          ? false
+                          : _monstroExpandidoData!.colecao == 'colecao_halloween'
+                              ? _colecaoAtual['halloween_${_monstroExpandidoData!.tipo1.name}'] != true
+                              : _colecaoAtual[_monstroExpandidoData!.tipo1.name] != true,
+                      heroTag: monstroExpandido!,
                     ),
                   ),
                 ],
@@ -524,7 +442,10 @@ class _ColecaoScreenState extends State<ColecaoScreen> {
     final tagUnico = '${monstro.colecao}_$nomeArquivo';
 
     return GestureDetector(
-      onTap: () => setState(() => monstroExpandido = tagUnico),
+      onTap: () => setState(() {
+        monstroExpandido = tagUnico;
+        _monstroExpandidoData = monstro;
+      }),
       child: Card(
         elevation: 4,
         child: Column(
@@ -576,6 +497,201 @@ class _ColecaoScreenState extends State<ColecaoScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Aba dos monstros nostálgicos (coleção original)
+  Widget _buildAbaNostalgicos() {
+    return Consumer(
+      builder: (context, ref, _) {
+        final monstrosAsync = ref.watch(monstrosListProvider);
+        return monstrosAsync.when(
+          data: (monstros) {
+            // Ordena monstros: primeiro coleção inicial, depois nostálgicos
+            final monstrosOrdenados = List<MonstroAventura>.from(monstros);
+            monstrosOrdenados.sort((a, b) {
+              // Primeiro ordena por coleção (inicial antes de nostálgicos)
+              if (a.colecao != b.colecao) {
+                return a.colecao == 'colecao_inicial' ? -1 : 1;
+              }
+              // Depois ordena por nome do tipo
+              return a.tipo1.name.compareTo(b.tipo1.name);
+            });
+
+            // Calcula progresso (total desbloqueados / total)
+            final totalDesbloqueados = monstrosOrdenados
+                .where((m) =>
+                    m.colecao == 'colecao_inicial' ||
+                    _colecaoAtual[m.tipo1.name] == true)
+                .length;
+
+            return Column(
+              children: [
+                // Badge de progresso
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '$totalDesbloqueados/${monstrosOrdenados.length} desbloqueados',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                // Grid de monstros
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: monstrosOrdenados.length,
+                    itemBuilder: (context, index) {
+                      final monstro = monstrosOrdenados[index];
+                      final nomeArquivo = monstro.tipo1.name;
+                      // Coleção inicial sempre desbloqueada, outras usam HIVE
+                      final estaBloqueado = monstro.colecao == 'colecao_inicial'
+                          ? false
+                          : _colecaoAtual[nomeArquivo] != true;
+                      return _buildMonstroItem(
+                        nomeArquivo,
+                        monstro.tipo1,
+                        monstro,
+                        estaBloqueado,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Erro ao carregar monstros: $error'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Lista dos 30 tipos de monstros de eventos (Halloween)
+  /// Os nomes serão buscados da coleção inicial + " Halloween"
+  static const List<String> _tiposEventos = [
+    'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
+    'eletrico', 'fantasma', 'fera', 'fogo', 'gelo', 'inseto',
+    'luz', 'magico', 'marinho', 'mistico', 'normal', 'nostalgico',
+    'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
+    'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi',
+  ];
+
+  /// Aba dos monstros de Eventos (Halloween)
+  Widget _buildAbaHalloween() {
+    return Consumer(
+      builder: (context, ref, _) {
+        final monstrosAsync = ref.watch(monstrosListProvider);
+        return monstrosAsync.when(
+          data: (monstrosOriginais) {
+            // Cria monstros de eventos baseados nos tipos originais
+            final monstrosEventos = <MonstroAventura>[];
+
+            for (final tipoNome in _tiposEventos) {
+              // Busca o monstro da coleção inicial com esse tipo
+              final monstroOriginal = monstrosOriginais.firstWhere(
+                (m) => m.tipo1.name == tipoNome && m.colecao == 'colecao_inicial',
+                orElse: () => monstrosOriginais.firstWhere(
+                  (m) => m.tipo1.name == tipoNome,
+                  orElse: () => monstrosOriginais.first,
+                ),
+              );
+
+              // Nome = nome original + " Halloween"
+              final nomeHalloween = '${monstroOriginal.nome} Halloween';
+
+              monstrosEventos.add(MonstroAventura(
+                id: 'evento_$tipoNome',
+                nome: nomeHalloween,
+                tipo1: monstroOriginal.tipo1,
+                tipo2: monstroOriginal.tipo2,
+                criadoEm: DateTime.now(),
+                colecao: 'colecao_halloween',
+                isBloqueado: true,
+              ));
+            }
+
+            // Calcula progresso (verifica prefixo halloween_ no HIVE)
+            final totalDesbloqueados = _tiposEventos
+                .where((tipo) => _colecaoAtual['halloween_$tipo'] == true)
+                .length;
+
+            return Column(
+              children: [
+                // Badge de progresso
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '$totalDesbloqueados/30 desbloqueados',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                // Grid de monstros de eventos
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: monstrosEventos.length,
+                    itemBuilder: (context, index) {
+                      final monstro = monstrosEventos[index];
+                      final nomeArquivo = monstro.tipo1.name;
+                      // Verifica se está desbloqueado no HIVE com prefixo halloween_
+                      final estaBloqueado =
+                          _colecaoAtual['halloween_$nomeArquivo'] != true;
+                      return _buildMonstroItem(
+                        nomeArquivo,
+                        monstro.tipo1,
+                        monstro,
+                        estaBloqueado,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Erro ao carregar monstros: $error'),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

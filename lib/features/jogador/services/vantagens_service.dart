@@ -29,6 +29,28 @@ class VantagensService {
       ehNostalgica: true,
     ),
 
+    // Coleção Halloween - Bônus de Ataque
+    VantagemColecao(
+      id: 'halloween',
+      nomeColecao: 'Coleção Halloween',
+      descricaoColecao: 'Criaturas assustadoras da noite de Halloween',
+      tipoVantagem: TipoVantagemColecao.bonusAtaque,
+      valor: 6.0, // +1 ATK a cada 5 monstros (máximo +6 aos 30)
+      monstrosRequeridos: 30, // Total de monstros Halloween
+      monstrosDesbloqueados: 0, // Será calculado dinamicamente
+      tiposRequeridos: [
+        Tipo.agua, Tipo.alien, Tipo.desconhecido, Tipo.deus, Tipo.docrates,
+        Tipo.dragao, Tipo.eletrico, Tipo.fantasma, Tipo.fera, Tipo.fogo,
+        Tipo.gelo, Tipo.inseto, Tipo.luz, Tipo.magico, Tipo.marinho,
+        Tipo.mistico, Tipo.normal, Tipo.nostalgico, Tipo.pedra, Tipo.planta,
+        Tipo.psiquico, Tipo.subterraneo, Tipo.tecnologia, Tipo.tempo,
+        Tipo.terrestre, Tipo.trevas, Tipo.venenoso, Tipo.vento, Tipo.voador, Tipo.zumbi
+      ],
+      imagemColecao: 'assets/colecoes/halloween.png',
+      ehNostalgica: false,
+      ehHalloween: true, // Nova flag para identificar Halloween
+    ),
+
     // FUTURAS COLEÇÕES (comentadas temporariamente)
 
     // VantagemColecao(
@@ -77,7 +99,10 @@ class VantagensService {
         int monstrosDesbloqueados = 0;
 
         for (final tipo in colecao.tiposRequeridos) {
-          if (colecaoJogador[tipo.name] == true) {
+          // Para Halloween, verifica com prefixo 'halloween_'
+          final chave = colecao.id == 'halloween' ? 'halloween_${tipo.name}' : tipo.name;
+
+          if (colecaoJogador[chave] == true) {
             monstrosDesbloqueados++;
           }
         }

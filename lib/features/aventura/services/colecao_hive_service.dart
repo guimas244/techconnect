@@ -183,22 +183,42 @@ class ColecaoHiveService {
     }
   }
 
+  /// Lista dos 30 monstros nostálgicos
+  static List<String> get monstrosNostalgicos => [
+    'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
+    'eletrico', 'fantasma', 'fera', 'fogo', 'gelo', 'inseto',
+    'luz', 'magico', 'marinho', 'mistico', 'normal', 'nostalgico',
+    'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
+    'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
+  ];
+
+  /// Lista dos 30 monstros de Halloween
+  static List<String> get monstrosHalloween => [
+    'abobora', 'aranha', 'bruxa', 'caldeira', 'caveira',
+    'cemiterio', 'corvo', 'espantalho', 'esqueleto', 'foice',
+    'gato_preto', 'grimorio', 'lobisomem', 'lua_cheia', 'mansao',
+    'mascara', 'morcego', 'morto_vivo', 'mumia', 'noite',
+    'olho', 'ouija', 'pocao', 'sombra', 'tesoura',
+    'tumba', 'vampiro', 'vassoura', 'vela', 'veneno'
+  ];
+
   /// Cria uma coleção inicial com todos os monstros bloqueados
   Map<String, bool> criarColecaoInicial() {
-    final monstrosNostalgicos = [
-      'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao',
-      'eletrico', 'fantasma', 'fera', 'fogo', 'gelo', 'inseto',
-      'luz', 'magico', 'marinho', 'mistico', 'normal', 'nostalgico',
-      'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
-      'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
-    ];
-
     final colecaoInicial = <String, bool>{};
+
+    // Adiciona nostálgicos
     for (final monstro in monstrosNostalgicos) {
-      colecaoInicial[monstro] = false; // Todos bloqueados inicialmente
+      colecaoInicial[monstro] = false;
+    }
+
+    // Adiciona Halloween (prefixo halloween_ para diferenciar)
+    for (final monstro in monstrosHalloween) {
+      colecaoInicial['halloween_$monstro'] = false;
     }
 
     print('🆕 [ColecaoHiveService] Coleção inicial criada com ${colecaoInicial.length} monstros');
+    print('   - Nostálgicos: ${monstrosNostalgicos.length}');
+    print('   - Halloween: ${monstrosHalloween.length}');
     return colecaoInicial;
   }
 

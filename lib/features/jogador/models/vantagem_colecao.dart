@@ -12,6 +12,7 @@ class VantagemColecao {
   final List<Tipo> tiposRequeridos;
   final String imagemColecao;
   final bool ehNostalgica;
+  final bool ehHalloween;
 
   const VantagemColecao({
     required this.id,
@@ -24,6 +25,7 @@ class VantagemColecao {
     required this.tiposRequeridos,
     required this.imagemColecao,
     this.ehNostalgica = false,
+    this.ehHalloween = false,
   });
 
   StatusVantagem get status {
@@ -37,6 +39,11 @@ class VantagemColecao {
   double get progresso => (monstrosDesbloqueados / monstrosRequeridos).clamp(0.0, 1.0);
 
   double get valorAtual {
+    // Halloween tem cálculo especial: +1 ATK a cada 5 monstros
+    if (ehHalloween) {
+      return (monstrosDesbloqueados / 5).floor().toDouble();
+    }
+
     switch (status) {
       case StatusVantagem.ativa:
         return valor;
@@ -76,6 +83,7 @@ class VantagemColecao {
     List<Tipo>? tiposRequeridos,
     String? imagemColecao,
     bool? ehNostalgica,
+    bool? ehHalloween,
   }) {
     return VantagemColecao(
       id: id ?? this.id,
@@ -88,6 +96,7 @@ class VantagemColecao {
       tiposRequeridos: tiposRequeridos ?? this.tiposRequeridos,
       imagemColecao: imagemColecao ?? this.imagemColecao,
       ehNostalgica: ehNostalgica ?? this.ehNostalgica,
+      ehHalloween: ehHalloween ?? this.ehHalloween,
     );
   }
 

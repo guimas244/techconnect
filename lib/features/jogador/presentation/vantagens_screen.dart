@@ -7,6 +7,7 @@ import '../../../core/services/storage_service.dart';
 import '../../aventura/services/colecao_service.dart';
 import '../../../core/models/vantagem_colecao_enum.dart';
 import '../widgets/icone_colecao_nostalgica.dart';
+import '../widgets/icone_colecao_halloween.dart';
 import 'package:remixicon/remixicon.dart';
 
 class VantagensScreen extends ConsumerStatefulWidget {
@@ -352,21 +353,23 @@ class _VantagensScreenState extends ConsumerState<VantagensScreen>
               // Segunda linha: Imagem e descrição
               Row(
                 children: [
-                  // Widget especial para coleção nostálgica ou ícone padrão
+                  // Widget especial para coleção nostálgica, Halloween ou ícone padrão
                   vantagem.ehNostalgica
                       ? const IconeColecaoNostalgica(size: 48)
-                      : Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: vantagem.tipoVantagem.cor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            vantagem.tipoVantagem.icone,
-                            color: vantagem.tipoVantagem.cor,
-                            size: 28,
-                          ),
-                        ),
+                      : vantagem.ehHalloween
+                          ? const IconeColecaoHalloween(size: 48)
+                          : Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: vantagem.tipoVantagem.cor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                vantagem.tipoVantagem.icone,
+                                color: vantagem.tipoVantagem.cor,
+                                size: 28,
+                              ),
+                            ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(

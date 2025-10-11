@@ -104,6 +104,7 @@ flutter:
     - assets/monstros_aventura/
     - assets/monstros_aventura/colecao_inicial/
     - assets/monstros_aventura/colecao_nostalgicos/
+    - assets/monstros_aventura/colecao_halloween/
     - assets/mapas_aventura/
     - assets/icons_gerais/
     - assets/npc/

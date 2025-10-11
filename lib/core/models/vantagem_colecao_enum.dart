@@ -32,7 +32,7 @@ enum TipoVantagemColecao {
   ),
   bonusAtaque(
     nome: 'Bônus de Ataque',
-    descricao: 'Aumenta o poder de ataque de todos os monstros',
+    descricao: 'Aumenta o poder de ataque de todos os monstros (+1 ATK a cada 5 reunidos)',
     icone: Icons.flash_on,
     cor: Colors.red,
     unidade: 'ATK',
