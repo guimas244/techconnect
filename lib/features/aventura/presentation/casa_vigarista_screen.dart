@@ -511,21 +511,116 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   void _apostarMagia() async {
     if (_comprando || _historiaAtual.score < custoAposta) return;
 
+    // 1. Mostra modal de confirmação
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2a2a3e),
+        title: Text(
+          'Confirmar Compra',
+          style: GoogleFonts.cinzel(
+            color: Colors.purple.shade400,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deseja comprar uma Magia Ancestral?',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Custo: $custoAposta',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Você receberá uma magia aleatória baseada no seu tier atual.',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade400,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Comprar'),
+          ),
+        ],
+      ),
+    );
+
+    // Se cancelou, retorna
+    if (confirmacao != true) return;
+
+    // Ativa loading
     setState(() => _comprando = true);
 
     try {
+      // Aguarda um frame para garantir que o loading apareça
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      print('🛒 [Loja] Comprando magia...');
+
+      // Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
         score: _historiaAtual.score - custoAposta,
       );
 
+      // Gera magia (simula processamento)
+      await Future.delayed(const Duration(milliseconds: 800));
       final magia = _magiaService.gerarMagiaAleatoria(tierAtual: _historiaAtual.tier);
 
-      if (mounted) {
-        Navigator.of(context).pop(ResultadoLoja(
-          tipo: TipoResultado.magia,
-          habilidade: magia,
-          historiaAtualizada: historiaAtualizada,
-        ));
+      print('✅ [Loja] Magia gerada: ${magia.nome}');
+
+      final resultado = ResultadoLoja(
+        tipo: TipoResultado.magia,
+        habilidade: magia,
+        historiaAtualizada: historiaAtualizada,
+      );
+
+      // Retorna via callback (inline) ou Navigator.pop (modal)
+      if (widget.onResultado != null) {
+        // Está inline na tab, usa callback
+        print('📤 [Loja] Usando callback (inline) - mantém loading');
+        widget.onResultado!(resultado);
+
+        // Aguarda mais tempo para garantir que o modal abra
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Desliga loading após timeout de segurança (3s total)
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          if (mounted && _comprando) {
+            print('⏰ [Loja] Timeout - desligando loading');
+            setState(() => _comprando = false);
+          }
+        });
+      } else {
+        // Está como modal, usa Navigator.pop
+        print('📤 [Loja] Usando Navigator.pop (modal)');
+        if (mounted) {
+          Navigator.of(context).pop(resultado);
+        }
       }
     } catch (e) {
       print('❌ Erro ao apostar magia: $e');
@@ -538,21 +633,118 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   void _apostarCura() async {
     if (_comprando || _historiaAtual.score < custoCura) return;
 
+    // 1. Mostra modal de confirmação
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2a2a3e),
+        title: Text(
+          'Confirmar Compra',
+          style: GoogleFonts.cinzel(
+            color: const Color(0xFFe63946),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deseja comprar Cura da Vida?',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Custo: $custoCura',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Você receberá uma porcentagem de cura baseada no seu tier.',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFe63946),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Comprar'),
+          ),
+        ],
+      ),
+    );
+
+    // Se cancelou, retorna
+    if (confirmacao != true) return;
+
+    // Ativa loading
     setState(() => _comprando = true);
 
     try {
+      // Aguarda um frame para garantir que o loading apareça
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      print('🛒 [Loja] Comprando cura...');
+
+      // Calcula porcentagem de cura
       final porcentagemCura = 30 + (_historiaAtual.tier * 5);
 
+      // Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
         score: _historiaAtual.score - custoCura,
       );
 
-      if (mounted) {
-        Navigator.of(context).pop(ResultadoLoja(
-          tipo: TipoResultado.cura,
-          porcentagemCura: porcentagemCura,
-          historiaAtualizada: historiaAtualizada,
-        ));
+      // Simula processamento
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      print('✅ [Loja] Cura gerada: $porcentagemCura%');
+
+      final resultado = ResultadoLoja(
+        tipo: TipoResultado.cura,
+        porcentagemCura: porcentagemCura,
+        historiaAtualizada: historiaAtualizada,
+      );
+
+      // Retorna via callback (inline) ou Navigator.pop (modal)
+      if (widget.onResultado != null) {
+        // Está inline na tab, usa callback
+        print('📤 [Loja] Usando callback (inline) - mantém loading');
+        widget.onResultado!(resultado);
+
+        // Aguarda mais tempo para garantir que o modal abra
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Desliga loading após timeout de segurança (3s total)
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          if (mounted && _comprando) {
+            print('⏰ [Loja] Timeout - desligando loading');
+            setState(() => _comprando = false);
+          }
+        });
+      } else {
+        // Está como modal, usa Navigator.pop
+        print('📤 [Loja] Usando Navigator.pop (modal)');
+        if (mounted) {
+          Navigator.of(context).pop(resultado);
+        }
       }
     } catch (e) {
       print('❌ Erro ao apostar cura: $e');
@@ -565,10 +757,75 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   void _abrirFeirao() async {
     if (_comprando || _historiaAtual.score < custoFeirao) return;
 
+    // 1. Mostra modal de confirmação
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2a2a3e),
+        title: Text(
+          'Confirmar Compra',
+          style: GoogleFonts.cinzel(
+            color: const Color(0xFFf4a261),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deseja abrir o Feirão?',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Custo: $custoFeirao',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Você receberá 3 itens aleatórios para escolher.',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf4a261),
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Abrir'),
+          ),
+        ],
+      ),
+    );
+
+    // Se cancelou, retorna
+    if (confirmacao != true) return;
+
     setState(() => _comprando = true);
 
     try {
       print('🏪 [Loja] Gerando 3 itens para o Feirão...');
+
+      // Aguarda um frame para garantir que o loading apareça
+      await Future.delayed(const Duration(milliseconds: 100));
 
       final itens = List.generate(
         3,
@@ -616,10 +873,75 @@ class _CasaVigaristaScreenState extends State<CasaVigaristaScreen> {
   void _abrirBiblioteca() async {
     if (_comprando || _historiaAtual.score < custoFeirao) return;
 
+    // 1. Mostra modal de confirmação
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2a2a3e),
+        title: Text(
+          'Confirmar Compra',
+          style: GoogleFonts.cinzel(
+            color: const Color(0xFF2a9d8f),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deseja abrir a Biblioteca?',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Custo: $custoFeirao',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Você receberá 3 magias aleatórias para escolher.',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2a9d8f),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Abrir'),
+          ),
+        ],
+      ),
+    );
+
+    // Se cancelou, retorna
+    if (confirmacao != true) return;
+
     setState(() => _comprando = true);
 
     try {
       print('📚 [Loja] Gerando 3 magias para a Biblioteca...');
+
+      // Aguarda um frame para garantir que o loading apareça
+      await Future.delayed(const Duration(milliseconds: 100));
 
       final magias = List.generate(
         3,

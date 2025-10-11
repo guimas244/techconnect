@@ -5,7 +5,7 @@ import '../models/item.dart';
 
 /// Modal do Feirão - exibe 3 itens para o jogador escolher e comprar
 /// Cada item custa custoAposta adicional
-class ModalFeirao extends StatelessWidget {
+class ModalFeirao extends StatefulWidget {
   final List<Item> itens;
   final int custoAposta;
   final int scoreAtual;
@@ -18,19 +18,28 @@ class ModalFeirao extends StatelessWidget {
   });
 
   @override
+  State<ModalFeirao> createState() => _ModalFeiraoState();
+}
+
+class _ModalFeiraoState extends State<ModalFeirao> {
+  bool _comprando = false;
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2a2a3e),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.amber.shade700, width: 3),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: Stack(
+        children: [
+          Container(
+            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2a2a3e),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.amber.shade700, width: 3),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // Header
             Container(
               padding: const EdgeInsets.all(20),
@@ -72,7 +81,7 @@ class ModalFeirao extends StatelessWidget {
                         Icon(Remix.coin_fill, color: Colors.amber.shade300, size: 16),
                         const SizedBox(width: 6),
                         Text(
-                          '$scoreAtual',
+                          '${widget.scoreAtual}',
                           style: GoogleFonts.cinzel(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -90,7 +99,7 @@ class ModalFeirao extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Escolha um item para comprar por $custoAposta pontos',
+                'Escolha um item para comprar por ${widget.custoAposta} pontos',
                 style: GoogleFonts.cinzel(
                   fontSize: 14,
                   color: Colors.grey.shade300,
@@ -104,7 +113,7 @@ class ModalFeirao extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
-                  children: itens.map((item) => _buildItemCard(context, item)).toList(),
+                  children: widget.itens.map((item) => _buildItemCard(context, item)).toList(),
                 ),
               ),
             ),
@@ -136,14 +145,61 @@ class ModalFeirao extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
+              ],
+            ),
+          ),
+          // Loading overlay
+          if (_comprando)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Processando compra...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
+  Future<void> _comprarItem(Item item) async {
+    setState(() => _comprando = true);
+
+    try {
+      // Aguarda para mostrar o loading
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
+        Navigator.of(context).pop(item);
+      }
+    } catch (e) {
+      print('❌ [Feirão] Erro ao comprar item: $e');
+      if (mounted) {
+        setState(() => _comprando = false);
+      }
+    }
+  }
+
   Widget _buildItemCard(BuildContext context, Item item) {
-    final podeComprar = scoreAtual >= custoAposta;
+    final podeComprar = widget.scoreAtual >= widget.custoAposta;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -218,8 +274,8 @@ class ModalFeirao extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: podeComprar
-                          ? () => Navigator.of(context).pop(item)
+                      onPressed: (podeComprar && !_comprando)
+                          ? () => _comprarItem(item)
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: podeComprar
@@ -241,7 +297,7 @@ class ModalFeirao extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            podeComprar ? '$custoAposta' : 'Sem score',
+                            podeComprar ? '${widget.custoAposta}' : 'Sem score',
                             style: GoogleFonts.cinzel(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,

@@ -1084,6 +1084,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           } catch (e) {
             print('❌ [Loja] Erro ao salvar magia equipada: $e');
           }
+
+          // Fecha o modal
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
         },
       ),
     );
