@@ -8,7 +8,10 @@ class MagiaService {
 
   /// Gera uma magia aleatória para drop
   /// Não tem tipagem elemental definida (será definida quando equipada no monstro)
-  MagiaDrop gerarMagiaAleatoria({int tierAtual = 1}) {
+  ///
+  /// [isCompra] - Se true, magia vem sempre no level do tier (loja)
+  ///              Se false, usa lógica de chance (recompensa/drop)
+  MagiaDrop gerarMagiaAleatoria({int tierAtual = 1, bool isCompra = false}) {
     // Sorteia tipo da magia (suporte ou ofensiva)
     final tipos = [TipoHabilidade.ofensiva, TipoHabilidade.suporte];
     final tipoSorteado = tipos[_random.nextInt(tipos.length)];
@@ -36,7 +39,7 @@ class MagiaService {
     // Gera valores baseados no tier
     final valorBase = _gerarValorBaseMagia(tierAtual);
     final custoEnergia = _gerarCustoEnergia(valorBase);
-    final levelMagia = _gerarLevelMagia(tierAtual);
+    final levelMagia = isCompra ? tierAtual : _gerarLevelMagia(tierAtual);
     
     // Gera nome usando o gerador existente adaptado para magias
     final nome = _gerarNomeMagia(tipoSorteado, efeitoSorteado);
@@ -80,21 +83,19 @@ class MagiaService {
     return 4;
   }
 
-  /// Gera level da magia baseado no tier com chances similares aos inimigos
+  /// Gera level da magia baseado no tier para recompensas
+  /// Level mínimo = 50% do tier (nunca menor que 1)
+  /// Level máximo = tier atual
   int _gerarLevelMagia(int tier) {
     if (tier == 1) return 1;
-    
-    final chance = _random.nextInt(100);
-    if (chance < 20) {
-      // 20% chance: level = tier
-      return tier;
-    } else if (chance < 40) {
-      // 20% chance: level = tier - 1 (mínimo 1)
-      return (tier - 1).clamp(1, tier);
-    } else {
-      // 60% chance: level 1
-      return 1;
-    }
+
+    // Calcula tier mínimo (50% do tier atual, nunca menor que 1)
+    final tierMinimo = (tier * 0.5).ceil().clamp(1, tier);
+
+    // Sorteia entre o tier mínimo e o tier atual
+    final levelSorteado = tierMinimo + _random.nextInt(tier - tierMinimo + 1);
+
+    return levelSorteado;
   }
 
   /// Gera nome da magia baseado no tipo e efeito

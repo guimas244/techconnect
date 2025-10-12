@@ -620,7 +620,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       // Gera magia (simula processamento)
       await Future.delayed(const Duration(milliseconds: 800));
-      final magia = _magiaService.gerarMagiaAleatoria(tierAtual: _historiaAtual.tier);
+      final magia = _magiaService.gerarMagiaAleatoria(tierAtual: _historiaAtual.tier, isCompra: true);
 
       print('✅ [Loja] Magia gerada: ${magia.nome}');
 
@@ -977,7 +977,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       final magias = List.generate(
         3,
-        (_) => _magiaService.gerarMagiaAleatoria(tierAtual: _historiaAtual.tier),
+        (_) => _magiaService.gerarMagiaAleatoria(tierAtual: _historiaAtual.tier, isCompra: true),
       );
 
       final historiaAtualizada = _historiaAtual.copyWith(
