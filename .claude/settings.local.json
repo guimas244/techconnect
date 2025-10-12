@@ -37,7 +37,8 @@
       "Bash(move casa_vigarista_screen.dart deprecatedcasa_vigarista_screen_callback.dart)",
       "Bash(if not exist \"d:\\workspace\\techterra\\techterra\\lib\\features\\aventura\\presentation\\deprecated\" mkdir \"d:\\workspace\\techterra\\techterra\\lib\\features\\aventura\\presentation\\deprecated\")",
       "Bash(move:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash([ -f \"assets/eventos/halloween/ovo_halloween.jpeg\" ])"
     ],
     "deny": [],
     "ask": []

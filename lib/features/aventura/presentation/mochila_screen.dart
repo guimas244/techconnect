@@ -669,10 +669,9 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
                       'assets/eventos/halloween/ovo_halloween.png',
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.egg,
-                          size: 30,
-                          color: Color(0xFF9C27B0),
+                        return Image.asset(
+                          'assets/eventos/halloween/ovo_halloween.png',
+                          fit: BoxFit.contain,
                         );
                       },
                     ),
@@ -956,6 +955,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
                                 item.iconPath,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
+                                  // Se for ovo, usa a imagem PNG sempre
+                                  if (item.tipo == TipoItemConsumivel.ovoEvento) {
+                                    return Image.asset(
+                                      'assets/eventos/halloween/ovo_halloween.png',
+                                      fit: BoxFit.contain,
+                                    );
+                                  }
                                   return Icon(
                                     _getIconForType(item.tipo),
                                     size: 30,
@@ -1005,11 +1011,17 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
                           color: Colors.black.withOpacity(0.7),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          _getIconForType(item.tipo),
-                          size: 12,
-                          color: Colors.white70,
-                        ),
+                        child: item.tipo == TipoItemConsumivel.ovoEvento
+                            ? Image.asset(
+                                'assets/eventos/halloween/ovo_halloween.png',
+                                width: 12,
+                                height: 12,
+                              )
+                            : Icon(
+                                _getIconForType(item.tipo),
+                                size: 12,
+                                color: Colors.white70,
+                              ),
                       ),
                     ),
                   ],

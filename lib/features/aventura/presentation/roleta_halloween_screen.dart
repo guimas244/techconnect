@@ -1256,10 +1256,9 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
                           'assets/eventos/halloween/ovo_halloween.png',
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.egg,
-                              size: 120,
-                              color: Colors.white,
+                            return Image.asset(
+                              'assets/eventos/halloween/ovo_halloween.png',
+                              fit: BoxFit.contain,
                             );
                           },
                         ),
@@ -1313,10 +1312,17 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.egg,
-                    color: Colors.white,
-                    size: 32,
+                  Image.asset(
+                    'assets/eventos/halloween/ovo_halloween.png',
+                    width: 32,
+                    height: 32,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/eventos/halloween/ovo_halloween.png',
+                        width: 32,
+                        height: 32,
+                      );
+                    },
                   ),
                   const SizedBox(width: 14),
                   Column(

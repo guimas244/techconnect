@@ -12,10 +12,10 @@ class ProgressoDiario {
     Map<String, double>? distribuicaoAtributos,
   })  : killsPorTipo = killsPorTipo ?? {},
         distribuicaoAtributos = distribuicaoAtributos ?? {
-          'HP': 0,
-          'ATK': 0,
-          'DEF': 0,
-          'SPD': 0,
+          'HP': 25,
+          'ATK': 25,
+          'DEF': 25,
+          'SPD': 25,
         };
 
   // Incrementa kills de um tipo

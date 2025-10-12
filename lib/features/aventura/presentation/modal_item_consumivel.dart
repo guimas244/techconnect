@@ -71,6 +71,13 @@ class ModalItemConsumivel extends StatelessWidget {
                             item.iconPath,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
+                              // Se for ovo, usa a imagem JPEG sempre
+                              if (item.tipo == TipoItemConsumivel.ovoEvento) {
+                                return Image.asset(
+                                  'assets/eventos/halloween/ovo_halloween.png',
+                                  fit: BoxFit.contain,
+                                );
+                              }
                               return Icon(
                                 _getIconForType(item.tipo),
                                 size: 60,

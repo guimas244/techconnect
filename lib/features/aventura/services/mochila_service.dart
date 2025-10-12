@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/mochila.dart';
+import '../models/item_consumivel.dart';
 
 class MochilaService {
   static const String _boxName = 'mochila_box';
+  static const String _migrationBoxName = 'app_migration';
+  static const String _currentVersion = '2.1.0';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
@@ -25,21 +28,26 @@ class MochilaService {
         return mochilaNova;
       }
 
+      Mochila mochila;
+
       // Se for String, converte de JSON
       if (conteudo is String) {
         final json = jsonDecode(conteudo) as Map<String, dynamic>;
         print('✅ [MochilaService] Mochila carregada do Hive (JSON)');
-        return Mochila.fromJson(json).inicializarMoedaEvento().inicializarOvoEvento();
+        mochila = Mochila.fromJson(json).inicializarMoedaEvento().inicializarOvoEvento();
       }
-
       // Se for Map, usa direto
-      if (conteudo is Map) {
+      else if (conteudo is Map) {
         print('✅ [MochilaService] Mochila carregada do Hive (Map)');
-        return Mochila.fromJson(Map<String, dynamic>.from(conteudo)).inicializarMoedaEvento().inicializarOvoEvento();
+        mochila = Mochila.fromJson(Map<String, dynamic>.from(conteudo)).inicializarMoedaEvento().inicializarOvoEvento();
+      } else {
+        print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
+        return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
       }
 
-      print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
-      return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
+      // Aplica migração se necessário (2.0.0 -> 2.1.0)
+      final mochilaLimpa = await _aplicarMigracaoSeNecessario(emailLimpo, mochila);
+      return mochilaLimpa;
     } catch (e, stack) {
       print('❌ [MochilaService] Erro ao carregar mochila: $e');
       print(stack);
@@ -112,5 +120,62 @@ class MochilaService {
         ],
       ),
     );
+  }
+
+  /// Aplica migração 2.0.0 -> 2.1.0 se necessário
+  /// Remove poções e pedras de reforço da mochila
+  static Future<Mochila> _aplicarMigracaoSeNecessario(String emailLimpo, Mochila mochila) async {
+    try {
+      final migrationBox = await Hive.openBox(_migrationBoxName);
+      final chave = 'migrated_2_1_0_$emailLimpo';
+
+      // Verifica se já foi migrado
+      final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
+
+      if (jaMigrado) {
+        print('✅ [MochilaService] Migração 2.1.0 já foi aplicada anteriormente');
+        return mochila;
+      }
+
+      print('🔄 [MochilaService] Aplicando migração 2.0.0 -> 2.1.0: Limpando poções e pedras de reforço');
+
+      // Remove todos os itens que são poções ou joias (pedra de reforço)
+      final itensLimpos = mochila.itens.map((item) {
+        if (item == null) return null;
+
+        // Mantém moeda de evento e ovo de evento (slots fixos)
+        if (item.tipo == TipoItemConsumivel.moedaEvento ||
+            item.tipo == TipoItemConsumivel.ovoEvento) {
+          return item;
+        }
+
+        // Remove poções e joias (pedra de reforço)
+        if (item.tipo == TipoItemConsumivel.pocao ||
+            item.tipo == TipoItemConsumivel.joia) {
+          print('🗑️ [MochilaService] Removendo: ${item.nome} (${item.tipo.name})');
+          return null;
+        }
+
+        // Mantém outros tipos
+        return item;
+      }).toList();
+
+      final mochilaLimpa = mochila.copyWith(itens: itensLimpos);
+
+      // Salva a mochila limpa
+      await _salvarNoHive(emailLimpo, mochilaLimpa);
+
+      // Marca como migrado
+      await migrationBox.put(chave, true);
+
+      print('✅ [MochilaService] Migração 2.1.0 concluída com sucesso');
+      return mochilaLimpa;
+
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro na migração 2.1.0: $e');
+      print(stack);
+      // Em caso de erro, retorna a mochila original
+      return mochila;
+    }
   }
 }

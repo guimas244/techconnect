@@ -111,10 +111,10 @@ enum AtributoJogo {
   /// Obtém a chance (em %) de gerar monstro raro baseada no tier
   ///
   /// - Tier 3-10: 2% de chance
-  /// - Tier 11+: 3% de chance (boost no endgame)
+  /// - Tier 11+: 4% de chance (boost no endgame)
   static int chanceMonstroColecoRaroPercent(int tier) {
     if (tier >= AtributoJogo.tierBoostMonstroColecoRaro.min) {
-      return AtributoJogo.chanceMonstroColecoRaroTier11Plus.min; // 3% tier 11+
+      return AtributoJogo.chanceMonstroColecoRaroTier11Plus.min; // 4% tier 11+
     }
     return AtributoJogo.chanceMonstroColecoRaro.min; // 2% tier 3-10
   }
