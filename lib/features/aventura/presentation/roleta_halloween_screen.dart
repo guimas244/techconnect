@@ -558,24 +558,32 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
     final chave = 'halloween_${tipoSorteado.name}';
     final ehDuplicado = colecaoAtual[chave] == true;
 
-    print('🎃 [Halloween] Verificando duplicado ANTES de salvar: $chave = ${colecaoAtual[chave]}');
+    print('🎃 [Halloween] Verificando duplicado: $chave = ${colecaoAtual[chave]} (Duplicado: $ehDuplicado)');
 
     // 2º: Salva no Drive apenas se NÃO for duplicado
     if (!ehDuplicado) {
       await _salvarNaColecaoHalloween(tipoSorteado);
+      print('✅ [Halloween] Monstro NOVO salvo na coleção');
     } else {
       print('🥚 [Halloween] Monstro JÁ existe na coleção - não salvando novamente');
     }
 
+    // 3º: Se for duplicado, adiciona ovo de evento na mochila AQUI (antes do modal)
+    if (ehDuplicado) {
+      print('🥚 [Halloween] Adicionando ovo de evento à mochila...');
+      await _adicionarOvoNaMochila();
+      print('✅ [Halloween] Ovo de evento adicionado!');
+    }
+
     if (!mounted) return;
 
-    // 3º: Esconde loading e mostra carta
+    // 4º: Esconde loading e mostra carta
     setState(() {
       _salvando = false;
       _revelando = true;
     });
 
-    // 4º: Revela a carta com animação
+    // 5º: Revela a carta com animação
     _flipControllers[index].reverse().then((_) {
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
@@ -589,11 +597,8 @@ class _CartasHalloweenScreenState extends ConsumerState<CartasHalloweenScreen>
     print('🎃 [Halloween] Mostrando resultado: ${tipoSorteado.name} - Duplicado: $ehDuplicado');
 
     if (ehDuplicado) {
-      // É duplicado - dar ovo de evento
-      print('🥚 [Halloween] Monstro duplicado! Dando ovo de evento...');
-
-      // Adiciona 1 ovo na mochila
-      await _adicionarOvoNaMochila();
+      // É duplicado - mostra modal do ovo (já foi adicionado anteriormente)
+      print('🥚 [Halloween] Monstro duplicado! Mostrando modal do ovo...');
 
       // Mostra o modal do ovo
       await showDialog(
