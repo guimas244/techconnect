@@ -44,7 +44,8 @@
       "Read(//c/Users/guima/**)",
       "Read(//c//**)",
       "Bash(powershell.exe:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -14,6 +14,7 @@ import '../services/ranking_service.dart';
 import '../services/aventura_hive_service.dart';
 import '../services/colecao_service.dart';
 import '../../tipagem/data/tipagem_repository.dart';
+import '../../../core/config/offline_config.dart';
 
 class AventuraRepository {
   final GoogleDriveService _driveService = GoogleDriveService();
@@ -115,6 +116,12 @@ class AventuraRepository {
 
   /// Método privado para salvar no Drive (usado apenas quando necessário)
   Future<bool> _salvarNoDrive(HistoriaJogador historia) async {
+    // MODO OFFLINE: Não salva no Drive
+    if (OfflineConfig.isOfflineMode) {
+      print('🔌 [Repository] Modo OFFLINE - Pulando salvamento no Drive');
+      return true; // Retorna sucesso porque salvamento local já foi feito
+    }
+
     try {
       // Cria o caminho com data atual e email do jogador
       final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
@@ -149,6 +156,33 @@ class AventuraRepository {
 
   /// Sincroniza dados com Drive (DOWNLOAD - baixa do Drive para HIVE local)
   Future<Map<String, dynamic>> sincronizarComDrive(String email) async {
+    // MODO OFFLINE: Usa apenas dados locais
+    if (OfflineConfig.isOfflineMode) {
+      print('🔌 [Repository] Modo OFFLINE - Carregando dados locais');
+      try {
+        final aventuraLocal = await _hiveService.carregarAventura(email);
+        if (aventuraLocal != null) {
+          return {
+            'sucesso': true,
+            'mensagem': 'Dados carregados localmente (Modo Offline)',
+            'dados': aventuraLocal
+          };
+        } else {
+          return {
+            'sucesso': false,
+            'mensagem': 'Nenhuma aventura local encontrada.\n\nQue tal iniciar uma nova aventura?',
+            'dados': null
+          };
+        }
+      } catch (e) {
+        return {
+          'sucesso': false,
+          'mensagem': 'Erro ao carregar dados locais: $e',
+          'dados': null
+        };
+      }
+    }
+
     try {
       print('🌐 [Repository] Iniciando sincronização (download) do Drive para: $email');
       print('📝 [Repository] Buscando arquivo: historico_$email.json');
