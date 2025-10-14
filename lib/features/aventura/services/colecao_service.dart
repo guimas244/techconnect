@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../../core/services/google_drive_service.dart';
 import 'colecao_hive_service.dart';
+import '../../../core/config/offline_config.dart';
 
 class ColecaoService {
   final GoogleDriveService _driveService = GoogleDriveService();
@@ -23,6 +24,12 @@ class ColecaoService {
       }
 
       print('📭 [ColecaoService] Nenhuma coleção encontrada no HIVE para $email');
+
+      // MODO OFFLINE: Não busca no Drive, cria coleção inicial
+      if (OfflineConfig.isOfflineMode) {
+        print('🔌 [ColecaoService] Modo OFFLINE - Criando coleção inicial local');
+        return await _criarColecaoInicial(email);
+      }
 
       // 2º: Se não encontrou no HIVE, tenta carregar do Drive
       final nomeArquivo = 'colecao_$email.json';
@@ -120,6 +127,12 @@ class ColecaoService {
           } else {
             colecaoInicial[entry.key] = entry.value;
           }
+        }
+
+        // MODO OFFLINE: Não salva no Drive
+        if (OfflineConfig.isOfflineMode) {
+          print('🔌 [ColecaoService] Modo OFFLINE - Pulando salvamento no Drive');
+          return true;
         }
 
         final dados = {

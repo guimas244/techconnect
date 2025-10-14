@@ -45,7 +45,9 @@
       "Read(//c//**)",
       "Bash(powershell.exe:*)",
       "Bash(export:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nWIP: Iniciando versão offline - Aventura Repository\n\n- Criada configuração global de modo offline (OfflineConfig)\n- Modificado AventuraRepository para suportar modo offline:\n  - _salvarNoDrive: pula salvamento no Drive em modo offline\n  - sincronizarComDrive: usa apenas dados locais em modo offline\n  \nFalta fazer:\n- Tipagem Repository (offline)\n- Ranking Service (offline)  \n- Coleção Service (offline)\n- Drops Config (offline)\n- Mochila já é 100% local\n- Progresso já é 100% local\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Implementação offline para Ranking e Coleção\n\n- Ranking Service: Salva rankings em SharedPreferences quando offline\n  - Método _atualizarRankingLocal() para salvar localmente\n  - Método carregarRankingsLocais() para carregar rankings salvos\n  - Limite de 100 rankings locais (mantém os mais recentes)\n\n- Coleção Service: Usa apenas HIVE local quando offline\n  - Pula busca no Drive em modo offline\n  - Pula salvamento no Drive em modo offline\n  - Cria coleção inicial local se não existir\n\nSistema offline agora funciona para:\n✅ Histórias (HIVE)\n✅ Rankings (SharedPreferences)  \n✅ Coleção (HIVE)\n✅ Mochila (já era local)\n✅ Progresso (já era local)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

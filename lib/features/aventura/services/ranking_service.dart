@@ -5,6 +5,8 @@ import '../../../core/services/google_drive_service.dart';
 import '../../../core/config/version_config.dart';
 import '../../../core/config/score_config.dart';
 import '../../../core/utils/date_folder_manager.dart';
+import '../../../core/config/offline_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RankingService {
   static final RankingService _instance = RankingService._internal();
@@ -49,6 +51,19 @@ class RankingService {
     required int tier,
     DateTime? dataHora,
   }) async {
+    // MODO OFFLINE: Salva apenas localmente
+    if (OfflineConfig.isOfflineMode) {
+      print('🔌 [RankingService] Modo OFFLINE - Salvando ranking localmente');
+      await _atualizarRankingLocal(
+        runId: runId,
+        email: email,
+        score: score,
+        tier: tier,
+        dataHora: dataHora,
+      );
+      return;
+    }
+
     try {
       final dataHoraFinal = dataHora ?? agora;
       final dataSemHora = DateTime(dataHoraFinal.year, dataHoraFinal.month, dataHoraFinal.day);
@@ -59,11 +74,11 @@ class RankingService {
       print('🏆 [RankingService] Atualizando ranking para $email - Tier: $tier');
       print('   - Score bruto: $score');
       print('   - Score salvo: $scoreParaSalvar (limite aplicado)');
-      
+
       // Carrega o ranking individual do email para o dia
       final rankingDiario = await carregarRankingDiaEmail(dataSemHora, email);
       final entradaExistente = rankingDiario.entradas.where((e) => VersionConfig.extractPlayerNameOnly(e.email) == VersionConfig.extractPlayerNameOnly(email)).firstOrNull;
-      
+
       // 🚨 VALIDAÇÃO ANTI-CHEAT: Verifica mudança de versão no meio da run
       final entradaMesmaRun = rankingDiario.entradas.where((e) => e.runId == runId).firstOrNull;
       if (entradaMesmaRun != null && entradaMesmaRun.version != VersionConfig.currentVersion) {
@@ -77,25 +92,25 @@ class RankingService {
           dataHora: dataHora ?? DateTime.now(),
           version: 'versão inválida ($runId)',
         );
-        
+
         // Remove entrada anterior e adiciona a nova invalidada
         final entradasFiltradas = rankingDiario.entradas.where((e) => e.runId != runId).toList();
         entradasFiltradas.add(novaEntrada);
         final rankingAtualizado = rankingDiario.copyWith(entradas: entradasFiltradas);
         await _salvarRankingDia(rankingAtualizado, email);
-        
+
         print('❌ [ANTI-CHEAT] Run invalidada e score zerado para $email');
         return;
       }
-      
+
       String emailComVersao = email;
       String versaoParaSalvar = VersionConfig.currentVersion;
-      
+
       if (entradaExistente != null) {
         // Já existe entrada, verifica versionamento
         final versaoExistente = entradaExistente.version;
         final nomeJogador = VersionConfig.extractPlayerNameOnly(email);
-        
+
         if (VersionConfig.compareVersions(VersionConfig.currentVersion, versaoExistente) < 0) {
           // Downgrade detectado
           emailComVersao = VersionConfig.formatPlayerNameWithVersion(nomeJogador, VersionConfig.currentVersion, isDowngrade: true);
@@ -132,10 +147,73 @@ class RankingService {
       await _salvarRankingDia(rankingAtualizado, email);
 
       print('✅ [RankingService] Ranking atualizado com sucesso para $email');
-      
+
     } catch (e) {
       print('❌ [RankingService] Erro ao atualizar ranking: $e');
       throw Exception('Erro ao atualizar ranking: $e');
+    }
+  }
+
+  /// Atualiza ranking localmente (modo offline)
+  Future<void> _atualizarRankingLocal({
+    required String runId,
+    required String email,
+    required int score,
+    required int tier,
+    DateTime? dataHora,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dataHoraFinal = dataHora ?? agora;
+      final scoreParaSalvar = ScoreConfig.calcularScoreSalvar(tier, score);
+
+      print('🏆 [RankingService-OFFLINE] Salvando ranking local para $email');
+      print('   - Score bruto: $score');
+      print('   - Score salvo: $scoreParaSalvar');
+
+      // Cria entrada de ranking
+      final entrada = RankingEntry(
+        runId: runId,
+        email: email,
+        score: scoreParaSalvar,
+        dataHora: dataHoraFinal,
+        version: VersionConfig.currentVersion,
+      );
+
+      // Carrega rankings existentes
+      final rankingsJson = prefs.getString('rankings_local') ?? '[]';
+      final List<dynamic> rankingsList = jsonDecode(rankingsJson);
+
+      // Adiciona nova entrada
+      rankingsList.add(entrada.toJson());
+
+      // Mantém apenas as últimas 100 entradas
+      if (rankingsList.length > 100) {
+        rankingsList.removeRange(0, rankingsList.length - 100);
+      }
+
+      // Salva de volta
+      await prefs.setString('rankings_local', jsonEncode(rankingsList));
+      print('✅ [RankingService-OFFLINE] Ranking salvo localmente');
+    } catch (e) {
+      print('❌ [RankingService-OFFLINE] Erro ao salvar ranking local: $e');
+    }
+  }
+
+  /// Carrega rankings locais (modo offline)
+  Future<List<RankingEntry>> carregarRankingsLocais() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rankingsJson = prefs.getString('rankings_local') ?? '[]';
+      final List<dynamic> rankingsList = jsonDecode(rankingsJson);
+
+      return rankingsList
+          .map((json) => RankingEntry.fromJson(json as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.score.compareTo(a.score)); // Ordena por score decrescente
+    } catch (e) {
+      print('❌ [RankingService-OFFLINE] Erro ao carregar rankings locais: $e');
+      return [];
     }
   }
 
