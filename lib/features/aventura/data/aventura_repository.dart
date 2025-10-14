@@ -1105,7 +1105,13 @@ class AventuraRepository {
   Future<bool> arquivarHistoricoJogador(String email, String runId) async {
     try {
       print('📦 [Repository] INICIANDO arquivamento para: $email (RunID: $runId)');
-      
+
+      // MODO OFFLINE: Não arquiva no Drive, apenas retorna sucesso
+      if (OfflineConfig.isOfflineMode) {
+        print('🔌 [Repository] Modo OFFLINE - Pulando arquivamento no Drive');
+        return true;
+      }
+
       // Verifica se runId não está vazio - se estiver, gera um temporário
       String runIdFinal = runId;
       if (runId.isEmpty) {
@@ -1113,21 +1119,21 @@ class AventuraRepository {
         runIdFinal = 'legacy_${DateTime.now().millisecondsSinceEpoch}';
         print('🆔 [Repository] RunId temporário gerado: $runIdFinal');
       }
-      
+
       final nomeAtual = 'historico_$email.json';
       final novoNome = 'historico_${email}_$runIdFinal.json';
-      
+
       print('📦 [Repository] Arquivo atual: $nomeAtual');
       print('📦 [Repository] Novo nome: $novoNome');
-      
+
       // Cria o caminho com data atual (mesmo padrão usado em carregarHistoricoJogador e salvarHistoricoJogador)
       final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
       final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
       final caminhoCompleto = 'historias/$dataFormatada/$email';
-      
+
       print('📦 [Repository] Caminho completo: $caminhoCompleto');
       print('📦 [Repository] Chamando DriveService.renomearArquivoDaPasta...');
-      
+
       // Renomeia o arquivo no Drive usando o caminho completo
       final sucesso = await _driveService.renomearArquivoDaPasta(nomeAtual, novoNome, caminhoCompleto);
       

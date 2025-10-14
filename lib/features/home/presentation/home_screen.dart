@@ -9,6 +9,7 @@ import '../../aventura/providers/aventura_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/config/version_config.dart';
+import '../../../core/config/offline_config.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +31,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _checkDriveConnection() async {
+    // OFFLINE MODE: Skip Drive connection
+    if (OfflineConfig.isOfflineMode) {
+      print('🔌 [HomeScreen] Modo OFFLINE - Pulando conexão com Drive');
+      setState(() {
+        _isDriveConnected = true; // Set to true so cards are not blocked
+        _isConnecting = false;
+        _connectionStatus = 'Modo Offline - Dados salvos localmente';
+      });
+      return;
+    }
+
     setState(() {
       _isConnecting = true;
       _connectionStatus = 'Verificando conexão...';

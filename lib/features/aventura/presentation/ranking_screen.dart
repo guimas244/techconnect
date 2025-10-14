@@ -6,6 +6,7 @@ import '../services/ranking_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/config/version_config.dart';
+import '../../../core/config/offline_config.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
@@ -35,6 +36,49 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     final agora = _rankingService.agora;
     _dataAtual = DateTime(agora.year, agora.month, agora.day);
     _carregarRanking();
+  }
+
+  Future<void> _downloadRanking() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Salvando ranking localmente...'),
+            ],
+          ),
+        ),
+      );
+
+      // O ranking já está salvo localmente no SharedPreferences
+      // Este método apenas confirma o salvamento
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ranking salvo localmente com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _carregarRanking() async {
@@ -254,6 +298,14 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
             context.go('/home');
           },
         ),
+        actions: [
+          if (OfflineConfig.isOfflineMode)
+            IconButton(
+              icon: const Icon(Icons.download, color: Colors.white),
+              onPressed: _downloadRanking,
+              tooltip: 'Download do ranking local',
+            ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(

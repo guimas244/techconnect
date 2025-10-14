@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Login persistente para modo offline\n\nSistema de cache de usuário implementado:\n\nNovos arquivos:\n- UserCacheService: Salva/carrega dados do usuário em SharedPreferences\n- UserHelper: Helper para obter email/UID do usuário (Firebase ou cache)\n\nModificações:\n- AuthProvider: Auto-login do cache em modo offline\n- AuthProvider: Salva usuário no cache após login bem-sucedido\n- AuthProvider: Limpa cache no logout\n- Método getEmail() para obter email do usuário (Firebase ou cache)\n\nFuncionamento:\n1. Ao fazer login, dados são salvos em cache local\n2. Em modo offline, app carrega usuário do cache automaticamente\n3. Não precisa fazer login novamente enquanto cache existir\n4. Logout limpa o cache\n\nDados salvos em cache:\n- Email\n- Display Name  \n- Photo URL\n- UID\n- Status de login\n\nBuild testado: 114.4MB\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(/d/bkc_2025_dublin/flutter/bin/flutter build apk --release)",
+      "Bash(\"D:/bkc_2025_dublin/flutter/bin/flutter.bat\" build apk --release)",
+      "Bash(\"/d/bkc_2025_dublin/flutter/flutter/bin/flutter.bat\" build apk --release)"
     ],
     "deny": [],
     "ask": []

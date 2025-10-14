@@ -83,6 +83,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading);
 
     try {
+      // MODO OFFLINE: Salva credenciais direto no cache sem autenticar no Firebase
+      if (OfflineConfig.isOfflineMode) {
+        print('🔌 [AuthProvider] Modo OFFLINE - Login local sem Firebase');
+
+        // Cria dados de usuário fake para salvar no cache
+        final fakeUserData = {
+          'email': email,
+          'displayName': email.split('@')[0],
+          'photoUrl': '',
+          'uid': 'offline_${email.hashCode}',
+        };
+
+        // Salva no cache como se fosse um usuário do Firebase
+        await UserCacheService.salvarUsuarioFromMap(fakeUserData);
+
+        print('✅ [AuthProvider] Login offline bem-sucedido: $email');
+
+        state = const AuthState(
+          status: AuthStatus.authenticated,
+          user: null, // Não temos User do Firebase em modo offline
+        );
+        return;
+      }
+
+      // MODO ONLINE: Autentica normalmente no Firebase
       final UserCredential userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -118,7 +143,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         default:
           errorMessage = 'Erro ao fazer login: ${e.message}';
       }
-      
+
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: errorMessage,

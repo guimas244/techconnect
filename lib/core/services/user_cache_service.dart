@@ -26,6 +26,23 @@ class UserCacheService {
     }
   }
 
+  /// Salva usuário no cache a partir de um Map (para modo offline)
+  static Future<void> salvarUsuarioFromMap(Map<String, String> userData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString(_keyEmail, userData['email'] ?? '');
+      await prefs.setString(_keyDisplayName, userData['displayName'] ?? '');
+      await prefs.setString(_keyPhotoUrl, userData['photoUrl'] ?? '');
+      await prefs.setString(_keyUid, userData['uid'] ?? '');
+      await prefs.setBool(_keyIsLoggedIn, true);
+
+      print('✅ [UserCache] Usuário salvo no cache (modo offline): ${userData['email']}');
+    } catch (e) {
+      print('❌ [UserCache] Erro ao salvar usuário: $e');
+    }
+  }
+
   /// Verifica se existe um usuário em cache
   static Future<bool> temUsuarioEmCache() async {
     try {

@@ -17,6 +17,7 @@ import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/developer_config.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/offline_config.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -665,6 +666,13 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                   : const Icon(Icons.save, color: Colors.white),
               onPressed: _salvandoDrive ? null : _uploadParaDrive,
               tooltip: _salvandoDrive ? 'Salvando...' : 'Salvar aventura no Drive + Ranking',
+            ),
+          // Botão de Download (apenas em modo offline)
+          if (historiaAtual != null && OfflineConfig.isOfflineMode)
+            IconButton(
+              icon: const Icon(Icons.download, color: Colors.white),
+              onPressed: _downloadHistoria,
+              tooltip: 'Download da história',
             ),
           if (historiaAtual != null)
             IconButton(
@@ -1516,7 +1524,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           await repository.atualizarRankingPorScore(historiaAtual!);
           print('✅ [AventuraScreen] Score registrado no ranking com sucesso!');
         } catch (e) {
-          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          if (!OfflineConfig.isOfflineMode && (e.toString().contains('401') || e.toString().contains('authentication'))) {
             print('🔄 [AventuraScreen] Erro 401 no ranking, renovando autenticação...');
             await GoogleDriveService().inicializarConexao();
             await repository.atualizarRankingPorScore(historiaAtual!);
@@ -1545,7 +1553,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       try {
         historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
       } catch (e) {
-        if (e.toString().contains('401') || e.toString().contains('authentication')) {
+        if (!OfflineConfig.isOfflineMode && (e.toString().contains('401') || e.toString().contains('authentication'))) {
           print('[AventuraScreen] Erro 401 detectado, renovando autenticacao...');
           await GoogleDriveService().inicializarConexao();
           historiaAtual = await repository.carregarHistoricoJogador(emailJogador);
@@ -1564,7 +1572,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         try {
           sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
         } catch (e) {
-          if (e.toString().contains('401') || e.toString().contains('authentication')) {
+          if (!OfflineConfig.isOfflineMode && (e.toString().contains('401') || e.toString().contains('authentication'))) {
             print('[AventuraScreen] Erro 401 no arquivamento, renovando autenticacao...');
             await GoogleDriveService().inicializarConexao();
             sucessoArquivamento = await repository.arquivarHistoricoJogador(emailJogador, historiaAtual.runId);
@@ -1608,7 +1616,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       }
       return sucessoLocal;
     } catch (e) {
-      if (e.toString().contains('401') || e.toString().contains('authentication')) {
+      if (!OfflineConfig.isOfflineMode && (e.toString().contains('401') || e.toString().contains('authentication'))) {
         print('[AventuraScreen] Erro 401 ao remover historico local, renovando autenticacao...');
         await GoogleDriveService().inicializarConexao();
         final sucessoLocal = await repository.removerHistoricoJogador(emailJogador);
@@ -2073,6 +2081,53 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erro ao baixar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Download da história (salva localmente no Hive)
+  Future<void> _downloadHistoria() async {
+    if (historiaAtual == null) return;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Salvando história localmente...'),
+            ],
+          ),
+        ),
+      );
+
+      final repository = ref.read(aventuraRepositoryProvider);
+
+      // Salva localmente no Hive
+      await repository.salvarHistoricoJogadorLocal(historiaAtual!);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('História salva localmente com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
             backgroundColor: Colors.red,
           ),
         );

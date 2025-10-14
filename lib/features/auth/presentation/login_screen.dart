@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../../core/services/user_cache_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -159,6 +161,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (authState.status == AuthStatus.authenticated) {
         // Salva dados do usuário após login bem-sucedido
         await _saveUserDataAfterLogin(email, password);
+
+        // Salva email no provider para ficar disponível globalmente
+        final cachedEmail = await UserCacheService.getEmailEmCache();
+        if (cachedEmail != null && cachedEmail.isNotEmpty) {
+          ref.read(cachedUserEmailStateProvider.notifier).state = cachedEmail;
+        }
 
         // Pergunta sobre biometria se ainda não foi configurada
         final firstSetupDone = await _storageService.isFirstBiometricSetupDone();
