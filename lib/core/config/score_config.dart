@@ -76,11 +76,18 @@ class ScoreConfig {
   }
 
   /// Verifica se o jogador atingiu o limite de score para o tier atual
+  ///
+  /// Tier 1-10: Retorna true quando atinge 50 pontos
+  /// Tier 11+: SEMPRE retorna false (score ilimitado para uso na loja)
+  ///
+  /// IMPORTANTE: O limite de 150 no tier 11+ só se aplica ao RANKING,
+  /// não ao score em si que pode crescer infinitamente para compras na loja
   static bool atingiuLimite(int tier, int scoreAtual) {
     if (ehPreTransicao(tier)) {
       return scoreAtual >= SCORE_LIMITE_PRE_TIER_11;
     } else {
-      return scoreAtual >= scoreMaximoExtras;
+      // Tier 11+: score é ilimitado (false = nunca atinge limite)
+      return false;
     }
   }
 

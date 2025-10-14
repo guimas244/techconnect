@@ -363,57 +363,90 @@ class AventuraRepository {
       await removerHistoricoJogador(email);
     }
 
-    // Consulta monstros nostálgicos desbloqueados da coleção
-    print('🎯 [Repository] Consultando coleção de monstros nostálgicos para: $email');
+    // Consulta monstros nostálgicos e Halloween desbloqueados da coleção
+    print('🎯 [Repository] Consultando coleção de monstros nostálgicos e Halloween para: $email');
     final monstrosNostalgicosDesbloqueados = await _colecaoService.obterMonstrosNostalgicosDesbloqueados(email);
+    final monstrosHalloweenDesbloqueados = await _colecaoService.obterMonstrosHalloweenDesbloqueados(email);
 
     final random = Random();
     final tiposDisponiveis = Tipo.values.toList();
 
-    // Cria uma lista com tipos iniciais (sempre disponíveis)
-    final todosOsTiposDisponiveis = <Tipo>[];
-    todosOsTiposDisponiveis.addAll(tiposDisponiveis); // 30 monstros iniciais sempre
+    // Cria uma lista de tuplas (tipo, coleção) para o pool de sorteio
+    // Cada entrada representa 1 monstro específico de 1 coleção específica
+    final poolMonstros = <Map<String, dynamic>>[];
 
-    // Adiciona monstros nostálgicos desbloqueados (expandindo as opções)
+    // 1. Adiciona TODOS os 30 monstros iniciais (sempre disponíveis)
+    for (final tipo in tiposDisponiveis) {
+      poolMonstros.add({
+        'tipo': tipo,
+        'colecao': 'inicial',
+        'imagem': 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
+      });
+    }
+    print('✅ [Repository] 30 monstros INICIAIS adicionados ao pool');
+
+    // 2. Adiciona monstros nostálgicos DESBLOQUEADOS (1 por tipo desbloqueado)
     for (final nomeNostalgico in monstrosNostalgicosDesbloqueados) {
-      // Converte nome do monstro nostálgico para Tipo (se existir)
       try {
         final tipoNostalgico = Tipo.values.firstWhere((tipo) => tipo.name == nomeNostalgico);
-        // Adiciona como opção extra na roleta (não remove o inicial)
-        todosOsTiposDisponiveis.add(tipoNostalgico);
-        print('🌟 [Repository] Monstro nostálgico ADICIONADO à roleta: ${tipoNostalgico.name}');
+        poolMonstros.add({
+          'tipo': tipoNostalgico,
+          'colecao': 'nostalgico',
+          'imagem': 'assets/monstros_aventura/colecao_nostalgicos/${tipoNostalgico.name}.png',
+        });
+        print('🌟 [Repository] Monstro nostálgico ADICIONADO: ${tipoNostalgico.name}');
       } catch (e) {
-        print('⚠️ [Repository] Monstro nostálgico não encontrado nos tipos: $nomeNostalgico');
+        print('⚠️ [Repository] Tipo nostálgico não encontrado: $nomeNostalgico');
       }
     }
 
-    // Embaralha todos os tipos disponíveis (iniciais + nostálgicos)
-    todosOsTiposDisponiveis.shuffle(random);
-    print('🎲 [Repository] Total de tipos disponíveis para sorteio: ${todosOsTiposDisponiveis.length}');
-    print('📋 [Repository] Monstros nostálgicos desbloqueados: ${monstrosNostalgicosDesbloqueados.length}');
-    print('🔍 [Repository] Lista nostálgicos: $monstrosNostalgicosDesbloqueados');
+    // 3. Adiciona monstros Halloween DESBLOQUEADOS (1 por tipo desbloqueado)
+    for (final nomeHalloween in monstrosHalloweenDesbloqueados) {
+      try {
+        final tipoHalloween = Tipo.values.firstWhere((tipo) => tipo.name == nomeHalloween);
+        poolMonstros.add({
+          'tipo': tipoHalloween,
+          'colecao': 'halloween',
+          'imagem': 'assets/monstros_aventura/colecao_halloween/${tipoHalloween.name}.png',
+        });
+        print('🎃 [Repository] Monstro Halloween ADICIONADO: ${tipoHalloween.name}');
+      } catch (e) {
+        print('⚠️ [Repository] Tipo Halloween não encontrado: $nomeHalloween');
+      }
+    }
+
+    // Embaralha o pool completo
+    poolMonstros.shuffle(random);
+    print('🎲 [Repository] Pool total de monstros: ${poolMonstros.length} (30 inicial + ${monstrosNostalgicosDesbloqueados.length} nostálgico + ${monstrosHalloweenDesbloqueados.length} halloween)');
 
     final monstrosSorteados = <MonstroAventura>[];
 
-    // Sorteia 3 tipos únicos da lista combinada
-    final tiposUnicos = <Tipo>{};
-    for (int i = 0; i < todosOsTiposDisponiveis.length && tiposUnicos.length < 3; i++) {
-      tiposUnicos.add(todosOsTiposDisponiveis[i]);
+    // Sorteia 3 monstros diferentes do pool (garante tipos diferentes)
+    final tiposSorteados = <Tipo>{};
+    final monstrosEscolhidos = <Map<String, dynamic>>[];
+
+    for (final monstroData in poolMonstros) {
+      final tipo = monstroData['tipo'] as Tipo;
+      if (!tiposSorteados.contains(tipo)) {
+        tiposSorteados.add(tipo);
+        monstrosEscolhidos.add(monstroData);
+        if (monstrosEscolhidos.length >= 3) break;
+      }
     }
 
-    // Converte o Set para List para poder iterar
-    final tiposSorteados = tiposUnicos.toList();
+    for (final monstroData in monstrosEscolhidos) {
+      final tipo = monstroData['tipo'] as Tipo;
+      final colecao = monstroData['colecao'] as String;
+      final imagemPath = monstroData['imagem'] as String;
 
-    for (int i = 0; i < tiposSorteados.length; i++) {
-      final tipo = tiposSorteados[i];
-      // Sorteia tipo extra diferente do principal (usando todos os tipos disponíveis)
-      final outrosTipos = todosOsTiposDisponiveis.where((t) => t != tipo).toList();
+      // Sorteia tipo extra diferente do principal (usa pool completo de tipos)
+      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
-      
+
       // Gera 4 habilidades para o monstro
       final habilidades = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
-      
+
       // Sorteia atributos usando os ranges definidos
       final vidaSorteada = AtributoJogo.vida.sortear(random);
       final energiaSorteada = AtributoJogo.energia.sortear(random);
@@ -421,26 +454,18 @@ class AventuraRepository {
       final ataqueSorteado = AtributoJogo.ataque.sortear(random);
       final defesaSorteada = AtributoJogo.defesa.sortear(random);
 
-      // Determina se é um monstro nostálgico desbloqueado
-      // Como temos duplicados na roleta, damos 60% de chance para nostálgico se desbloqueado
-      final temNostalgico = monstrosNostalgicosDesbloqueados.contains(tipo.name);
-      final ehNostalgico = temNostalgico && random.nextDouble() < 0.6;
-      final caminhoImagem = ehNostalgico
-          ? 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png'
-          : 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png';
-
-      print('🎲 [Repository] Sorteando monstro ${tipo.name} ${ehNostalgico ? '(NOSTÁLGICO)' : '(INICIAL)'}:');
+      print('🎲 [Repository] Monstro sorteado: ${tipo.name} (${colecao.toUpperCase()})');
       print('   - Vida: $vidaSorteada (range: ${AtributoJogo.vida.rangeTexto})');
       print('   - Energia: $energiaSorteada (range: ${AtributoJogo.energia.rangeTexto})');
       print('   - Agilidade: $agilidadeSorteada (range: ${AtributoJogo.agilidade.rangeTexto})');
       print('   - Ataque: $ataqueSorteado (range: ${AtributoJogo.ataque.rangeTexto})');
       print('   - Defesa: $defesaSorteada (range: ${AtributoJogo.defesa.rangeTexto})');
-      print('   - Imagem: $caminhoImagem');
+      print('   - Imagem: $imagemPath');
 
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: caminhoImagem,
+        imagem: imagemPath,
         vida: vidaSorteada,
         energia: energiaSorteada,
         agilidade: agilidadeSorteada,
@@ -464,7 +489,7 @@ class AventuraRepository {
     print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
 
     // Sorteia 5 monstros inimigos para a aventura (tier 1 - sem itens)
-    final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: 1);
+    final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: 1, email: email);
     print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
     
     // Gera um ID único para esta run/aventura
@@ -582,7 +607,7 @@ class AventuraRepository {
       print('🗺️ [Repository] Mapa escolhido para nova aventura: $mapaEscolhido');
 
       // Sorteia 5 monstros inimigos (apenas 1 tipo cada)
-      final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: historiaAtual.tier);
+      final monstrosInimigos = await _sortearMonstrosInimigos(tierAtual: historiaAtual.tier, email: email);
       print('👾 [Repository] Sorteados ${monstrosInimigos.length} monstros inimigos');
 
       // Gera um novo runId se não existir ou se estiver vazio
@@ -618,7 +643,7 @@ class AventuraRepository {
   }
 
   /// Sorteia 5 monstros inimigos com tipos e habilidades + monstros elite a cada 3 tiers
-  Future<List<MonstroInimigo>> _sortearMonstrosInimigos({int tierAtual = 1}) async {
+  Future<List<MonstroInimigo>> _sortearMonstrosInimigos({int tierAtual = 1, required String email}) async {
     final random = Random();
     final monstrosInimigos = <MonstroInimigo>[];
 
@@ -627,14 +652,65 @@ class AventuraRepository {
 
     print('🏆 [Repository] Tier $tierAtual: ${deveSpawnarElite ? "Com monstro elite (5+1)" : "Sem monstro elite (5)"}');
 
+    // Consulta monstros desbloqueados (nostálgicos + Halloween)
+    print('🎯 [Repository] Consultando monstros desbloqueados para inimigos...');
+    final monstrosNostalgicosDesbloqueados = await _colecaoService.obterMonstrosNostalgicosDesbloqueados(email);
+    final monstrosHalloweenDesbloqueados = await _colecaoService.obterMonstrosHalloweenDesbloqueados(email);
+
+    // Cria pool de inimigos (tipo + coleção)
+    final poolInimigos = <Map<String, dynamic>>[];
+    final tiposDisponiveisBase = Tipo.values.toList();
+
+    // 1. Adiciona TODOS os 30 monstros iniciais
+    for (final tipo in tiposDisponiveisBase) {
+      poolInimigos.add({
+        'tipo': tipo,
+        'colecao': 'inicial',
+        'imagem': 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
+      });
+    }
+
+    // 2. Adiciona nostálgicos desbloqueados
+    for (final nomeNostalgico in monstrosNostalgicosDesbloqueados) {
+      try {
+        final tipoNostalgico = Tipo.values.firstWhere((tipo) => tipo.name == nomeNostalgico);
+        poolInimigos.add({
+          'tipo': tipoNostalgico,
+          'colecao': 'nostalgico',
+          'imagem': 'assets/monstros_aventura/colecao_nostalgicos/${tipoNostalgico.name}.png',
+        });
+        print('🌟 [Repository] Nostálgico disponível como inimigo: ${tipoNostalgico.name}');
+      } catch (e) {
+        print('⚠️ [Repository] Tipo nostálgico não encontrado: $nomeNostalgico');
+      }
+    }
+
+    // 3. Adiciona Halloween desbloqueados
+    for (final nomeHalloween in monstrosHalloweenDesbloqueados) {
+      try {
+        final tipoHalloween = Tipo.values.firstWhere((tipo) => tipo.name == nomeHalloween);
+        poolInimigos.add({
+          'tipo': tipoHalloween,
+          'colecao': 'halloween',
+          'imagem': 'assets/monstros_aventura/colecao_halloween/${tipoHalloween.name}.png',
+        });
+        print('🎃 [Repository] Halloween disponível como inimigo: ${tipoHalloween.name}');
+      } catch (e) {
+        print('⚠️ [Repository] Tipo Halloween não encontrado: $nomeHalloween');
+      }
+    }
+
+    print('👾 [Repository] Pool de inimigos: ${poolInimigos.length} (30 inicial + ${monstrosNostalgicosDesbloqueados.length} nostálgico + ${monstrosHalloweenDesbloqueados.length} halloween)');
+
     // Sempre gera 5 monstros normais
     for (int i = 0; i < 5; i++) {
-      // Escolhe um tipo principal aleatório
-      final tiposDisponiveis = Tipo.values.toList();
-      final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
-      
-      // Sorteia tipo extra diferente do principal (todos os monstros têm 2 tipos)
-      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+      // Escolhe um monstro aleatório do pool
+      final monstroData = poolInimigos[random.nextInt(poolInimigos.length)];
+      final tipo = monstroData['tipo'] as Tipo;
+      final imagemPath = monstroData['imagem'] as String;
+
+      // Sorteia tipo extra diferente do principal
+      final outrosTipos = tiposDisponiveisBase.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
       
@@ -688,11 +764,12 @@ class AventuraRepository {
       print('   - Evolução: +${niveisEvolucao * AtributoJogo.evolucaoGanhoVida.min} = $vidaComEvolucao');
       print('   - Bônus tier (+${(bonusPercentual * 100).toStringAsFixed(0)}%): $vidaFinal');
       print('   - Energia: $energiaBase+${niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min}=$energiaFinal');
+      print('   - Coleção: ${monstroData['colecao']}');
 
       final monstro = MonstroInimigo(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
+        imagem: imagemPath,
         vida: vidaFinal,
         energia: energiaFinal,
         agilidade: AtributoJogo.agilidade.sortear(random),
@@ -709,7 +786,12 @@ class AventuraRepository {
     // Gera monstro elite se for tier múltiplo de 3
     if (deveSpawnarElite) {
       print('🏆 [Repository] Gerando monstro elite para tier $tierAtual');
-      final monstroElite = await _gerarMonstroElite(tierAtual, random);
+      final monstroElite = await _gerarMonstroElite(
+        tierAtual,
+        random,
+        poolInimigos,
+        tiposDisponiveisBase,
+      );
       monstrosInimigos.add(monstroElite);
     }
 
@@ -720,7 +802,12 @@ class AventuraRepository {
 
     if (AtributoJogo.deveGerarMonstroRaro(random, tierAtual)) {
       print('🌟 [Repository] ✅ SORTEIO VENCEU! Gerando monstro RARO da nova coleção');
-      final monstroRaro = await _gerarMonstroRaro(tierAtual, random);
+      final monstroRaro = await _gerarMonstroRaro(
+        tierAtual,
+        random,
+        poolInimigos,
+        tiposDisponiveisBase,
+      );
       monstrosInimigos.add(monstroRaro);
     } else {
       print('🌟 [Repository] ❌ Sorteio perdeu, não vai gerar monstro raro desta vez');
@@ -730,11 +817,18 @@ class AventuraRepository {
   }
 
   /// Gera um monstro elite com dobro de vida e item raro+
-  Future<MonstroInimigo> _gerarMonstroElite(int tierAtual, Random random) async {
-    // Escolhe tipos aleatórios para o monstro elite
-    final tiposDisponiveis = Tipo.values.toList();
-    final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
-    final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+  Future<MonstroInimigo> _gerarMonstroElite(
+    int tierAtual,
+    Random random,
+    List<Map<String, dynamic>> poolInimigos,
+    List<Tipo> tiposBase,
+  ) async {
+    // Escolhe um monstro aleatório do pool
+    final monstroData = poolInimigos[random.nextInt(poolInimigos.length)];
+    final tipo = monstroData['tipo'] as Tipo;
+    final imagemPath = monstroData['imagem'] as String;
+
+    final outrosTipos = tiposBase.where((t) => t != tipo).toList();
     outrosTipos.shuffle(random);
     final tipoExtra = outrosTipos.first;
 
@@ -766,11 +860,12 @@ class AventuraRepository {
     print('   - Vida normal: $vidaComBonus → Elite: $vidaFinalElite (2x)');
     print('   - Energia: $energiaFinal');
     print('   - Item elite: ${itemElite.nome}');
+    print('   - Coleção: ${monstroData['colecao']}');
 
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
-      imagem: 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png', // Usa imagem do tipo como os outros
+      imagem: imagemPath,
       vida: vidaFinalElite,
       energia: energiaFinal,
       agilidade: AtributoJogo.agilidade.sortear(random),
@@ -784,11 +879,18 @@ class AventuraRepository {
   }
 
   /// Gera um monstro raro da nova coleção (nostálgicos)
-  Future<MonstroInimigo> _gerarMonstroRaro(int tierAtual, Random random) async {
-    // Escolhe um tipo aleatório para o monstro raro
-    final tiposDisponiveis = Tipo.values.toList();
-    final tipo = tiposDisponiveis[random.nextInt(tiposDisponiveis.length)];
-    final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
+  Future<MonstroInimigo> _gerarMonstroRaro(
+    int tierAtual,
+    Random random,
+    List<Map<String, dynamic>> poolInimigos,
+    List<Tipo> tiposBase,
+  ) async {
+    // Escolhe um monstro aleatório do pool
+    final monstroData = poolInimigos[random.nextInt(poolInimigos.length)];
+    final tipo = monstroData['tipo'] as Tipo;
+    final imagemPath = monstroData['imagem'] as String;
+
+    final outrosTipos = tiposBase.where((t) => t != tipo).toList();
     outrosTipos.shuffle(random);
     final tipoExtra = outrosTipos.first;
 
@@ -823,15 +925,16 @@ class AventuraRepository {
     final energiaFinal = energiaBase + (niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min);
 
     print('🌟 [Repository] Monstro RARO tier $tierAtual:');
-    print('   - Tipo: ${tipo.name} (Da nova coleção nostálgica)');
+    print('   - Tipo: ${tipo.name}');
     print('   - Vida: $vidaFinal');
     print('   - Energia: $energiaFinal');
     print('   - Item: ${itemEquipado?.nome ?? 'Nenhum'}');
+    print('   - Coleção: ${monstroData['colecao']}');
 
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
-      imagem: 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png', // Imagem do monstro nostálgico
+      imagem: imagemPath,
       vida: vidaFinal,
       energia: energiaFinal,
       agilidade: AtributoJogo.agilidade.sortear(random),
@@ -897,9 +1000,9 @@ class AventuraRepository {
   }
 
   /// Gera novos monstros inimigos para um tier específico (método público)
-  Future<List<MonstroInimigo>> gerarMonstrosInimigosPorTier(int tier) async {
+  Future<List<MonstroInimigo>> gerarMonstrosInimigosPorTier(int tier, String email) async {
     print('🆕 [Repository] Gerando monstros inimigos para tier $tier via método público');
-    return await _sortearMonstrosInimigos(tierAtual: tier);
+    return await _sortearMonstrosInimigos(tierAtual: tier, email: email);
   }
 
   /// Atualiza o ranking quando o score de uma aventura for alterado

@@ -1481,7 +1481,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     print('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [MapaAventura] Gerando novos monstros inimigos para tier $novoTier');
 
     // Chama o método público do repository para gerar novos monstros com itens
-    final novosMonstros = await repository.gerarMonstrosInimigosPorTier(novoTier);
+    final emailJogador = ref.read(validUserEmailProvider);
+    final novosMonstros = await repository.gerarMonstrosInimigosPorTier(novoTier, emailJogador);
 
     print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [MapaAventura] Novos monstros gerados com tier $novoTier');
     return novosMonstros;
@@ -1993,7 +1994,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       await Future.delayed(const Duration(seconds: 2));
 
       // Gera novos monstros para o tier atual
-      final novosMonstros = await repository.gerarMonstrosInimigosPorTier(historiaAtual!.tier);
+      final emailJogador = ref.read(validUserEmailProvider);
+      final novosMonstros = await repository.gerarMonstrosInimigosPorTier(historiaAtual!.tier, emailJogador);
 
       // Atualiza a história com novos monstros e decrementa refreshs
       final historiaAtualizada = historiaAtual!.copyWith(

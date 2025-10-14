@@ -31,6 +31,7 @@ import '../models/item_consumivel.dart';
 import '../models/mochila.dart';
 import '../../../core/config/score_config.dart';
 import 'modal_limite_score.dart';
+import 'modal_limite_score_tier11.dart';
 import '../services/mochila_service.dart';
 import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
@@ -782,19 +783,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
             : historia.tier;
 
         // Calcula novo score com limite de pontos extras
+        // Score acumula ILIMITADO (para uso na loja)
+        // O limite de 150 só é aplicado ao salvar no ranking
         int novoScore = historia.score + scoreGanho;
-
-        // Se tier 11+, aplica limite máximo de pontos extras (100)
-        if (ScoreConfig.ehPosTransicao(historia.tier)) {
-          final scoreMaximoExtras = ScoreConfig.scoreMaximoExtras;
-          if (novoScore > scoreMaximoExtras) {
-            novoScore = scoreMaximoExtras;
-            print('⚠️ [BatalhaScreen] Score limitado ao máximo de extras: $scoreMaximoExtras');
-          }
-        }
 
         print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
         print('📊 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
+        if (ScoreConfig.ehPosTransicao(historia.tier)) {
+          print('💰 [BatalhaScreen] Score ILIMITADO no tier 11+ (limite de 150 só no ranking)');
+        }
         
         // Cria registro da batalha
         final registroBatalha = RegistroBatalha(
@@ -813,28 +810,37 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           scoreGanho: scoreGanho,
         );
         
-        // Verifica se deve mostrar modal de limite de 50 pontos
-        bool mostrarModalLimite = false;
+        // Verifica se deve mostrar modal de limite de 50 pontos (tier 1-10)
+        bool mostrarModalLimite50 = false;
         if (ScoreConfig.ehPreTransicao(historia.tier) &&
             novoScore >= ScoreConfig.SCORE_LIMITE_PRE_TIER_11 &&
             !historia.mensagemLimite50Mostrada) {
-          mostrarModalLimite = true;
+          mostrarModalLimite50 = true;
+        }
+
+        // Verifica se deve mostrar modal de limite de 100 extras (tier 11+)
+        bool mostrarModalLimite100 = false;
+        if (ScoreConfig.ehPosTransicao(historia.tier) &&
+            novoScore >= ScoreConfig.scoreMaximoExtras &&
+            !historia.mensagemLimite100Mostrada) {
+          mostrarModalLimite100 = true;
         }
 
         // Atualiza história com novo score e histórico da batalha
         final historiaComScore = historia.copyWith(
           score: novoScore,
           historicoBatalhas: [...historia.historicoBatalhas, registroBatalha],
-          mensagemLimite50Mostrada: mostrarModalLimite ? true : historia.mensagemLimite50Mostrada,
+          mensagemLimite50Mostrada: mostrarModalLimite50 ? true : historia.mensagemLimite50Mostrada,
+          mensagemLimite100Mostrada: mostrarModalLimite100 ? true : historia.mensagemLimite100Mostrada,
         );
         // Salva histórico apenas no HIVE (SEM atualizar ranking em vitórias)
         await repository.salvarHistoricoJogadorLocal(historiaComScore);
 
-        print('? [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
+        print('✅ [BatalhaScreen] Score atualizado e batalha salva no histórico local (sem ranking)!');
 
-        // Mostra modal de limite se necessário (após salvar)
-        if (mostrarModalLimite && mounted) {
-          print('⚠️ [BatalhaScreen] Score atingiu ${ScoreConfig.SCORE_LIMITE_PRE_TIER_11} - Mostrando modal de alerta');
+        // Mostra modal de limite de 50 se necessário (após salvar)
+        if (mostrarModalLimite50 && mounted) {
+          print('⚠️ [BatalhaScreen] Score atingiu ${ScoreConfig.SCORE_LIMITE_PRE_TIER_11} - Mostrando modal de alerta tier 1-10');
           // Aguarda um frame para garantir que o widget está montado
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -842,6 +848,21 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 context: context,
                 barrierDismissible: true,
                 builder: (context) => const ModalLimiteScore(),
+              );
+            }
+          });
+        }
+
+        // Mostra modal de limite de 100 extras se necessário (após salvar)
+        if (mostrarModalLimite100 && mounted) {
+          print('⚠️ [BatalhaScreen] Score atingiu ${ScoreConfig.scoreMaximoExtras} extras - Mostrando modal de alerta tier 11+');
+          // Aguarda um frame para garantir que o widget está montado
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (context) => const ModalLimiteScoreTier11(),
               );
             }
           });

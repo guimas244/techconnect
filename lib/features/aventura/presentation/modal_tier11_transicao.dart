@@ -303,7 +303,11 @@ class ModalTier11Transicao extends StatelessWidget {
                           Colors.blue.shade300,
                         ),
                         _buildBulletPoint(
-                          '• Limite total: ${ScoreConfig.SCORE_LIMITE_MAXIMO_TOTAL} pontos (${ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11} garantidos + ${ScoreConfig.scoreMaximoExtras} extras)',
+                          '• Score ILIMITADO para usar na loja!',
+                          Colors.green.shade300,
+                        ),
+                        _buildBulletPoint(
+                          '• Limite no ranking: ${ScoreConfig.SCORE_LIMITE_MAXIMO_TOTAL} pontos (${ScoreConfig.SCORE_PONTOS_GARANTIDOS_TIER_11} garantidos + ${ScoreConfig.scoreMaximoExtras} extras)',
                           Colors.amber.shade300,
                         ),
                       ],

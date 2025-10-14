@@ -179,47 +179,82 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     final random = Random();
     final tiposDisponiveis = Tipo.values.toList();
 
-    // Consulta monstros nostálgicos desbloqueados da coleção
+    // Consulta monstros nostálgicos e Halloween desbloqueados da coleção
     final emailJogador = await StorageService().getLastEmail() ?? '';
-    print('🎯 [AventuraScreen] Consultando coleção de monstros nostálgicos para: $emailJogador');
+    print('🎯 [AventuraScreen] Consultando coleção de monstros nostálgicos e Halloween para: $emailJogador');
 
     final ColecaoService colecaoService = ColecaoService();
     final monstrosNostalgicosDesbloqueados = await colecaoService.obterMonstrosNostalgicosDesbloqueados(emailJogador);
+    final monstrosHalloweenDesbloqueados = await colecaoService.obterMonstrosHalloweenDesbloqueados(emailJogador);
 
-    // Cria uma lista com tipos iniciais (sempre disponíveis)
-    final todosOsTiposDisponiveis = <Tipo>[];
-    todosOsTiposDisponiveis.addAll(tiposDisponiveis); // 30 monstros iniciais sempre
+    // Cria pool de monstros (tipo + coleção)
+    final poolMonstros = <Map<String, dynamic>>[];
 
-    // Adiciona monstros nostálgicos desbloqueados (expandindo as opções)
+    // 1. Adiciona TODOS os 30 monstros iniciais
+    for (final tipo in tiposDisponiveis) {
+      poolMonstros.add({
+        'tipo': tipo,
+        'colecao': 'inicial',
+        'imagem': 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png',
+      });
+    }
+    print('✅ [AventuraScreen] 30 monstros INICIAIS adicionados');
+
+    // 2. Adiciona nostálgicos desbloqueados
     for (final nomeNostalgico in monstrosNostalgicosDesbloqueados) {
       try {
         final tipoNostalgico = Tipo.values.firstWhere((tipo) => tipo.name == nomeNostalgico);
-        // Adiciona como opção extra na roleta (não remove o inicial)
-        todosOsTiposDisponiveis.add(tipoNostalgico);
-        print('🌟 [AventuraScreen] Monstro nostálgico ADICIONADO à roleta: ${tipoNostalgico.name}');
+        poolMonstros.add({
+          'tipo': tipoNostalgico,
+          'colecao': 'nostalgico',
+          'imagem': 'assets/monstros_aventura/colecao_nostalgicos/${tipoNostalgico.name}.png',
+        });
+        print('🌟 [AventuraScreen] Nostálgico ADICIONADO: ${tipoNostalgico.name}');
       } catch (e) {
-        print('⚠️ [AventuraScreen] Monstro nostálgico não encontrado nos tipos: $nomeNostalgico');
+        print('⚠️ [AventuraScreen] Tipo nostálgico não encontrado: $nomeNostalgico');
       }
     }
 
-    todosOsTiposDisponiveis.shuffle(random);
-    print('🎲 [AventuraScreen] Total de tipos disponíveis para sorteio: ${todosOsTiposDisponiveis.length}');
+    // 3. Adiciona Halloween desbloqueados
+    for (final nomeHalloween in monstrosHalloweenDesbloqueados) {
+      try {
+        final tipoHalloween = Tipo.values.firstWhere((tipo) => tipo.name == nomeHalloween);
+        poolMonstros.add({
+          'tipo': tipoHalloween,
+          'colecao': 'halloween',
+          'imagem': 'assets/monstros_aventura/colecao_halloween/${tipoHalloween.name}.png',
+        });
+        print('🎃 [AventuraScreen] Halloween ADICIONADO: ${tipoHalloween.name}');
+      } catch (e) {
+        print('⚠️ [AventuraScreen] Tipo Halloween não encontrado: $nomeHalloween');
+      }
+    }
+
+    poolMonstros.shuffle(random);
+    print('🎲 [AventuraScreen] Pool total: ${poolMonstros.length} monstros');
 
     final monstrosSorteados = <MonstroAventura>[];
 
-    // Sorteia 3 tipos únicos da lista combinada (iniciais + nostálgicos)
-    final tiposUnicos = <Tipo>{};
-    for (int i = 0; i < todosOsTiposDisponiveis.length && tiposUnicos.length < 3; i++) {
-      tiposUnicos.add(todosOsTiposDisponiveis[i]);
+    // Sorteia 3 monstros com tipos diferentes
+    final tiposSorteados = <Tipo>{};
+    final monstrosEscolhidos = <Map<String, dynamic>>[];
+
+    for (final monstroData in poolMonstros) {
+      final tipo = monstroData['tipo'] as Tipo;
+      if (!tiposSorteados.contains(tipo)) {
+        tiposSorteados.add(tipo);
+        monstrosEscolhidos.add(monstroData);
+        if (monstrosEscolhidos.length >= 3) break;
+      }
     }
 
-    // Converte o Set para List para poder iterar
-    final tiposSorteados = tiposUnicos.toList();
+    for (final monstroData in monstrosEscolhidos) {
+      final tipo = monstroData['tipo'] as Tipo;
+      final colecao = monstroData['colecao'] as String;
+      final imagemPath = monstroData['imagem'] as String;
 
-    for (int i = 0; i < tiposSorteados.length; i++) {
-      final tipo = tiposSorteados[i];
       // Sorteia tipo extra diferente do principal
-      final outrosTipos = todosOsTiposDisponiveis.where((t) => t != tipo).toList();
+      final outrosTipos = tiposDisponiveis.where((t) => t != tipo).toList();
       outrosTipos.shuffle(random);
       final tipoExtra = outrosTipos.first;
 
@@ -233,25 +268,18 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final ataqueSorteado = AtributoJogo.ataque.sortear(random);
       final defesaSorteada = AtributoJogo.defesa.sortear(random);
 
-      // Determina se é um monstro nostálgico desbloqueado (60% chance para nostálgico se desbloqueado)
-      final temNostalgico = monstrosNostalgicosDesbloqueados.contains(tipo.name);
-      final ehNostalgico = temNostalgico && random.nextDouble() < 0.6;
-      final caminhoImagem = ehNostalgico
-          ? 'assets/monstros_aventura/colecao_nostalgicos/${tipo.name}.png'
-          : 'assets/monstros_aventura/colecao_inicial/${tipo.name}.png';
-
-      print('🎲 [AventuraScreen] Sorteando monstro ${tipo.name} ${ehNostalgico ? '(NOSTÁLGICO)' : '(INICIAL)'}:');
+      print('🎲 [AventuraScreen] Monstro sorteado: ${tipo.name} (${colecao.toUpperCase()}):');
       print('   - Vida: $vidaSorteada (range: ${AtributoJogo.vida.rangeTexto})');
       print('   - Energia: $energiaSorteada (range: ${AtributoJogo.energia.rangeTexto})');
       print('   - Agilidade: $agilidadeSorteada (range: ${AtributoJogo.agilidade.rangeTexto})');
       print('   - Ataque: $ataqueSorteado (range: ${AtributoJogo.ataque.rangeTexto})');
       print('   - Defesa: $defesaSorteada (range: ${AtributoJogo.defesa.rangeTexto})');
-      print('   - Imagem: $caminhoImagem');
+      print('   - Imagem: $imagemPath');
 
       final monstro = MonstroAventura(
         tipo: tipo,
         tipoExtra: tipoExtra,
-        imagem: caminhoImagem,
+        imagem: imagemPath,
         vida: vidaSorteada,
         energia: energiaSorteada,
         agilidade: agilidadeSorteada,
