@@ -17,6 +17,7 @@ class ProgressoScreen extends ConsumerStatefulWidget {
 class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
   ProgressoDiario? progressoAtual;
   bool _mostrarDistribuicao = false;
+  bool _mostrarHistorico = false;
   bool _isLoading = true;
   Tipo? _tipoSelecionado;
   int _pontosPorKill = 2;
@@ -43,23 +44,19 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
     _pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
 
     // Tenta carregar progresso salvo
-    // IMPORTANTE: A configuração de distribuição é preservada entre dias
     final progressoJson = prefs.getString('progresso_diario');
 
     if (progressoJson != null) {
       final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
-      final progressoSalvo = ProgressoDiario.fromJson(progressoData);
+      var progressoSalvo = ProgressoDiario.fromJson(progressoData);
 
-      // Se é do dia anterior, limpa os kills mas mantém a distribuição
+      // Se é do dia anterior, finaliza o dia e cria novo
       if (progressoSalvo.data != hoje) {
-        progressoAtual = ProgressoDiario(
-          data: hoje,
-          distribuicaoAtributos: progressoSalvo.distribuicaoAtributos, // Preserva a configuração
-        );
-        await _salvarProgresso(progressoAtual!);
-      } else {
-        progressoAtual = progressoSalvo;
+        progressoSalvo = progressoSalvo.finalizarDia(hoje);
+        await _salvarProgresso(progressoSalvo);
       }
+
+      progressoAtual = progressoSalvo;
     } else {
       // Cria novo progresso
       progressoAtual = ProgressoDiario(data: hoje);
@@ -157,6 +154,19 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _mostrarHistorico = !_mostrarHistorico;
+                          if (_mostrarHistorico) _mostrarDistribuicao = false;
+                        });
+                      },
+                      icon: Icon(
+                        _mostrarHistorico ? Icons.close : Icons.history,
+                        color: Colors.white,
+                      ),
+                      tooltip: 'Ver histórico',
+                    ),
                     Expanded(
                       child: Column(
                         children: [
@@ -171,7 +181,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Total: ${progressoAtual!.totalKills} kills',
+                            'Hoje: ${progressoAtual!.totalKills} kills | Total: ${progressoAtual!.totalKillsComHistorico} kills',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -185,6 +195,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                       onPressed: () {
                         setState(() {
                           _mostrarDistribuicao = !_mostrarDistribuicao;
+                          if (_mostrarDistribuicao) _mostrarHistorico = false;
                         });
                       },
                       icon: Icon(
@@ -221,9 +232,11 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
 
           // Conteúdo
           Expanded(
-            child: _mostrarDistribuicao
-                ? _buildDistribuicaoView()
-                : _buildKillsView(),
+            child: _mostrarHistorico
+                ? _buildHistoricoView()
+                : _mostrarDistribuicao
+                    ? _buildDistribuicaoView()
+                    : _buildKillsView(),
           ),
         ],
       ),
@@ -231,7 +244,9 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
   }
 
   Map<String, int> _calcularBonusTipo(Tipo tipo) {
-    final kills = progressoAtual?.killsPorTipo[tipo.name] ?? 0;
+    // Usa kills do histórico válido + dia atual
+    final killsTotal = progressoAtual?.killsPorTipoComHistorico ?? {};
+    final kills = killsTotal[tipo.name] ?? 0;
     final bonus = <String, int>{};
 
     if (kills == 0) {
@@ -248,13 +263,270 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
     return bonus;
   }
 
+  Widget _buildHistoricoView() {
+    final historicoValido = progressoAtual?.historicoValido ?? [];
+    final hoje = progressoAtual?.data ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final killsHoje = progressoAtual?.killsPorTipo ?? {};
+    final totalKillsHoje = progressoAtual?.totalKills ?? 0;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Informação sobre validade
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.indigo.shade900.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.indigo.shade600, width: 2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Cada entrada dura 3 dias inteiros a partir da data de entrada',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // DIA ATUAL (HOJE)
+          if (totalKillsHoje > 0) ...[
+            _buildEntradaCard(
+              dataEntrada: hoje,
+              dataValidade: DateFormat('yyyy-MM-dd').format(
+                DateFormat('yyyy-MM-dd').parse(hoje).add(const Duration(days: 3)),
+              ),
+              totalKills: totalKillsHoje,
+              killsPorTipo: killsHoje,
+              isHoje: true,
+            ),
+          ],
+
+          // Lista de entradas do histórico
+          ...historicoValido.reversed.map((entrada) {
+            return _buildEntradaCard(
+              dataEntrada: entrada.dataEntrada,
+              dataValidade: entrada.dataValidade,
+              totalKills: entrada.totalKills,
+              killsPorTipo: entrada.killsPorTipo,
+              isHoje: false,
+            );
+          }).toList(),
+
+          // Mensagem se não tem nada
+          if (historicoValido.isEmpty && totalKillsHoje == 0) ...[
+            const SizedBox(height: 40),
+            Icon(Icons.history, size: 80, color: Colors.white24),
+            const SizedBox(height: 16),
+            Text(
+              'Nenhum histórico disponível',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Suas conquistas diárias aparecerão aqui',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white54,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntradaCard({
+    required String dataEntrada,
+    required String dataValidade,
+    required int totalKills,
+    required Map<String, int> killsPorTipo,
+    required bool isHoje,
+  }) {
+    final dataEntradaFormatada = DateFormat('dd/MM/yyyy').format(
+      DateFormat('yyyy-MM-dd').parse(dataEntrada),
+    );
+    final dataValidadeFormatada = DateFormat('dd/MM/yyyy').format(
+      DateFormat('yyyy-MM-dd').parse(dataValidade),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isHoje
+            ? Colors.indigo.shade900.withOpacity(0.5)
+            : Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isHoje ? Colors.green.shade400 : Colors.amber.shade700,
+          width: isHoje ? 3 : 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isHoje ? Icons.today : Icons.calendar_today,
+                color: isHoje ? Colors.green.shade400 : Colors.amber,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Entrada: $dataEntradaFormatada',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (isHoje) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade400,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'HOJE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      'Validade: até $dataValidadeFormatada',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isHoje
+                            ? Colors.green.shade300
+                            : Colors.amber.shade300,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isHoje ? Colors.green.shade400 : Colors.amber.shade700,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$totalKills kills',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (killsPorTipo.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: killsPorTipo.entries.map((tipo) {
+                final tipoEnum = Tipo.values.firstWhere(
+                  (t) => t.name == tipo.key,
+                  orElse: () => Tipo.normal,
+                );
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tipoEnum.cor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: tipoEnum.cor, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/tipagens/icon_tipo_${tipoEnum.name}.png',
+                        width: 16,
+                        height: 16,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.catching_pokemon,
+                            size: 16,
+                            color: tipoEnum.cor,
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${tipo.value}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: tipoEnum.cor,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildBonusStat(String nome, int valor) {
     // Se houver tipo selecionado, mostra o bônus daquele tipo
     String displayText;
+    Color corTexto = Colors.amber.shade300;
+
     if (_tipoSelecionado != null) {
       final bonusTipo = _calcularBonusTipo(_tipoSelecionado!);
       final valorTipo = bonusTipo[nome] ?? 0;
       displayText = valorTipo > 0 ? '+$valorTipo' : '-';
+
+      // Para cores muito escuras (como Trevas), usa a mesma cor da borda
+      final isCorEscura = _tipoSelecionado!.cor.computeLuminance() < 0.1;
+      corTexto = isCorEscura ? Colors.purple.shade400 : _tipoSelecionado!.cor;
     } else {
       // Sem tipo selecionado, sempre mostra "-"
       displayText = '-';
@@ -275,9 +547,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
           displayText,
           style: TextStyle(
             fontSize: 16,
-            color: _tipoSelecionado != null
-                ? _tipoSelecionado!.cor
-                : Colors.amber.shade300,
+            color: corTexto,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -287,6 +557,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
 
   Widget _buildKillsView() {
     final tipos = Tipo.values;
+    final killsTotal = progressoAtual!.killsPorTipoComHistorico;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -295,7 +566,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
         runSpacing: 12,
         alignment: WrapAlignment.center,
         children: tipos.map((tipo) {
-          final kills = progressoAtual!.killsPorTipo[tipo.name] ?? 0;
+          final kills = killsTotal[tipo.name] ?? 0;
           return _buildTipoCard(tipo, kills);
         }).toList(),
       ),
@@ -304,6 +575,16 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
 
   Widget _buildTipoCard(Tipo tipo, int kills) {
     final isSelected = _tipoSelecionado == tipo;
+
+    // Para tipos muito escuros (como Trevas), usa uma cor de borda mais clara
+    final isCorEscura = tipo.cor.computeLuminance() < 0.1;
+    final corBorda = isCorEscura
+        ? (isSelected ? Colors.purple.shade400 : Colors.purple.shade700)
+        : (isSelected ? tipo.cor : tipo.cor.withOpacity(0.5));
+
+    final corFundo = isSelected
+        ? (isCorEscura ? Colors.purple.shade900.withOpacity(0.3) : tipo.cor.withOpacity(0.2))
+        : Colors.black.withOpacity(0.3);
 
     return GestureDetector(
       onTap: () {
@@ -316,18 +597,16 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
         width: 80,
         height: 80,
         decoration: BoxDecoration(
-          color: isSelected
-              ? tipo.cor.withOpacity(0.2)
-              : Colors.black.withOpacity(0.3),
+          color: corFundo,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? tipo.cor : tipo.cor.withOpacity(0.5),
+            color: corBorda,
             width: isSelected ? 3 : 2,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: tipo.cor.withOpacity(0.5),
+                    color: (isCorEscura ? Colors.purple.shade400 : tipo.cor).withOpacity(0.5),
                     blurRadius: 8,
                     spreadRadius: 2,
                   ),

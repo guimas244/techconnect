@@ -5,7 +5,7 @@ import '../models/progresso_diario.dart';
 import '../../../shared/models/tipo_enum.dart';
 import 'package:intl/intl.dart';
 
-/// Provider que fornece os bônus do progresso diário
+/// Provider que fornece os bônus do progresso diário (incluindo histórico válido)
 final progressoBonusProvider = FutureProvider<Map<Tipo, Map<String, int>>>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -18,21 +18,24 @@ final progressoBonusProvider = FutureProvider<Map<Tipo, Map<String, int>>>((ref)
   }
 
   final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
-  final progresso = ProgressoDiario.fromJson(progressoData);
+  var progresso = ProgressoDiario.fromJson(progressoData);
 
-  // Se não é do dia de hoje, retorna vazio
+  // Se não é do dia de hoje, finaliza o dia anterior e cria novo dia
   if (progresso.data != hoje) {
-    return {};
+    progresso = progresso.finalizarDia(hoje);
+    // Salva o progresso atualizado
+    await prefs.setString('progresso_diario', jsonEncode(progresso.toJson()));
   }
 
   // Carrega pontos por kill configurados
   final pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
 
-  // Calcula bônus para cada tipo
+  // Calcula bônus para cada tipo usando kills do histórico válido + dia atual
   final bonusPorTipo = <Tipo, Map<String, int>>{};
+  final killsPorTipoTotal = progresso.killsPorTipoComHistorico;
 
   for (final tipo in Tipo.values) {
-    final kills = progresso.killsPorTipo[tipo.name] ?? 0;
+    final kills = killsPorTipoTotal[tipo.name] ?? 0;
 
     if (kills == 0) {
       bonusPorTipo[tipo] = {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
@@ -74,19 +77,23 @@ class ProgressoBonusNotifier extends StateNotifier<Map<Tipo, Map<String, int>>> 
     }
 
     final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
-    final progresso = ProgressoDiario.fromJson(progressoData);
+    var progresso = ProgressoDiario.fromJson(progressoData);
 
+    // Se não é do dia de hoje, finaliza o dia anterior e cria novo dia
     if (progresso.data != hoje) {
-      state = {};
-      return;
+      progresso = progresso.finalizarDia(hoje);
+      // Salva o progresso atualizado
+      await prefs.setString('progresso_diario', jsonEncode(progresso.toJson()));
     }
 
     final pontosPorKill = prefs.getInt('aventura_pontos_por_kill') ?? 2;
 
+    // Calcula bônus para cada tipo usando kills do histórico válido + dia atual
     final bonusPorTipo = <Tipo, Map<String, int>>{};
+    final killsPorTipoTotal = progresso.killsPorTipoComHistorico;
 
     for (final tipo in Tipo.values) {
-      final kills = progresso.killsPorTipo[tipo.name] ?? 0;
+      final kills = killsPorTipoTotal[tipo.name] ?? 0;
 
       if (kills == 0) {
         bonusPorTipo[tipo] = {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};

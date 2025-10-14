@@ -38,7 +38,13 @@
       "Bash(if not exist \"d:\\workspace\\techterra\\techterra\\lib\\features\\aventura\\presentation\\deprecated\" mkdir \"d:\\workspace\\techterra\\techterra\\lib\\features\\aventura\\presentation\\deprecated\")",
       "Bash(move:*)",
       "Bash(findstr:*)",
-      "Bash([ -f \"assets/eventos/halloween/ovo_halloween.jpeg\" ])"
+      "Bash([ -f \"assets/eventos/halloween/ovo_halloween.jpeg\" ])",
+      "Bash(where flutter)",
+      "Bash(echo $PATH)",
+      "Read(//c/Users/guima/**)",
+      "Read(//c//**)",
+      "Bash(powershell.exe:*)",
+      "Bash(export:*)"
     ],
     "deny": [],
     "ask": []
