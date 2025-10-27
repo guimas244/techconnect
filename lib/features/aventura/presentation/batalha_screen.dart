@@ -122,6 +122,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool aguardandoContinuar = false;
   bool batalhaAutomatica = false; // Controla se está rodando batalha automática
 
+  // Round 0 - Bônus de Progressão
+  Map<String, int> bonusProgressao = {}; // Bônus aplicados do progresso diário
+
   @override
   void initState() {
     super.initState();
@@ -139,18 +142,48 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
-  void _inicializarBatalha() {
+  /// ROUND 0: Carrega os bônus de progressão do jogador
+  Future<void> _carregarBonusProgressao() async {
+    try {
+      print('? [ROUND 0] Carregando bônus de progressão...');
+
+      // Busca os bônus do provider
+      final bonusPorTipo = ref.read(progressoBonusStateProvider);
+      final tipoJogador = widget.jogador.tipo;
+
+      // Obtém os bônus para o tipo do monstro do jogador
+      final bonus = bonusPorTipo[tipoJogador] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+      bonusProgressao = bonus;
+
+      print('? [ROUND 0] Bônus para ${tipoJogador.displayName}: HP+${bonus['HP']} ATK+${bonus['ATK']} DEF+${bonus['DEF']} SPD+${bonus['SPD']}');
+    } catch (e) {
+      print('? [ROUND 0] Erro ao carregar bônus: $e');
+      bonusProgressao = {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+    }
+  }
+
+  Future<void> _inicializarBatalha() async {
     print('??? [BatalhaScreen] Inicializando batalha...');
+
+    // ROUND 0: Carregar bônus de progressão
+    await _carregarBonusProgressao();
     
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
-    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0);
-    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0);
-    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0);
-    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0);
+
+    // ROUND 0: Aplica bônus de progressão + item
+    final bonusHP = bonusProgressao['HP'] ?? 0;
+    final bonusATK = bonusProgressao['ATK'] ?? 0;
+    final bonusDEF = bonusProgressao['DEF'] ?? 0;
+    final bonusSPD = bonusProgressao['SPD'] ?? 0;
+
+    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0) + bonusATK;
+    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0) + bonusDEF;
+    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0) + bonusHP;
+    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + bonusHP;
     final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
-    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0);
+    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + bonusSPD;
 
     // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
@@ -172,15 +205,18 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final energiaInimigoTotal = widget.inimigo.energiaTotal;
     final agilidadeInimigoTotal = widget.inimigo.agilidadeTotal;
     
-    // Determina quem começa baseado na agilidade
+    // IMPORTANTE: A agilidade já inclui os bônus de progressão (bonusSPD)
+    // Determina quem começa baseado na agilidade APÓS bônus
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
-    
-    print('?? [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
+
+    print('?? [Stats] Jogador (COM BÔNUS): ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
     print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
     }
+    print('?? [ROUND 0] Bônus aplicados: HP+$bonusHP ATK+$bonusATK DEF+$bonusDEF SPD+$bonusSPD');
+    print('?? [Ordem] ${jogadorComeca ? "JOGADOR começa (AGI $agilidadeComItem >= $agilidadeInimigoTotal)" : "INIMIGO começa (AGI $agilidadeInimigoTotal > $agilidadeComItem)"}');
 
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
@@ -203,6 +239,67 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
     
     print('?? [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa a rodada');
+
+    // ROUND 0: Cria mensagem única de ativação dos bônus no histórico
+    final mensagensRound0 = <AcaoBatalha>[];
+    if (bonusHP > 0 || bonusATK > 0 || bonusDEF > 0 || bonusSPD > 0) {
+      // Constrói a descrição com múltiplas linhas
+      final linhas = <String>[];
+      linhas.add('⚔️ ROUND 0 - ATIVAÇÃO DE BÔNUS DE PROGRESSÃO ⚔️');
+      linhas.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      if (bonusHP > 0) {
+        linhas.add('💚 Bônus de Vida: +$bonusHP HP (${widget.jogador.vida} → $vidaComItem)');
+      }
+
+      if (bonusATK > 0) {
+        linhas.add('⚔️ Bônus de Ataque: +$bonusATK ATK (${widget.jogador.ataque} → $ataqueComItem)');
+      }
+
+      if (bonusDEF > 0) {
+        linhas.add('🛡️ Bônus de Defesa: +$bonusDEF DEF (${widget.jogador.defesa} → $defesaComItem)');
+      }
+
+      if (bonusSPD > 0) {
+        linhas.add('⚡ Bônus de Agilidade: +$bonusSPD SPD (${widget.jogador.agilidade} → $agilidadeComItem)');
+      }
+
+      linhas.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      // Adiciona uma única entrada no histórico com todas as linhas
+      mensagensRound0.add(AcaoBatalha(
+        atacante: 'Sistema',
+        habilidadeNome: 'ROUND 0',
+        danoBase: 0,
+        danoTotal: bonusHP + bonusATK + bonusDEF + bonusSPD,
+        defesaAlvo: 0,
+        vidaAntes: widget.jogador.vida,
+        vidaDepois: vidaComItem,
+        descricao: linhas.join('\n'),
+      ));
+    }
+
+    setState(() {
+      estadoAtual = EstadoBatalha(
+        jogador: widget.jogador,
+        inimigo: widget.inimigo,
+        vidaAtualJogador: vidaAtualComItem,
+        vidaAtualInimigo: vidaAtualInimigoTotal,
+        vidaMaximaJogador: vidaComItem,
+        vidaMaximaInimigo: vidaInimigoTotal,
+        energiaAtualJogador: energiaComItem,
+        energiaAtualInimigo: energiaInimigoTotal,
+        energiaMaximaJogador: energiaComItem,
+        energiaMaximaInimigo: energiaInimigoTotal,
+        ataqueAtualJogador: ataqueComItem,
+        defesaAtualJogador: defesaComItem,
+        ataqueAtualInimigo: ataqueInimigoTotal,
+        defesaAtualInimigo: defesaInimigoTotal,
+        habilidadesUsadasJogador: [],
+        habilidadesUsadasInimigo: [],
+        historicoAcoes: mensagensRound0,
+      );
+    });
   }
 
   void _executarRodadaCompleta() {
@@ -1559,9 +1656,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Habilidade habilidadeSubstituida,
   ) async {
     try {
+      // Escolhe o tipo elemental (50% cada tipo do monstro)
+      final tipos = [monstro.tipo, monstro.tipoExtra];
+      final tipoElemental = tipos[Random().nextInt(tipos.length)];
+
       final descricaoAtualizada = magia.descricao.replaceAll(
         'TIPO_ELEMENTAL',
-        monstro.tipo.name.toUpperCase(),
+        tipoElemental.name.toUpperCase(),
       );
 
       final novaHabilidade = Habilidade(
@@ -1569,7 +1670,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         descricao: descricaoAtualizada,
         tipo: magia.tipo,
         efeito: magia.efeito,
-        tipoElemental: monstro.tipo,
+        tipoElemental: tipoElemental, // Sorteia entre os tipos do monstro (50% cada)
         valor: magia.valor,
         custoEnergia: magia.custoEnergia,
         level: magia.level,

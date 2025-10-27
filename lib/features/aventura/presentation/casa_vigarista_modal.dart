@@ -1383,13 +1383,17 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
         magia: magia,
         monstrosDisponiveis: historia.monstros,
         onEquiparMagia: (monstro, magiaObtida, habilidadeSubstituida) async {
+          // Escolhe o tipo elemental (50% cada tipo do monstro)
+          final tipos = [monstro.tipo, monstro.tipoExtra];
+          final tipoElemental = tipos[Random().nextInt(tipos.length)];
+
           // Converte MagiaDrop de volta para Habilidade
           final novaHabilidade = Habilidade(
             nome: magiaObtida.nome,
             descricao: magiaObtida.descricao,
             tipo: magiaObtida.tipo,
             efeito: magiaObtida.efeito,
-            tipoElemental: habilidade.tipoElemental, // Usa o tipo elemental da habilidade original
+            tipoElemental: tipoElemental, // Sorteia entre os tipos do monstro (50% cada)
             valor: magiaObtida.valor,
             custoEnergia: magiaObtida.custoEnergia,
             level: magiaObtida.level,

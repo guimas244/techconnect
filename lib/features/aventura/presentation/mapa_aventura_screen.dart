@@ -1053,13 +1053,17 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   .where((h) => h != habilidadeSubstituida)
                   .toList();
 
+              // Escolhe o tipo elemental (50% cada tipo do monstro)
+              final tipos = [m.tipo, m.tipoExtra];
+              final tipoElemental = tipos[math.Random().nextInt(tipos.length)];
+
               // Cria a nova habilidade com a tipagem do monstro
               final novaHabilidade = Habilidade(
                 nome: magiaObtida.nome,
                 descricao: magiaObtida.descricao,
                 tipo: magiaObtida.tipo,
                 efeito: magiaObtida.efeito,
-                tipoElemental: m.tipo, // Usa o tipo do monstro
+                tipoElemental: tipoElemental, // Sorteia entre os tipos do monstro (50% cada)
                 valor: magiaObtida.valor,
                 custoEnergia: magiaObtida.custoEnergia,
                 level: magiaObtida.level,
