@@ -2794,9 +2794,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Widget _buildAcaoItem(int turno, AcaoBatalha acao, bool isJogadorAcao) {
-    // Detecta se foi crítico ou esquiva pela descrição
+    // Detecta se foi crítico, esquiva ou cura dobrada pela descrição
     final bool foiCritico = acao.descricao.contains('⚔️CRÍTICO!⚔️') || acao.descricao.contains('💥 CRÍTICO');
     final bool foiEsquiva = acao.descricao.contains('Ataque esquivado!') || acao.descricao.contains('🌪️ ESQUIVOU!');
+    final bool foiCuraDobrada = acao.descricao.contains('💚 (DOBRADO!)');
 
     // Define cores baseado no tipo de ação especial
     Color corFundo;
@@ -2810,6 +2811,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     } else if (foiEsquiva) {
       corFundo = Colors.green.shade50.withOpacity(0.8);
       corBorda = Colors.green.shade300;
+      larguraBorda = 2;
+    } else if (foiCuraDobrada) {
+      corFundo = Colors.lightGreen.shade50.withOpacity(0.8);
+      corBorda = Colors.lightGreen.shade300;
       larguraBorda = 2;
     } else {
       corFundo = Colors.grey.shade50;
