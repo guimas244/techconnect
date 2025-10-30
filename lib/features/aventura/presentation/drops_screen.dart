@@ -53,9 +53,10 @@ class _DropsScreenState extends State<DropsScreen> {
     } else {
       // Valores padrão
       _porcentagens = {
-        TipoDrop.pocaoVidaPequena: 30.0,
-        TipoDrop.pocaoVidaGrande: 10.0,
-        TipoDrop.pedraReforco: 5.0,
+        TipoDrop.pocaoVidaPequena: 5.0,
+        TipoDrop.pocaoVidaGrande: 2.0,
+        TipoDrop.pedraRecriacao: 2.0,
+        TipoDrop.joiaReforco: 1.0,
       };
     }
 

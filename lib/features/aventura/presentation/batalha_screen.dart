@@ -1517,9 +1517,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     RaridadeConsumivel raridade;
 
     switch (drop.tipo) {
-      case TipoDrop.pedraReforco:
+      case TipoDrop.pedraRecriacao:
         tipoConsumivel = TipoItemConsumivel.joia;
         raridade = RaridadeConsumivel.lendario;
+        break;
+      case TipoDrop.joiaReforco:
+        tipoConsumivel = TipoItemConsumivel.joia;
+        raridade = RaridadeConsumivel.epico;
         break;
       case TipoDrop.pocaoVidaGrande:
         tipoConsumivel = TipoItemConsumivel.pocao;

@@ -44,7 +44,8 @@ class _AdminDropsScreenState extends State<AdminDropsScreen> {
         _porcentagens = {
           TipoDrop.pocaoVidaPequena: 5.0,
           TipoDrop.pocaoVidaGrande: 2.0,
-          TipoDrop.pedraReforco: 1.0,
+          TipoDrop.pedraRecriacao: 2.0,
+          TipoDrop.joiaReforco: 1.0,
         };
         _isLoading = false;
       });

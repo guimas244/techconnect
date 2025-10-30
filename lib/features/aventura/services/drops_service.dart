@@ -18,9 +18,10 @@ class DropsService {
       // Usa valores padrão se não houver configuração
       // Ordem: do mais raro (menor %) para o menos raro (maior %)
       return _sortearComPorcentagens({
-        TipoDrop.pedraReforco: 1.0,        // 1% - Lendário (prioridade 1)
+        TipoDrop.joiaReforco: 1.0,         // 1% - Épico (prioridade 1)
         TipoDrop.pocaoVidaGrande: 2.0,     // 2% - Épico (prioridade 2)
-        TipoDrop.pocaoVidaPequena: 5.0,    // 5% - Inferior (prioridade 3)
+        TipoDrop.pedraRecriacao: 2.0,      // 2% - Lendário (prioridade 3)
+        TipoDrop.pocaoVidaPequena: 5.0,    // 5% - Inferior (prioridade 4)
       });
     }
 

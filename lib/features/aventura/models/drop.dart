@@ -1,7 +1,8 @@
 enum TipoDrop {
   pocaoVidaPequena,
   pocaoVidaGrande,
-  pedraReforco,
+  pedraRecriacao,
+  joiaReforco,
 }
 
 extension TipoDropExtension on TipoDrop {
@@ -11,8 +12,10 @@ extension TipoDropExtension on TipoDrop {
         return 'Poção de Vida Pequena';
       case TipoDrop.pocaoVidaGrande:
         return 'Poção de Vida Grande';
-      case TipoDrop.pedraReforco:
-        return 'Pedra de Reforço';
+      case TipoDrop.pedraRecriacao:
+        return 'Joia da Recriação';
+      case TipoDrop.joiaReforco:
+        return 'Joia de Reforço';
     }
   }
 
@@ -22,8 +25,10 @@ extension TipoDropExtension on TipoDrop {
         return 'Cura 25% da vida de um monstro à escolha';
       case TipoDrop.pocaoVidaGrande:
         return 'Cura 100% da vida de um monstro à escolha';
-      case TipoDrop.pedraReforco:
-        return 'Sobe 1 level/tier de um equipamento de um monstro à escolha';
+      case TipoDrop.pedraRecriacao:
+        return 'Recria o equipamento mantendo a raridade e sorteando tier alto';
+      case TipoDrop.joiaReforco:
+        return 'Ajusta os atributos do equipamento para o tier atual';
     }
   }
 
@@ -33,7 +38,9 @@ extension TipoDropExtension on TipoDrop {
         return 'assets/drops/drop_pocao_vida_pequena.png';
       case TipoDrop.pocaoVidaGrande:
         return 'assets/drops/drop_pocao_vida_grande.png';
-      case TipoDrop.pedraReforco:
+      case TipoDrop.pedraRecriacao:
+        return 'assets/drops/drop_pedra_recriacao.png';
+      case TipoDrop.joiaReforco:
         return 'assets/drops/drop_pedra_reforco.png';
     }
   }

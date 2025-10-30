@@ -49,7 +49,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pedra de Reforço',
+                        'Joia da Recriação',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -58,7 +58,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Atualiza equipamento para Tier ${widget.tierAtual}',
+                        'Recria equipamento com tier alto',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,
@@ -86,7 +86,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Selecione um monstro para reforçar seu equipamento',
+                      'Selecione um monstro para recriar seu equipamento',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade800,
@@ -155,7 +155,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.auto_fix_high),
-                    label: Text(_processando ? 'Reforçando...' : 'Reforçar Equipamento'),
+                    label: Text(_processando ? 'Recriando...' : 'Recriar Equipamento'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _corDestaque,
                       foregroundColor: Colors.white,
@@ -323,7 +323,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao reforçar: $e')),
+          SnackBar(content: Text('Erro ao recriar: $e')),
         );
         setState(() => _processando = false);
       }
