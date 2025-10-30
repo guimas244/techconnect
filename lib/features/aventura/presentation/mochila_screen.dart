@@ -934,6 +934,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
                 _buildLegendaRaridade(RaridadeConsumivel.epico),
                 const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.lendario),
+                const SizedBox(width: 12),
+                _buildLegendaRaridade(RaridadeConsumivel.impossivel),
               ],
             ),
           ),

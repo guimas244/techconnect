@@ -12,6 +12,7 @@ import '../models/item.dart';
 import '../models/historia_jogador.dart';
 import '../models/magia_drop.dart';
 import '../models/drop.dart';
+import '../models/passiva.dart';
 import '../services/drops_service.dart';
 import '../models/progresso_diario.dart';
 import '../providers/aventura_provider.dart';
@@ -86,11 +87,13 @@ class _PacoteRecompensas {
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
   final MonstroInimigo inimigo;
+  final List<MonstroAventura> equipeCompleta; // Lista completa da equipe para verificar passivas
 
   const BatalhaScreen({
     super.key,
     required this.jogador,
     required this.inimigo,
+    this.equipeCompleta = const [],
   });
 
   @override
@@ -143,6 +146,32 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('? [Batalha] Sistema de tipagem inicializado e pronto');
     }
   }
+
+  // ==================== FUNÇÕES HELPER DE PASSIVAS ====================
+
+  /// Verifica se algum monstro da equipe tem uma passiva específica
+  bool _temPassivaNaEquipe(TipoPassiva tipo) {
+    return widget.equipeCompleta.any((monstro) =>
+      monstro.passiva != null && monstro.passiva!.tipo == tipo
+    );
+  }
+
+  /// Verifica se tem passiva de Crítico na equipe
+  bool get _temPassivaCritico => _temPassivaNaEquipe(TipoPassiva.critico);
+
+  /// Verifica se tem passiva de Esquiva na equipe
+  bool get _temPassivaEsquiva => _temPassivaNaEquipe(TipoPassiva.esquiva);
+
+  /// Verifica se tem passiva de Cura de Batalha na equipe
+  bool get _temPassivaCuraDeBatalha => _temPassivaNaEquipe(TipoPassiva.curaDeBatalha);
+
+  /// Verifica se tem passiva de Mercador na equipe
+  bool get _temPassivaMercador => _temPassivaNaEquipe(TipoPassiva.mercador);
+
+  /// Verifica se tem passiva de Sortudo na equipe
+  bool get _temPassivaSortudo => _temPassivaNaEquipe(TipoPassiva.sortudo);
+
+  // ==================== FIM FUNÇÕES HELPER DE PASSIVAS ====================
 
   /// ROUND 0: Carrega os bônus de progressão do jogador
   Future<void> _carregarBonusProgressao() async {
@@ -623,18 +652,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Aplica efeito de suporte
     switch (habilidade.efeito) {
       case EfeitoHabilidade.curarVida:
+        // ===== PASSIVA: CURA DE BATALHA =====
+        // Se jogador tem passiva de Cura de Batalha, dobra a cura
+        int valorCura = habilidade.valorEfetivo;
+        bool curaDobrada = false;
+        if (isJogador && _temPassivaCuraDeBatalha) {
+          valorCura = valorCura * 2;
+          curaDobrada = true;
+          print('💚 [PASSIVA CURA DE BATALHA] Cura dobrada! $valorCura');
+        }
+
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + valorCura).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + valorCura).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -771,24 +810,48 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
 
+    print('🧮 [CALCULO INICIAL] Base: $danoBase + Ataque: $ataqueAtacante = $danoComAtaque');
+
+    // ===== PASSIVA: CRÍTICO (APLICADO ANTES DA DEFESA) =====
+    bool foiCritico = false;
+    int danoAntesCritico = danoComAtaque;
+    if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
+      danoComAtaque = (danoComAtaque * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+    }
+
     // Calcula efetividade de tipo usando tipo da habilidade
     double efetividade = await _calcularEfetividade(tipoAtaque, tipoDefensor);
 
-    // Aplica efetividade ao dano
+    // Aplica efetividade ao dano (ANTES da defesa)
     int danoComTipo = (danoComAtaque * efetividade).round();
-    
+
     // Verifica imunidade primeiro (efetividade = 0.0)
     if (efetividade == 0.0) {
       danoComTipo = 0;
     }
-    
-    // Define dano mínimo baseado no tipo de habilidade (só se não for imune)
+
+    print('🎯 [EFETIVIDADE] $danoComAtaque × ${efetividade.toStringAsFixed(1)} = $danoComTipo');
+
+    // Aplica defesa DEPOIS do crítico e efetividade
     int danoMinimo = (efetividade == 0.0) ? 0 : (habilidade.tipo == TipoHabilidade.ofensiva) ? 5 : 1;
     int danoFinal = (danoComTipo - defesaAlvo).clamp(danoMinimo, danoComTipo);
+
+    print('🛡️ [DEFESA] $danoComTipo - $defesaAlvo defesa = $danoFinal (mínimo: $danoMinimo)');
 
     // Aplica dano
     int vidaAntes, vidaDepois;
     EstadoBatalha novoEstado;
+    bool esquivou = false;
+
+    // ===== PASSIVA: ESQUIVA =====
+    // Verifica se jogador tem passiva de esquiva e está sendo atacado (10% chance de esquivar)
+    if (!isJogador && _temPassivaEsquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoFinal = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA] Ataque esquivado!');
+    }
 
     if (isJogador) {
       // Jogador ataca inimigo
@@ -823,8 +886,19 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
     
-    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes?$vidaDepois';
-    
+    // Monta descrição com crítico mostrando ordem correta
+    String calculoDano;
+    if (esquivou) {
+      calculoDano = 'Ataque esquivado! 🌪️';
+    } else if (foiCritico) {
+      // Mostra: Base + Ataque = X → CRÍTICO X×2 = Y → Efetividade = Z - Defesa = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoAntesCritico → ⚔️CRÍTICO!⚔️ ${danoAntesCritico}×2 = $danoComAtaque → x${efetividade.toStringAsFixed(1)} $efetividadeTexto = $danoComTipo - $defesaAlvo defesa = $danoFinal';
+    } else {
+      // Mostra: Base + Ataque → Efetividade - Defesa = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoComAtaque → x${efetividade.toStringAsFixed(1)} $efetividadeTexto = $danoComTipo - $defesaAlvo defesa = $danoFinal';
+    }
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $calculoDano. Vida: $vidaAntes→$vidaDepois';
+
     // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
     if (efetividade == 0.0) {
       descricao += ' (imune - nenhum dano foi causado)';
@@ -1543,7 +1617,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Só será salvo quando o jogador confirmar no modal de recompensas
     final consumiveis = <ItemConsumivel>[];
     try {
-      final dropConsumivel = await DropsService.sortearDrop();
+      // Verifica se tem passiva Sortudo para dobrar chances de drop
+      final dropConsumivel = await DropsService.sortearDrop(temPassivaSortudo: _temPassivaSortudo);
       if (dropConsumivel != null) {
         // Verifica se há espaço disponível antes de mostrar no modal
         final slotsLivres = await DropsService.slotsDisponiveis();
@@ -2002,6 +2077,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int vidaMaximaDefensor = isJogador ? estado.inimigo.vida : estado.jogador.vida;
     String atacanteNome = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
 
+    // Verifica crítico ANTES da defesa
+    bool foiCritico = false;
+    int ataqueAntesCritico = ataqueAtual;
+    if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
+      ataqueAtual = (ataqueAtual * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO BÁSICO] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
+    }
+
     final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
     final vidaDepois = vidaAntes - danoCalculado; // Permite vida negativa
 
@@ -2009,15 +2093,23 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final energiaRestaurada = isJogador
         ? (estado.jogador.energia * 0.1).round()
         : (estado.inimigo.energia * 0.1).round();
+    // Monta descrição com crítico
+    String descricao;
+    if (foiCritico) {
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAntesCritico → ⚔️CRÍTICO!⚔️ ${ataqueAntesCritico}×2 = $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
+    } else {
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
+    }
+
     final acao = AcaoBatalha(
       atacante: atacanteNome,
       habilidadeNome: 'Ataque Básico',
-      danoBase: ataqueAtual,
+      danoBase: ataqueAntesCritico,
       danoTotal: danoCalculado,
       defesaAlvo: defesaAlvo,
       vidaAntes: vidaAntes,
       vidaDepois: vidaDepois,
-      descricao: '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
+      descricao: descricao,
     );
 
     // Restaura 10% da energia máxima do atacante (com item durante batalha)
@@ -2701,13 +2793,23 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Widget _buildAcaoItem(int turno, AcaoBatalha acao, bool isJogadorAcao) {
+    // Detecta se foi crítico pela descrição
+    final bool foiCritico = acao.descricao.contains('⚔️CRÍTICO!⚔️') || acao.descricao.contains('💥 CRÍTICO');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: foiCritico
+            ? Colors.red.shade50.withOpacity(0.8) // Fundo vermelho claro se foi crítico
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: foiCritico
+              ? Colors.red.shade300 // Borda vermelha se foi crítico
+              : Colors.grey.shade200,
+          width: foiCritico ? 2 : 1, // Borda mais grossa se foi crítico
+        ),
       ),
       child: Row(
         children: [

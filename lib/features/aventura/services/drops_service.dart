@@ -10,7 +10,9 @@ class DropsService {
 
   /// Sorteia um drop baseado nas porcentagens configuradas
   /// Retorna null se não ganhou nenhum drop
-  static Future<Drop?> sortearDrop() async {
+  ///
+  /// [temPassivaSortudo]: Se true, dobra as chances de drop (passiva Sortudo)
+  static Future<Drop?> sortearDrop({bool temPassivaSortudo = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final configJson = prefs.getString(_configKey);
 
@@ -26,7 +28,7 @@ class DropsService {
         TipoDrop.pocaoVidaGrande: 2.0,        // 2% - Épico (prioridade 6)
         TipoDrop.pedraRecriacao: 2.0,         // 2% - Lendário (prioridade 7)
         TipoDrop.pocaoVidaPequena: 5.0,       // 5% - Inferior (prioridade 8)
-      });
+      }, temPassivaSortudo: temPassivaSortudo);
     }
 
     final Map<String, dynamic> configMap = jsonDecode(configJson);
@@ -37,14 +39,29 @@ class DropsService {
       porcentagens[tipo] = (entry.value as num).toDouble();
     }
 
-    return _sortearComPorcentagens(porcentagens);
+    return _sortearComPorcentagens(porcentagens, temPassivaSortudo: temPassivaSortudo);
   }
 
-  static Future<Drop?> _sortearComPorcentagens(Map<TipoDrop, double> porcentagens) async {
+  static Future<Drop?> _sortearComPorcentagens(
+    Map<TipoDrop, double> porcentagens, {
+    bool temPassivaSortudo = false,
+  }) async {
     final random = Random();
 
+    // ===== PASSIVA: SORTUDO =====
+    // Se tem passiva Sortudo, dobra as chances de todos os drops
+    final Map<TipoDrop, double> porcentagensAjustadas = {};
+    if (temPassivaSortudo) {
+      print('🍀 [PASSIVA SORTUDO] Dobrando chances de drop!');
+      for (final entry in porcentagens.entries) {
+        porcentagensAjustadas[entry.key] = entry.value * 2;
+      }
+    } else {
+      porcentagensAjustadas.addAll(porcentagens);
+    }
+
     // Tenta sortear cada tipo de drop
-    for (final entry in porcentagens.entries) {
+    for (final entry in porcentagensAjustadas.entries) {
       final chance = random.nextDouble() * 100;
       if (chance <= entry.value) {
         return Drop(tipo: entry.key, quantidade: 1);

@@ -3,6 +3,7 @@ import 'dart:math';
 import '../models/historia_jogador.dart';
 import '../models/item.dart';
 import '../models/habilidade.dart';
+import '../models/passiva.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../services/item_service.dart';
@@ -29,8 +30,87 @@ class CasaVigaristaModal extends StatefulWidget {
 
 class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   final ItemService _itemService = ItemService();
-  int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
-  int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
+
+  // ===== PASSIVA: MERCADOR =====
+  // Verifica se algum monstro da equipe tem passiva de Mercador
+  bool get _temPassivaMercador {
+    // Debug: mostra quais passivas existem na equipe
+    print('💰 [MERCADOR DEBUG] Verificando passivas na equipe:');
+    print('💰 [MERCADOR DEBUG] Total de monstros: ${_historiaAtual.monstros.length}');
+
+    bool temMercador = false;
+    for (var monstro in _historiaAtual.monstros) {
+      print('💰 [MERCADOR DEBUG] Monstro: ${monstro.tipo.displayName}');
+      if (monstro.passiva != null) {
+        print('   - Passiva: ${monstro.passiva!.tipo.name} (${monstro.passiva!.tipo.nome})');
+        if (monstro.passiva!.tipo == TipoPassiva.mercador) {
+          temMercador = true;
+          print('   ✅ MERCADOR ENCONTRADO!');
+        }
+      } else {
+        print('   - SEM PASSIVA');
+      }
+    }
+
+    print('💰 [MERCADOR RESULTADO FINAL] Tem passiva Mercador? $temMercador');
+    return temMercador;
+  }
+
+  // Custos específicos para cada tipo de aposta
+  int get custoItem {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    bool temMercador = _temPassivaMercador;
+    int custoFinal = temMercador ? (custoBase / 2).ceil() : custoBase;
+    print('💰 [CUSTO] Item: base=$custoBase, mercador=$temMercador, final=$custoFinal');
+    return custoFinal;
+  }
+
+  int get custoItemOriginal => _historiaAtual.tier >= 11 ? 4 : 4;
+
+  int get custoCura {
+    int custoBase = _historiaAtual.tier >= 11 ? 2 : 2;
+    bool temMercador = _temPassivaMercador;
+    int custoFinal = temMercador ? (custoBase / 2).ceil() : custoBase;
+    print('💰 [CUSTO] Cura: base=$custoBase, mercador=$temMercador, final=$custoFinal');
+    return custoFinal;
+  }
+
+  int get custoCuraOriginal => _historiaAtual.tier >= 11 ? 2 : 2;
+
+  int get custoMagia {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    bool temMercador = _temPassivaMercador;
+    int custoFinal = temMercador ? (custoBase / 2).ceil() : custoBase;
+    print('💰 [CUSTO] Magia: base=$custoBase, mercador=$temMercador, final=$custoFinal');
+    return custoFinal;
+  }
+
+  int get custoMagiaOriginal => _historiaAtual.tier >= 11 ? 4 : 4;
+
+  int get custoFeirao {
+    int custoBase = _historiaAtual.tier >= 11 ? 3 : 3;
+    bool temMercador = _temPassivaMercador;
+    int custoFinal = temMercador ? (custoBase / 2).ceil() : custoBase;
+    print('💰 [CUSTO] Feirão: base=$custoBase, mercador=$temMercador, final=$custoFinal');
+    return custoFinal;
+  }
+
+  int get custoFeiraoOriginal => _historiaAtual.tier >= 11 ? 3 : 3;
+
+  int get custoFeiraoMagias {
+    int custoBase = _historiaAtual.tier >= 11 ? 3 : 3;
+    bool temMercador = _temPassivaMercador;
+    int custoFinal = temMercador ? (custoBase / 2).ceil() : custoBase;
+    print('💰 [CUSTO] Feirão Magias: base=$custoBase, mercador=$temMercador, final=$custoFinal');
+    return custoFinal;
+  }
+
+  int get custoFeiraoMagiasOriginal => _historiaAtual.tier >= 11 ? 3 : 3;
+
+  // Getter antigo mantido para compatibilidade
+  int get custoAposta => custoItem;
+  int get custoApostaOriginal => custoItemOriginal;
+
   bool _comprando = false;
   late HistoriaJogador _historiaAtual;
 
@@ -116,18 +196,21 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                             'assets/icons_gerais/bau.png',
                             const Color(0xFF4169E1),
                             () => _mostrarConfirmacao('Item', _apostarItem),
+                            tipoOpcao: 'Item',
                           ),
                           // Magia Aleatória
                           _buildIconeOpcao(
                             'assets/icons_gerais/magia.png',
                             const Color(0xFF9932CC),
                             () => _mostrarConfirmacao('Magia', _apostarMagia),
+                            tipoOpcao: 'Magia',
                           ),
                           // Cura Aleatória
                           _buildIconeOpcao(
                             'assets/icons_gerais/cura.png',
                             const Color(0xFF228B22),
                             () => _mostrarConfirmacao('Cura', _apostarCura),
+                            tipoOpcao: 'Cura',
                           ),
                           // Feirão
                           _buildIconeOpcao(
@@ -303,14 +386,51 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: const Color(0xFFFF6B6B), width: 1),
                   ),
-                  child: Text(
-                    'Custo básico: $custoAposta | Feirão: $custoFeirao',
-                    style: const TextStyle(
-                      color: Color(0xFFFF6B6B),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _temPassivaMercador
+                      ? RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              color: Color(0xFFFF6B6B),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            children: [
+                              const TextSpan(text: 'Item: '),
+                              TextSpan(
+                                text: '$custoItemOriginal',
+                                style: const TextStyle(decoration: TextDecoration.lineThrough),
+                              ),
+                              TextSpan(text: ' $custoItem 💰 | '),
+                              const TextSpan(text: 'Cura: '),
+                              TextSpan(
+                                text: '$custoCuraOriginal',
+                                style: const TextStyle(decoration: TextDecoration.lineThrough),
+                              ),
+                              TextSpan(text: ' $custoCura 💰\n'),
+                              const TextSpan(text: 'Magia: '),
+                              TextSpan(
+                                text: '$custoMagiaOriginal',
+                                style: const TextStyle(decoration: TextDecoration.lineThrough),
+                              ),
+                              TextSpan(text: ' $custoMagia 💰 | '),
+                              const TextSpan(text: 'Feirão: '),
+                              TextSpan(
+                                text: '$custoFeiraoOriginal',
+                                style: const TextStyle(decoration: TextDecoration.lineThrough),
+                              ),
+                              TextSpan(text: ' $custoFeirao 💰'),
+                            ],
+                          ),
+                        )
+                      : Text(
+                          'Item: $custoItem 💰 | Cura: $custoCura 💰\nMagia: $custoMagia 💰 | Feirão: $custoFeirao 💰',
+                          style: const TextStyle(
+                            color: Color(0xFFFF6B6B),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                 ),
               ],
             ),
@@ -320,7 +440,9 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
     );
   }
 
-  void _mostrarConfirmacao(String tipoAposta, VoidCallback onConfirm) {
+  void _mostrarConfirmacao(String tipoAposta, VoidCallback onConfirm, {int? custoEspecifico}) {
+    // Define o custo baseado no tipo
+    final int custo = custoEspecifico ?? (tipoAposta == 'Item' ? custoItem : tipoAposta == 'Cura' ? custoCura : custoMagia);
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -381,7 +503,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Deseja investir $custoAposta moedas de ouro em "$tipoAposta"?',
+                    'Deseja investir $custo moedas de ouro em "$tipoAposta"?',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Color(0xFFCCCCCC),
@@ -484,13 +606,20 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
     );
   }
 
-  Widget _buildIconeOpcao(dynamic icon, Color cor, VoidCallback onTap, {bool isIcon = false}) {
-    bool podeComprar = _historiaAtual.score >= custoAposta && !_comprando;
+  Widget _buildIconeOpcao(dynamic icon, Color cor, VoidCallback onTap, {bool isIcon = false, String? tipoOpcao}) {
+    bool podeComprar = !_comprando;
 
-    // Para o feirão, verifica se tem dinheiro suficiente para o custo especial
+    // Define o custo baseado no tipo de opção
     if (isIcon && icon == Icons.store) {
-      int custoFeirao = ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
       podeComprar = _historiaAtual.score >= custoFeirao && !_comprando;
+    } else if (tipoOpcao == 'Item') {
+      podeComprar = _historiaAtual.score >= custoItem && !_comprando;
+    } else if (tipoOpcao == 'Magia') {
+      podeComprar = _historiaAtual.score >= custoMagia && !_comprando;
+    } else if (tipoOpcao == 'Cura') {
+      podeComprar = _historiaAtual.score >= custoCura && !_comprando;
+    } else {
+      podeComprar = _historiaAtual.score >= custoAposta && !_comprando;
     }
 
     return Material(
@@ -645,14 +774,14 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarItem() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoItem) return;
 
     setState(() { _comprando = true; });
 
     try {
       // Desconta o score primeiro
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoItem,
       );
 
       // Atualiza história local e salva
@@ -672,14 +801,14 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarMagia() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoMagia) return;
 
     setState(() { _comprando = true; });
 
     try {
       // Desconta o score primeiro
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoMagia,
       );
 
       // Atualiza história local e salva
@@ -700,14 +829,14 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _apostarCura() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoCura) return;
 
     setState(() { _comprando = true; });
 
     try {
       // Desconta o score primeiro
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoCura,
       );
 
       // Atualiza história local e salva
@@ -812,7 +941,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Você poderá escolher quais itens comprar!\\nCada item custará $custoAposta moedas.',
+                            'Você poderá escolher quais itens comprar!\\nCada item custará $custoItem moedas.',
                             style: TextStyle(
                               fontSize: 14,
                               color: const Color(0xFFFFD700),
@@ -1007,7 +1136,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
               Container(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Escolha quais itens deseja comprar por $custoAposta moedas cada',
+                  'Escolha quais itens deseja comprar por $custoItem moedas cada',
                   style: const TextStyle(
                     color: Color(0xFFCCCCCC),
                     fontSize: 16,
@@ -1109,7 +1238,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   Widget _buildItemFeirao(Item item, HistoriaJogador historia) {
-    bool podeComprar = _historiaAtual.score >= custoAposta && !_comprando;
+    bool podeComprar = _historiaAtual.score >= custoItem && !_comprando;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1230,7 +1359,7 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Comprar por $custoAposta moedas',
+                      'Comprar por $custoItem moedas',
                       style: TextStyle(
                         color: podeComprar ? const Color(0xFF2F1B14) : Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
@@ -1277,14 +1406,14 @@ class _CasaVigaristaModalState extends State<CasaVigaristaModal> {
   }
 
   void _comprarItemFeirao(Item item, HistoriaJogador historia) async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoItem) return;
 
     setState(() { _comprando = true; });
 
     try {
       // Desconta o custo do item
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoItem,
       );
 
       // Atualiza história local

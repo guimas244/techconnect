@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import '../models/monstro_inimigo.dart';
 import '../models/historia_jogador.dart';
@@ -17,6 +18,7 @@ import '../presentation/modal_magia_obtida.dart';
 import '../presentation/modal_cura_obtida.dart';
 import '../presentation/modal_feirao.dart';
 import '../presentation/modal_biblioteca.dart';
+import '../presentation/modal_loja_ganandius.dart';
 import '../models/magia_drop.dart';
 import '../models/habilidade.dart';
 import '../presentation/mochila_screen.dart';
@@ -715,6 +717,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.50)); // 0.25 + ~0.10 = 3cm abaixo
     }
 
+    // Adiciona NPC Ganandius no andar 11, depois 21, 31, 41, etc. (a cada 10 andares após o 11)
+    final tierAtual = historiaAtual?.tier ?? 1;
+    if (tierAtual >= 11 && (tierAtual - 11) % 10 == 0) {
+      pontos.add(_buildNpcGanandius(0.5, 0.35)); // Centro do mapa
+    }
+
     return pontos;
   }
 
@@ -1315,6 +1323,106 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
+  Widget _buildNpcGanandius(double left, double top) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final calcTop = math.min(screenHeight * top, screenHeight - 100);
+
+    return Positioned(
+      left: MediaQuery.of(context).size.width * left - 30, // Centraliza o ícone (60/2)
+      top: calcTop,
+      child: GestureDetector(
+        onTap: () => _mostrarLojaGanandius(),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.9),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.amber,
+              width: 4
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.deepPurple.withOpacity(0.6),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/npc/icon_negociante_ganandius.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Colors.amber,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarLojaGanandius() async {
+    if (historiaAtual == null) return;
+
+    try {
+      // Carrega se já pegou o despertar gratuito neste tier
+      final prefs = await SharedPreferences.getInstance();
+      final emailJogador = ref.read(validUserEmailProvider);
+      final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_${historiaAtual!.tier}';
+      final jaPegouGratuito = prefs.getBool(chaveGratuito) ?? false;
+
+      // Carrega o contador de compras para este tier
+      final chaveCompras = 'ganandius_compras_${emailJogador}_tier_${historiaAtual!.tier}';
+      final comprasRealizadas = prefs.getInt(chaveCompras) ?? 0;
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => ModalLojaGanandius(
+          historia: historiaAtual!,
+          onHistoriaAtualizada: (historiaAtualizada) async {
+            // Atualiza a história localmente
+            setState(() {
+              historiaAtual = historiaAtualizada;
+            });
+
+            // Salva no repositório
+            try {
+              final repository = ref.read(aventuraRepositoryProvider);
+              await repository.salvarHistoricoJogador(historiaAtualizada);
+              print('✅ [MapaAventura] História atualizada após despertar');
+            } catch (e) {
+              print('❌ [MapaAventura] Erro ao salvar história: $e');
+            }
+          },
+          jaPegouGratuito: jaPegouGratuito,
+          onPegouGratuito: () async {
+            // Marca que já pegou o gratuito neste tier
+            await prefs.setBool(chaveGratuito, true);
+            print('✅ [MapaAventura] Despertar gratuito marcado para tier ${historiaAtual!.tier}');
+          },
+          comprasRealizadas: comprasRealizadas,
+          onCompraRealizada: () async {
+            // Incrementa o contador de compras para este tier
+            final novoContador = comprasRealizadas + 1;
+            await prefs.setInt(chaveCompras, novoContador);
+            print('✅ [MapaAventura] Compra #$novoContador registrada para tier ${historiaAtual!.tier}');
+          },
+        ),
+      );
+    } catch (e) {
+      print('❌ [MapaAventura] Erro ao abrir loja Ganandius: $e');
+    }
+  }
+
   void _mostrarModalMonstroInimigo(MonstroInimigo monstro) async {
     // ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ PRINT DOS DADOS DE DEFESA DO MONSTRO INIMIGO
     print('ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â° [MONSTRO INIMIGO CLICADO] Tipo: ${monstro.tipo.displayName} (${monstro.tipo.name})');
@@ -1442,6 +1550,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         score: novoScore,
       );
 
+      // Se chegou no tier 11, limpa dados do NPC Ganandius para permitir novo despertar gratuito
+      if (historiaAtualizada.tier == 11) {
+        await _limparDadosGanandiusTier11();
+      }
+
       // Salva no repositório
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
 
@@ -1490,6 +1603,33 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
     print('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [MapaAventura] Novos monstros gerados com tier $novoTier');
     return novosMonstros;
+  }
+
+  /// Limpa dados do NPC Ganandius ao chegar no tier 11
+  Future<void> _limparDadosGanandiusTier11() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final emailJogador = ref.read(validUserEmailProvider);
+
+      // Remove apenas os dados do tier 11
+      final tier = 11;
+
+      // Remove flag de gratuito usado
+      final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_$tier';
+      await prefs.remove(chaveGratuito);
+
+      // Remove contador de compras
+      final chaveCompras = 'ganandius_compras_${emailJogador}_tier_$tier';
+      await prefs.remove(chaveCompras);
+
+      // Remove passivas sorteadas
+      final chavePassivas = 'ganandius_passivas_sorteadas_tier_$tier';
+      await prefs.remove(chavePassivas);
+
+      print('🧹 [GANANDIUS] Dados do tier 11 limpos - despertar gratuito disponível novamente!');
+    } catch (e) {
+      print('❌ [GANANDIUS] Erro ao limpar dados do tier 11: $e');
+    }
   }
 
   String _getMensagemDificuldadeTitulo(int tier) {

@@ -12,7 +12,9 @@
       "Bash(git restore:*)",
       "Bash(git push:*)",
       "Bash(git config:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub get:*)"
     ],
     "deny": [],
     "ask": []

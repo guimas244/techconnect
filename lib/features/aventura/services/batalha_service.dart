@@ -3,6 +3,7 @@ import '../models/batalha.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../models/habilidade.dart';
+import '../models/passiva.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../tipagem/data/tipagem_repository.dart';
@@ -201,7 +202,15 @@ class BatalhaService {
       case EfeitoHabilidade.curarVida:
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.vidaMaximaJogador);
+          int curaBruta = habilidade.valorEfetivo;
+
+          // Verifica passiva de Cura de Batalha (dobra toda cura recebida)
+          if (estado.jogador.passiva?.tipo == TipoPassiva.curaDeBatalha) {
+            curaBruta = (curaBruta * 2).round();
+            print('❤️ [CURA DE BATALHA] Passiva ativada! Cura dobrada: $curaBruta');
+          }
+
+          int novaVida = (estado.vidaAtualJogador + curaBruta).clamp(0, estado.vidaMaximaJogador);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           descricao = '$atacante curou ${novaVida - vidaAntes} de vida (${habilidade.nome}[${habilidade.tipoElemental.displayName}])';
         } else {
@@ -360,19 +369,42 @@ class BatalhaService {
     // Calcula dano
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
-    
+
     int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
-    int danoAntesEfetividade = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
-    
-    print('🧮 [CALCULO] Base: $danoBase + Ataque: $ataqueAtacante - Defesa: $defesaAlvo = $danoAntesEfetividade');
-    
+
+    print('🧮 [CALCULO INICIAL] Base: $danoBase + Ataque: $ataqueAtacante = $danoComAtaque');
+
+    // Verifica passiva de Crítico (10% chance de dobrar dano ANTES da defesa)
+    bool isCritico = false;
+    int danoAntesCritico = danoComAtaque;
+    if (isJogador && estado.jogador.passiva?.tipo == TipoPassiva.critico) {
+      if (_random.nextDouble() < 0.1) {
+        danoComAtaque = (danoComAtaque * 2).round();
+        isCritico = true;
+        print('⚔️ [CRÍTICO] Passiva ativada! $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+      }
+    }
+
+    // Aplica defesa DEPOIS do crítico
+    int danoAposDefesa = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
+
+    print('🛡️ [DEFESA] $danoComAtaque - $defesaAlvo defesa = $danoAposDefesa');
+
     // APLICA MULTIPLICADOR DE EFETIVIDADE
-    double danoComEfetividade = danoAntesEfetividade * multiplicadorEfetividade;
-    int danoFinal = danoComEfetividade.round().clamp(1, danoAntesEfetividade * 3); // Mínimo 1 de dano, máximo 3x
-    
-    print('🎯 [EFETIVIDADE FINAL] $danoAntesEfetividade × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
-    
+    double danoComEfetividade = danoAposDefesa * multiplicadorEfetividade;
+    int danoFinal = danoComEfetividade.round().clamp(1, danoAposDefesa * 3); // Mínimo 1 de dano, máximo 3x
+
+    print('🎯 [EFETIVIDADE FINAL] $danoAposDefesa × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
+
+    // Verifica passiva de Esquiva do defensor (10% chance de esquivar completamente)
+    if (!isJogador && estado.jogador.passiva?.tipo == TipoPassiva.esquiva) {
+      if (_random.nextDouble() < 0.1) {
+        danoFinal = 0;
+        print('💨 [ESQUIVA] Passiva ativada! Ataque esquivado!');
+      }
+    }
+
     // Aplica dano
     int vidaAntes, vidaDepois;
     EstadoBatalha novoEstado;
@@ -413,7 +445,16 @@ class BatalhaService {
       }
     }
     
-    String descricao = '$atacante usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) - $defesaInfo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    // Monta descrição com informação de crítico se aplicável
+    String calculoDano;
+    if (isCritico) {
+      // Mostra: Base + Ataque = X → CRÍTICO X×2 = Y - Defesa = Z → Efetividade = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoAntesCritico → ⚔️CRÍTICO!⚔️ ${danoAntesCritico}×2 = $danoComAtaque - $defesaInfo defesa = $danoAposDefesa → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal';
+    } else {
+      // Mostra: Base + Ataque - Defesa → Efetividade = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoComAtaque - $defesaInfo defesa = $danoAposDefesa → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal';
+    }
+    String descricao = '$atacante usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $calculoDano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(
@@ -476,20 +517,45 @@ class BatalhaService {
     // Calcula dano do ataque básico
     int ataqueAtacante = isJogador ? estado.ataqueAtualJogador : estado.ataqueAtualInimigo;
     int defesaAlvo = isJogador ? estado.defesaAtualInimigo : estado.defesaAtualJogador;
-    
+
     // Ataque básico: usa apenas 50% do ataque do atacante como dano base
     int danoBase = (ataqueAtacante * 0.5).round().clamp(1, ataqueAtacante);
     int danoComAtaque = danoBase + (ataqueAtacante * 0.3).round(); // Bônus menor para ataque básico
-    int danoAntesEfetividade = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
-    
-    print('🧮 [CALCULO BÁSICO] Base: $danoBase + Bônus: ${(ataqueAtacante * 0.3).round()} - Defesa: $defesaAlvo = $danoAntesEfetividade');
-    
+
+    print('🧮 [CALCULO INICIAL BÁSICO] Base: $danoBase + Bônus: ${(ataqueAtacante * 0.3).round()} = $danoComAtaque');
+
+    // Verifica passiva de Crítico (10% chance de dobrar dano ANTES da defesa)
+    bool isCritico = false;
+    int danoAntesCritico = danoComAtaque;
+    if (isJogador && estado.jogador.passiva?.tipo == TipoPassiva.critico) {
+      if (_random.nextDouble() < 0.1) {
+        danoComAtaque = (danoComAtaque * 2).round();
+        isCritico = true;
+        print('⚔️ [CRÍTICO] Passiva ativada! $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+      }
+    }
+
+    // Aplica defesa DEPOIS do crítico
+    int danoAposDefesa = (danoComAtaque - defesaAlvo).clamp(1, danoComAtaque);
+
+    print('🛡️ [DEFESA BÁSICO] $danoComAtaque - $defesaAlvo defesa = $danoAposDefesa');
+
     // Aplica multiplicador de efetividade
-    double danoComEfetividade = danoAntesEfetividade * multiplicadorEfetividade;
-    int danoFinal = danoComEfetividade.round().clamp(1, danoAntesEfetividade * 3);
-    
-    print('🎯 [EFETIVIDADE FINAL BÁSICO] $danoAntesEfetividade × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
-    
+    double danoComEfetividade = danoAposDefesa * multiplicadorEfetividade;
+    int danoFinal = danoComEfetividade.round().clamp(1, danoAposDefesa * 3);
+
+    print('🎯 [EFETIVIDADE FINAL BÁSICO] $danoAposDefesa × $multiplicadorEfetividade = $danoComEfetividade → $danoFinal');
+
+    // Verifica passiva de Esquiva do defensor (10% chance de esquivar completamente)
+    bool esquivou = false;
+    if (!isJogador && estado.jogador.passiva?.tipo == TipoPassiva.esquiva) {
+      if (_random.nextDouble() < 0.1) {
+        danoFinal = 0;
+        esquivou = true;
+        print('💨 [ESQUIVA] Passiva ativada! Ataque esquivado!');
+      }
+    }
+
     // Aplica dano
     int vidaAntes, vidaDepois;
     EstadoBatalha novoEstado;
@@ -504,7 +570,18 @@ class BatalhaService {
       novoEstado = estado.copyWith(vidaAtualJogador: vidaDepois);
     }
     
-    String descricao = '$atacante usou Ataque Básico[${tipoElementalAtacante.displayName}]: $danoBase base + bônus - $defesaAlvo defesa = $danoAntesEfetividade → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal de dano. Vida: $vidaAntes→$vidaDepois';
+    // Monta descrição com informação de crítico se aplicável
+    String calculoDano;
+    if (esquivou) {
+      calculoDano = 'Ataque esquivado! 💨';
+    } else if (isCritico) {
+      // Mostra: Base + Bônus = X → CRÍTICO X×2 = Y - Defesa = Z → Efetividade = Final
+      calculoDano = '$danoBase base + bônus = $danoAntesCritico → ⚔️CRÍTICO!⚔️ ${danoAntesCritico}×2 = $danoComAtaque - $defesaAlvo defesa = $danoAposDefesa → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal';
+    } else {
+      // Mostra: Base + Bônus - Defesa → Efetividade = Final
+      calculoDano = '$danoBase base + bônus = $danoComAtaque - $defesaAlvo defesa = $danoAposDefesa → ${multiplicadorEfetividade}x ($efetividadeTexto) = $danoFinal';
+    }
+    String descricao = '$atacante usou Ataque Básico[${tipoElementalAtacante.displayName}]: $calculoDano. Vida: $vidaAntes→$vidaDepois';
     
     // Adiciona ação ao histórico
     AcaoBatalha acao = AcaoBatalha(

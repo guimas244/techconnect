@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/item.dart';
+import '../models/passiva.dart';
 
 class CardMonstroAventura extends StatelessWidget {
   final String imagem;
@@ -13,6 +14,7 @@ class CardMonstroAventura extends StatelessWidget {
   final int defesa;
   final Item? itemEquipado;
   final int level;
+  final Passiva? passiva;
   final VoidCallback? onTap;
 
   const CardMonstroAventura({
@@ -27,6 +29,7 @@ class CardMonstroAventura extends StatelessWidget {
     required this.defesa,
     this.itemEquipado,
     this.level = 1,
+    this.passiva,
     this.onTap,
   });
 
@@ -258,6 +261,45 @@ class CardMonstroAventura extends StatelessWidget {
                 ),
               ],
             ),
+            // Exibição da passiva
+            if (passiva != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.amber.withOpacity(0.3),
+                      Colors.deepPurple.withOpacity(0.2),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      passiva!.tipo.icone,
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        passiva!.tipo.nome,
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
           ),
         ),

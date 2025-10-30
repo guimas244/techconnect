@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/habilidade.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../models/passiva.dart';
 
 /// Casa do Vigarista - Nova implementação seguindo REESTRUTURACAO_LOJA.md
 /// Retorna ResultadoLoja via Navigator.pop() ou callback se inline
@@ -37,10 +38,38 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   bool _comprando = false;
   Mochila? _mochila;
 
-  // Custos dinâmicos baseados no tier
-  int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
-  int get custoCura => 1 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
-  int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
+  // ===== PASSIVA: MERCADOR =====
+  bool get _temPassivaMercador {
+    bool temMercador = _historiaAtual.monstros.any((monstro) =>
+      monstro.passiva != null && monstro.passiva!.tipo == TipoPassiva.mercador
+    );
+    print('💰 [MERCADOR] Tem passiva? $temMercador');
+    return temMercador;
+  }
+
+  // Custos dinâmicos baseados no tier COM desconto Mercador
+  int get custoItem {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoMagia {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoCura {
+    int custoBase = _historiaAtual.tier >= 11 ? 2 : 2;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoFeirao {
+    int custoBase = _historiaAtual.tier >= 11 ? 3 : 3;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  // Mantém compatibilidade
+  int get custoAposta => custoItem;
   int get custoRoleta => 1; // Roleta custa 1 moeda de evento
 
   @override
@@ -148,7 +177,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
               child: _buildOptionCard(
                 title: 'Comprar Item',
                 iconAsset: 'assets/icons_gerais/bau.png',
-                cost: custoAposta,
+                cost: custoItem,
                 color: const Color(0xFF9d4edd),
                 onTap: _apostarItem,
               ),
@@ -168,7 +197,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
               child: _buildOptionCard(
                 title: 'Comprar Magia',
                 iconAsset: 'assets/icons_gerais/magia.png',
-                cost: custoAposta,
+                cost: custoMagia,
                 color: const Color(0xFF457b9d),
                 onTap: _apostarMagia,
               ),
@@ -418,7 +447,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   // ==================== MÉTODOS DE COMPRA ====================
 
   void _apostarItem() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoItem) return;
 
     // 1. Mostra modal de confirmação
     final confirmacao = await showDialog<bool>(
@@ -446,7 +475,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Custo: $custoAposta',
+                  'Custo: $custoItem',
                   style: const TextStyle(
                     color: Colors.amber,
                     fontSize: 18,
@@ -493,7 +522,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       // 2. Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoItem,
       );
 
       // 3. Gera item (simula processamento)
@@ -540,7 +569,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   }
 
   void _apostarMagia() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoMagia) return;
 
     // 1. Mostra modal de confirmação
     final confirmacao = await showDialog<bool>(
@@ -568,7 +597,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Custo: $custoAposta',
+                  'Custo: $custoMagia',
                   style: const TextStyle(
                     color: Colors.amber,
                     fontSize: 18,
@@ -615,7 +644,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       // Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoMagia,
       );
 
       // Gera magia (simula processamento)
