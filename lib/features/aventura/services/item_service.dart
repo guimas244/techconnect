@@ -71,7 +71,7 @@ class ItemService {
 
     print('🎲 [ItemService] Sorteio quantidade atributos: $chance/1000');
 
-    if (chance <= 1000) {
+    if (chance <= 5) {
       print('🎯 [ItemService] = 5 atributos MÁXIMOS (0.5% chance - Impossível)');
       return -1; // Flag especial para indicar item impossível
     }
