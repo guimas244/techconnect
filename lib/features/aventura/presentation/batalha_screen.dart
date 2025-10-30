@@ -1644,20 +1644,34 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final resultadoRecompensas = recompensaService.gerarRecompensasPorScore(1, tierAtual);
     final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
 
-    // ELITE: Sempre dropa item épico (nunca magia)
+    // ELITE: Dropa o item que ele tem equipado (mínimo Épico)
     if (widget.inimigo.isElite) {
-      final item = itemService.gerarItemComRaridade(
-        RaridadeItem.epico,
-        tierAtual: tierAtual,
-      );
-      print('[BatalhaScreen] 🏆 Drop ÉPICO garantido por inimigo ELITE: ${item.nome}');
-      return _DropResultado(
-        item: item,
-        tier: item.tier,
-        raridade: item.raridade,
-        consumiveis: consumiveis,
-        moedaEvento: moedaEvento,
-      );
+      final item = widget.inimigo.itemEquipado;
+
+      if (item != null) {
+        print('[BatalhaScreen] 👑 Elite dropou o item equipado: ${item.nome} (${item.raridade.nome})');
+        return _DropResultado(
+          item: item,
+          tier: item.tier,
+          raridade: item.raridade,
+          consumiveis: consumiveis,
+          moedaEvento: moedaEvento,
+        );
+      } else {
+        // Fallback caso elite não tenha item (não deveria acontecer)
+        print('[BatalhaScreen] ⚠️ Elite sem item equipado! Gerando Épico como fallback');
+        final itemFallback = itemService.gerarItemComRaridade(
+          RaridadeItem.epico,
+          tierAtual: tierAtual,
+        );
+        return _DropResultado(
+          item: itemFallback,
+          tier: itemFallback.tier,
+          raridade: itemFallback.raridade,
+          consumiveis: consumiveis,
+          moedaEvento: moedaEvento,
+        );
+      }
     }
 
     // NÃO-ELITE: 30% magia, 70% item

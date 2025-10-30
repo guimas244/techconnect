@@ -228,14 +228,41 @@ class ItemService {
   }
 
   /// Gera um item elite respeitando restrições de dificuldade por tier
+  /// Sorteia normalmente mas garante mínimo ÉPICO
   Item gerarItemEliteComRestricoes({int tierAtual = 1}) {
-    print('👑🔒 [ItemService] Gerando item ELITE com drop FIXO ÉPICO para tier $tierAtual');
+    print('👑 [ItemService] Gerando item ELITE para tier $tierAtual (mínimo: ÉPICO)');
 
-    // Para monstros elite, SEMPRE força item épico (sem aleatoriedade)
-    // Ignora completamente as restrições de tier para garantir drop épico
-    print('👑🔒 [ItemService] Drop FIXO: ÉPICO (100% garantido para monstro elite)');
+    // Sorteia item normalmente (pode vir Lendário ou até Impossível!)
+    int quantidadeAtributos = _determinarQuantidadeAtributos();
+    RaridadeItem raridade = _determinarRaridade(quantidadeAtributos);
 
-    return gerarItemComRaridade(RaridadeItem.epico, tierAtual: tierAtual);
+    print('👑 [ItemService] Item sorteado: ${raridade.nome}');
+
+    // Se vier abaixo de Épico, força para Épico (mínimo garantido)
+    if (raridade.nivel < RaridadeItem.epico.nivel) {
+      print('👑 [ItemService] Forçando para ÉPICO (era ${raridade.nome})');
+      raridade = RaridadeItem.epico;
+      quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.epico);
+    } else {
+      print('👑 [ItemService] Mantendo raridade sorteada: ${raridade.nome}');
+    }
+
+    // Gera o nome do item
+    String nome = GeradorNomesItens.gerarNomeItem();
+
+    // Gera os atributos do item
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+
+    print('✅ [ItemService] Item ELITE gerado: $nome (${raridade.nome}) | Tier: $tierAtual');
+
+    return Item(
+      id: _gerarId(),
+      nome: nome,
+      raridade: raridade,
+      atributos: atributos,
+      dataObtencao: DateTime.now(),
+      tier: tierAtual,
+    );
   }
 
   /// Obtém as raridades permitidas baseado no tier (restrições de dificuldade)
