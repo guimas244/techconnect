@@ -1281,6 +1281,9 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       case 'lendária':
       case 'lendaria':
         return 'assets/armaduras/armadura_lendaria.png';
+      case 'impossível':
+      case 'impossivel':
+        return 'assets/armaduras/armadura_impossivel.png';
       default:
         return 'assets/armaduras/armadura_normal.png';
     }

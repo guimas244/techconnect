@@ -1,6 +1,9 @@
 import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/item_consumivel.dart';
 import '../models/mochila.dart';
 import '../models/historia_jogador.dart';
@@ -13,6 +16,9 @@ import '../../auth/providers/auth_provider.dart';
 import '../services/item_service.dart';
 import '../models/monstro_aventura.dart';
 import '../models/item.dart';
+import '../models/progresso_diario.dart';
+import '../../../shared/models/tipo_enum.dart';
+import 'modal_nuty_negra_utilizada.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -162,11 +168,16 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     }
 
     if (item.tipo == TipoItemConsumivel.fruta) {
-      // Distingue entre Fruta Nuty (lendária) e Fruta Nuty Cristalizada (épica)
+      // Distingue entre Fruta Nuty (lendária), Fruta Nuty Cristalizada (épica) e Fruta Nuty Negra (épica)
       if (item.raridade == RaridadeConsumivel.lendario) {
         await _usarFrutaNuty(index, item);
       } else {
-        await _usarFrutaNutyCristalizada(index, item);
+        // Distingue entre Nuty Cristalizada e Nuty Negra pelo ID
+        if (item.id == 'frutaNutyNegra') {
+          await _usarFrutaNutyNegra(index, item);
+        } else {
+          await _usarFrutaNutyCristalizada(index, item);
+        }
       }
       return;
     }
@@ -552,6 +563,70 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _usarFrutaNutyNegra(int index, ItemConsumivel item) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) {
+      _mostrarSnack('Erro ao obter informações do jogador.', erro: true);
+      return;
+    }
+
+    final email = user.email!;
+
+    // Sorteia um tipo aleatório
+    final random = Random();
+    final tipos = Tipo.values.where((t) => t != Tipo.normal).toList();
+    final tipoSorteado = tipos[random.nextInt(tipos.length)];
+
+    // Carrega o progresso diário
+    final prefs = await SharedPreferences.getInstance();
+    final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final progressoJson = prefs.getString('progressoDiario_$email');
+
+    ProgressoDiario progresso;
+    if (progressoJson != null) {
+      progresso = ProgressoDiario.fromJson(
+        Map<String, dynamic>.from(json.decode(progressoJson) as Map)
+      );
+
+      // Verifica se precisa mudar o dia
+      if (progresso.data != hoje) {
+        progresso = progresso.finalizarDia(hoje);
+      }
+    } else {
+      progresso = ProgressoDiario(data: hoje);
+    }
+
+    // Adiciona 10 kills do tipo sorteado
+    for (int i = 0; i < 10; i++) {
+      progresso = progresso.adicionarKill(tipoSorteado);
+    }
+
+    // Salva o progresso atualizado
+    await prefs.setString(
+      'progressoDiario_$email',
+      json.encode(progresso.toJson()),
+    );
+
+    // Mostra modal informando qual tipo ganhou os kills
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalNutyNegraUtilizada(
+        tipoSorteado: tipoSorteado,
+        onContinuar: () => Navigator.of(context).pop(),
+      ),
+    );
+
+    // Consome o item
+    await _consumirItem(
+      index,
+      item,
+      mensagem: '+10 kills de ${tipoSorteado.displayName} adicionados!',
     );
   }
 
