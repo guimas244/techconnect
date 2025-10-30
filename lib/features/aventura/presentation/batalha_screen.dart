@@ -900,9 +900,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $calculoDano. Vida: $vidaAntes→$vidaDepois';
 
     // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
+    // NÃO adiciona se foi esquiva
     if (efetividade == 0.0) {
       descricao += ' (imune - nenhum dano foi causado)';
-    } else if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
+    } else if (!esquivou && habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
       descricao += ' (a habilidade causou 5 de dano penetrante)';
     }
 
@@ -2793,22 +2794,38 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Widget _buildAcaoItem(int turno, AcaoBatalha acao, bool isJogadorAcao) {
-    // Detecta se foi crítico pela descrição
+    // Detecta se foi crítico ou esquiva pela descrição
     final bool foiCritico = acao.descricao.contains('⚔️CRÍTICO!⚔️') || acao.descricao.contains('💥 CRÍTICO');
+    final bool foiEsquiva = acao.descricao.contains('Ataque esquivado!') || acao.descricao.contains('🌪️ ESQUIVOU!');
+
+    // Define cores baseado no tipo de ação especial
+    Color corFundo;
+    Color corBorda;
+    double larguraBorda;
+
+    if (foiCritico) {
+      corFundo = Colors.red.shade50.withOpacity(0.8);
+      corBorda = Colors.red.shade300;
+      larguraBorda = 2;
+    } else if (foiEsquiva) {
+      corFundo = Colors.green.shade50.withOpacity(0.8);
+      corBorda = Colors.green.shade300;
+      larguraBorda = 2;
+    } else {
+      corFundo = Colors.grey.shade50;
+      corBorda = Colors.grey.shade200;
+      larguraBorda = 1;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: foiCritico
-            ? Colors.red.shade50.withOpacity(0.8) // Fundo vermelho claro se foi crítico
-            : Colors.grey.shade50,
+        color: corFundo,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: foiCritico
-              ? Colors.red.shade300 // Borda vermelha se foi crítico
-              : Colors.grey.shade200,
-          width: foiCritico ? 2 : 1, // Borda mais grossa se foi crítico
+          color: corBorda,
+          width: larguraBorda,
         ),
       ),
       child: Row(

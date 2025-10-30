@@ -5,6 +5,7 @@ import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/passiva.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/developer_config.dart';
 
 class ModalLojaGanandius extends StatefulWidget {
   final HistoriaJogador historia;
@@ -54,6 +55,19 @@ class _ModalLojaGanandiusState extends State<ModalLojaGanandius> {
   }
 
   void _iniciarCompraDespertar() async {
+    // Debug: verifica o valor da flag
+    print('🔧 [GANANDIUS] ENABLE_TYPE_EDITING = ${DeveloperConfig.ENABLE_TYPE_EDITING}');
+
+    // Se ENABLE_TYPE_EDITING for true, mostra TODAS as passivas
+    if (DeveloperConfig.ENABLE_TYPE_EDITING) {
+      print('🔧 [GANANDIUS DEV MODE] Mostrando TODAS as passivas disponíveis');
+      _mostrarTodasPassivas();
+      return;
+    }
+
+    print('🔧 [GANANDIUS] Modo normal - sorteando 2 passivas');
+
+    // Modo normal: sorteia apenas 2 passivas
     final prefs = await SharedPreferences.getInstance();
     final chavePassivas = 'ganandius_passivas_sorteadas_tier_${_historiaAtual.tier}';
 
@@ -84,6 +98,117 @@ class _ModalLojaGanandiusState extends State<ModalLojaGanandius> {
 
     // Mostra modal de escolha entre as 2 passivas
     _mostrarEscolhaPassivas(passiva1, passiva2);
+  }
+
+  // Mostra modal com TODAS as passivas disponíveis (modo desenvolvedor)
+  void _mostrarTodasPassivas() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.deepPurple.shade800,
+                  Colors.deepPurple.shade900,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.amber, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.8),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.amber.withOpacity(0.3),
+                              Colors.deepPurple.withOpacity(0.3),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.amber, width: 2),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              '✨ Escolha Sua Passiva ✨',
+                              style: TextStyle(
+                                color: Colors.amber,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'serif',
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '🔧 MODO DESENVOLVEDOR 🔧',
+                              style: TextStyle(
+                                color: Colors.greenAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        custoDespertar == 0
+                            ? '✨ DESPERTAR GRATUITO! ✨\n\nTodas as passivas estão disponíveis para escolha:'
+                            : 'Todas as passivas estão disponíveis para escolha:',
+                        style: TextStyle(
+                          color: custoDespertar == 0 ? Colors.greenAccent : const Color(0xFFCCCCCC),
+                          fontSize: 14,
+                          fontWeight: custoDespertar == 0 ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                // Lista de todas as passivas (scrollable)
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: TipoPassiva.values.map((passiva) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildCardEscolhaPassiva(passiva),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _mostrarEscolhaPassivas(TipoPassiva passiva1, TipoPassiva passiva2) {
