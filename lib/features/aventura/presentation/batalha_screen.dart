@@ -1525,6 +1525,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         tipoConsumivel = TipoItemConsumivel.joia;
         raridade = RaridadeConsumivel.epico;
         break;
+      case TipoDrop.frutaNuty:
+        tipoConsumivel = TipoItemConsumivel.fruta;
+        raridade = RaridadeConsumivel.lendario;
+        break;
+      case TipoDrop.frutaNutyCristalizada:
+        tipoConsumivel = TipoItemConsumivel.fruta;
+        raridade = RaridadeConsumivel.epico;
+        break;
       case TipoDrop.pocaoVidaGrande:
         tipoConsumivel = TipoItemConsumivel.pocao;
         raridade = RaridadeConsumivel.epico;

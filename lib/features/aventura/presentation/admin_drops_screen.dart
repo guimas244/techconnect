@@ -46,6 +46,7 @@ class _AdminDropsScreenState extends State<AdminDropsScreen> {
           TipoDrop.pocaoVidaGrande: 2.0,
           TipoDrop.pedraRecriacao: 2.0,
           TipoDrop.joiaReforco: 1.0,
+          TipoDrop.frutaNuty: 0.5,
         };
         _isLoading = false;
       });
@@ -238,7 +239,7 @@ class _AdminDropsScreenState extends State<AdminDropsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Chance de Drop: ${porcentagem.toStringAsFixed(0)}%',
+                        'Chance de Drop: ${porcentagem.toStringAsFixed(1)}%',
                         style: TextStyle(
                           color: Colors.amber.shade300,
                           fontSize: 16,
@@ -248,12 +249,12 @@ class _AdminDropsScreenState extends State<AdminDropsScreen> {
                       const SizedBox(height: 8),
                       Slider(
                         value: porcentagem,
-                        min: 1,
+                        min: 0,
                         max: 100,
-                        divisions: 99,
+                        divisions: 200,
                         activeColor: DeveloperConfig.ENABLE_TYPE_EDITING ? Colors.amber : Colors.grey,
                         inactiveColor: Colors.grey.shade700,
-                        label: '${porcentagem.toStringAsFixed(0)}%',
+                        label: '${porcentagem.toStringAsFixed(1)}%',
                         onChanged: DeveloperConfig.ENABLE_TYPE_EDITING
                             ? (value) {
                                 setState(() {

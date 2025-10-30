@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_consumivel.dart';
@@ -10,6 +11,7 @@ import 'modal_item_consumivel.dart';
 import 'modal_selecao_monstro_reforco.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/item_service.dart';
+import '../models/monstro_aventura.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -154,6 +156,16 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         await _usarJoiaRecriacao(index, item);
       } else {
         await _usarJoiaReforco(index, item);
+      }
+      return;
+    }
+
+    if (item.tipo == TipoItemConsumivel.fruta) {
+      // Distingue entre Fruta Nuty (lendária) e Fruta Nuty Cristalizada (épica)
+      if (item.raridade == RaridadeConsumivel.lendario) {
+        await _usarFrutaNuty(index, item);
+      } else {
+        await _usarFrutaNutyCristalizada(index, item);
       }
       return;
     }
@@ -383,6 +395,155 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
             index,
             item,
             mensagem: '${monstro.nome}: ${itemAtual.nome} reforçado de Tier ${itemAtual.tier} para Tier ${itemReforcado.tier}!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarFrutaNuty(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a fruta.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Filtra apenas monstros de level 1
+    final monstrosLevel1 = historiaAtual!.monstros.where((m) => m.level == 1).toList();
+
+    if (monstrosLevel1.isEmpty) {
+      _mostrarSnack('A Fruta Nuty só pode ser usada em monstros Level 1!', erro: true);
+      return;
+    }
+
+    // Mostra modal para selecionar o monstro
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: monstrosLevel1,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          // Maximiza todos os atributos do monstro
+          final monstroMaximizado = monstro.copyWith(
+            vida: 150,  // Máximo de vida
+            vidaAtual: 150,  // Cura para o máximo também
+            energia: 40,  // Máximo de energia
+            agilidade: 20,  // Máximo de agilidade
+            ataque: 20,  // Máximo de ataque
+            defesa: 60,  // Máximo de defesa
+          );
+
+          // Atualiza o monstro na lista
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return monstroMaximizado;
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome} teve todos seus atributos maximizados!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarFrutaNutyCristalizada(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a fruta.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Pode ser usado em qualquer monstro (sem restrição de level)
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: historiaAtual!.monstros,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          // Sorteia um atributo aleatório para ganhar +10
+          final random = Random();
+          final atributos = ['vida', 'energia', 'agilidade', 'ataque', 'defesa'];
+          final atributoSorteado = atributos[random.nextInt(atributos.length)];
+
+          // Cria o monstro com o atributo sorteado aumentado
+          late final MonstroAventura monstroAprimorado;
+          late final String nomeAtributo;
+
+          switch (atributoSorteado) {
+            case 'vida':
+              monstroAprimorado = monstro.copyWith(
+                vida: monstro.vida + 10,
+                vidaAtual: monstro.vidaAtual + 10, // Aumenta vida atual também
+              );
+              nomeAtributo = 'Vida';
+              break;
+            case 'energia':
+              monstroAprimorado = monstro.copyWith(energia: monstro.energia + 10);
+              nomeAtributo = 'Energia';
+              break;
+            case 'agilidade':
+              monstroAprimorado = monstro.copyWith(agilidade: monstro.agilidade + 10);
+              nomeAtributo = 'Agilidade';
+              break;
+            case 'ataque':
+              monstroAprimorado = monstro.copyWith(ataque: monstro.ataque + 10);
+              nomeAtributo = 'Ataque';
+              break;
+            case 'defesa':
+              monstroAprimorado = monstro.copyWith(defesa: monstro.defesa + 10);
+              nomeAtributo = 'Defesa';
+              break;
+          }
+
+          // Atualiza o monstro na lista
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return monstroAprimorado;
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome} ganhou +10 de $nomeAtributo!',
           );
         },
       ),
@@ -1134,6 +1295,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         return Icons.local_drink;
       case TipoItemConsumivel.joia:
         return Icons.diamond;
+      case TipoItemConsumivel.fruta:
+        return Icons.apple;
       case TipoItemConsumivel.pergaminho:
         return Icons.article;
       case TipoItemConsumivel.elixir:

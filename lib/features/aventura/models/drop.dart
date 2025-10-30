@@ -3,6 +3,8 @@ enum TipoDrop {
   pocaoVidaGrande,
   pedraRecriacao,
   joiaReforco,
+  frutaNuty,
+  frutaNutyCristalizada,
 }
 
 extension TipoDropExtension on TipoDrop {
@@ -16,6 +18,10 @@ extension TipoDropExtension on TipoDrop {
         return 'Joia da Recriação';
       case TipoDrop.joiaReforco:
         return 'Joia de Reforço';
+      case TipoDrop.frutaNuty:
+        return 'Fruta Nuty';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'Fruta Nuty Cristalizada';
     }
   }
 
@@ -29,6 +35,10 @@ extension TipoDropExtension on TipoDrop {
         return 'Recria o equipamento mantendo a raridade e sorteando tier alto';
       case TipoDrop.joiaReforco:
         return 'Ajusta os atributos do equipamento para o tier atual';
+      case TipoDrop.frutaNuty:
+        return 'Maximiza todos os atributos do monstro (apenas Level 1)';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'Adiciona +10 em um atributo aleatório do monstro';
     }
   }
 
@@ -42,6 +52,10 @@ extension TipoDropExtension on TipoDrop {
         return 'assets/drops/drop_pedra_recriacao.png';
       case TipoDrop.joiaReforco:
         return 'assets/drops/drop_pedra_reforco.png';
+      case TipoDrop.frutaNuty:
+        return 'assets/drops/drop_fruta_nuty.png';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'assets/drops/drop_fruta_nuty_cristalizada.png';
     }
   }
 

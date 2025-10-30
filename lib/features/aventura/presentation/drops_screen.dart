@@ -57,6 +57,7 @@ class _DropsScreenState extends State<DropsScreen> {
         TipoDrop.pocaoVidaGrande: 2.0,
         TipoDrop.pedraRecriacao: 2.0,
         TipoDrop.joiaReforco: 1.0,
+        TipoDrop.frutaNuty: 0.5,
       };
     }
 

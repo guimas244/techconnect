@@ -74,6 +74,7 @@ class ItemConsumivel {
 enum TipoItemConsumivel {
   pocao,
   joia,
+  fruta,
   pergaminho,
   elixir,
   fragmento,
