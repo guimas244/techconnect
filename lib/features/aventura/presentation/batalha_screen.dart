@@ -36,6 +36,7 @@ import '../services/mochila_service.dart';
 import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
 import 'modal_monstro_aventura.dart';
+import 'modal_vidinha_utilizada.dart';
 
 class _ResultadoEvolucao {
   final HistoriaJogador historiaAtualizada;
@@ -112,6 +113,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool monstroRaroDesbloqueado = false;
   bool scoreAtualizado = false;
   bool podeVoltarParaAventura = false;
+  bool vidinhaUsada = false; // Controla se a vidinha já foi usada nesta batalha
   int turnoAtual = 1;
   bool vezDoJogador = true;
   String? ultimaAcao;
@@ -354,18 +356,30 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         
         // Pequeno delay para não sobrecarregar
         await Future.delayed(const Duration(milliseconds: 100));
-        
+
         // Segundo ataque (inimigo)
         estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
         if (estadoAtualizado.vidaAtualJogador <= 0) {
-          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
-          return;
+          // Tenta usar vidinha antes de finalizar como derrota
+          final vidinhaFoiUsada = await _tentarUsarVidinha();
+          if (!vidinhaFoiUsada) {
+            _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+            return;
+          }
+          // Vidinha foi usada, continua a batalha
+          estadoAtualizado = estadoAtual!;
         }
       } else {
         estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
         if (estadoAtualizado.vidaAtualJogador <= 0) {
-          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
-          return;
+          // Tenta usar vidinha antes de finalizar como derrota
+          final vidinhaFoiUsada = await _tentarUsarVidinha();
+          if (!vidinhaFoiUsada) {
+            _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+            return;
+          }
+          // Vidinha foi usada, continua a batalha
+          estadoAtualizado = estadoAtual!;
         }
         
         await Future.delayed(const Duration(milliseconds: 100));
@@ -432,14 +446,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await Future.delayed(const Duration(milliseconds: 1000));
       estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
       if (estadoAtualizado.vidaAtualJogador <= 0) {
-        _finalizarRodada(estadoAtualizado, 'inimigo');
-        return;
+        // Tenta usar vidinha antes de finalizar como derrota
+        final vidinhaFoiUsada = await _tentarUsarVidinha();
+        if (!vidinhaFoiUsada) {
+          _finalizarRodada(estadoAtualizado, 'inimigo');
+          return;
+        }
+        // Vidinha foi usada, continua a batalha
+        estadoAtualizado = estadoAtual!;
       }
     } else {
       estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
       if (estadoAtualizado.vidaAtualJogador <= 0) {
-        _finalizarRodada(estadoAtualizado, 'inimigo');
-        return;
+        // Tenta usar vidinha antes de finalizar como derrota
+        final vidinhaFoiUsada = await _tentarUsarVidinha();
+        if (!vidinhaFoiUsada) {
+          _finalizarRodada(estadoAtualizado, 'inimigo');
+          return;
+        }
+        // Vidinha foi usada, continua a batalha
+        estadoAtualizado = estadoAtual!;
       }
       
       // Segundo ataque (jogador)
@@ -1020,6 +1046,91 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
+  /// Verifica se o jogador tem vidinha e a usa automaticamente
+  /// Retorna true se a vidinha foi usada, false caso contrário
+  Future<bool> _tentarUsarVidinha() async {
+    // Se já usou vidinha nesta batalha, não pode usar novamente
+    if (vidinhaUsada) {
+      return false;
+    }
+
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final mochila = await MochilaService.carregarMochila(context, emailJogador);
+
+      if (mochila == null) {
+        return false;
+      }
+
+      // Procura por vidinha na mochila
+      int indexVidinha = -1;
+      for (int i = 0; i < mochila.itens.length; i++) {
+        final item = mochila.itens[i];
+        if (item != null &&
+            item.tipo == TipoItemConsumivel.vidinha &&
+            item.quantidade > 0) {
+          indexVidinha = i;
+          break;
+        }
+      }
+
+      if (indexVidinha == -1) {
+        // Não tem vidinha
+        return false;
+      }
+
+      // Tem vidinha! Vamos usar
+      final vidinha = mochila.itens[indexVidinha]!;
+
+      // Remove 1 vidinha da mochila
+      final quantidadeRestante = vidinha.quantidade - 1;
+      final mochilaAtualizada = quantidadeRestante > 0
+          ? mochila.atualizarItem(
+              indexVidinha,
+              vidinha.copyWith(quantidade: quantidadeRestante),
+            )
+          : mochila.removerItem(indexVidinha);
+
+      // Salva mochila atualizada
+      await MochilaService.salvarMochila(
+        context,
+        emailJogador,
+        mochilaAtualizada,
+      );
+
+      // Marca que usou vidinha
+      vidinhaUsada = true;
+
+      // Revive o monstro com vida cheia
+      if (estadoAtual != null) {
+        setState(() {
+          estadoAtual = estadoAtual!.copyWith(
+            vidaAtualJogador: estadoAtual!.vidaMaximaJogador,
+          );
+        });
+      }
+
+      // Mostra modal de vidinha utilizada
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => ModalVidinhaUtilizada(
+            monstro: widget.jogador,
+            onContinuar: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        );
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao tentar usar vidinha: $e');
+      return false;
+    }
+  }
+
   Future<void> _processarCuraPosBatalha() async {
     try {
       print('?? [CuraPosBatalha] Iniciando processamento da cura pós-batalha...');
@@ -1532,6 +1643,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       case TipoDrop.frutaNutyCristalizada:
         tipoConsumivel = TipoItemConsumivel.fruta;
         raridade = RaridadeConsumivel.epico;
+        break;
+      case TipoDrop.vidinha:
+        tipoConsumivel = TipoItemConsumivel.vidinha;
+        raridade = RaridadeConsumivel.lendario;
         break;
       case TipoDrop.pocaoVidaGrande:
         tipoConsumivel = TipoItemConsumivel.pocao;

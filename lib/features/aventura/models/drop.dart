@@ -5,6 +5,7 @@ enum TipoDrop {
   joiaReforco,
   frutaNuty,
   frutaNutyCristalizada,
+  vidinha,
 }
 
 extension TipoDropExtension on TipoDrop {
@@ -22,6 +23,8 @@ extension TipoDropExtension on TipoDrop {
         return 'Fruta Nuty';
       case TipoDrop.frutaNutyCristalizada:
         return 'Fruta Nuty Cristalizada';
+      case TipoDrop.vidinha:
+        return 'Vidinha';
     }
   }
 
@@ -39,6 +42,8 @@ extension TipoDropExtension on TipoDrop {
         return 'Maximiza todos os atributos do monstro (apenas Level 1)';
       case TipoDrop.frutaNutyCristalizada:
         return 'Adiciona +10 em um atributo aleatório do monstro';
+      case TipoDrop.vidinha:
+        return 'Revive automaticamente seu monstro na primeira morte em batalha';
     }
   }
 
@@ -56,6 +61,8 @@ extension TipoDropExtension on TipoDrop {
         return 'assets/drops/drop_fruta_nuty.png';
       case TipoDrop.frutaNutyCristalizada:
         return 'assets/drops/drop_fruta_nuty_cristalizada.png';
+      case TipoDrop.vidinha:
+        return 'assets/drops/drop_vidinha.png';
     }
   }
 

@@ -2457,6 +2457,8 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         return Icons.diamond;
       case TipoItemConsumivel.fruta:
         return Icons.apple;
+      case TipoItemConsumivel.vidinha:
+        return Icons.favorite;
       case TipoItemConsumivel.pergaminho:
         return Icons.article;
       case TipoItemConsumivel.elixir:

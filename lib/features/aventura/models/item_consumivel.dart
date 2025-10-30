@@ -75,6 +75,7 @@ enum TipoItemConsumivel {
   pocao,
   joia,
   fruta,
+  vidinha,
   pergaminho,
   elixir,
   fragmento,
@@ -88,6 +89,7 @@ enum RaridadeConsumivel {
   raro,
   epico,
   lendario,
+  impossivel,
 }
 
 extension RaridadeConsumivelExtension on RaridadeConsumivel {
@@ -103,6 +105,8 @@ extension RaridadeConsumivelExtension on RaridadeConsumivel {
         return 'Épico';
       case RaridadeConsumivel.lendario:
         return 'Lendário';
+      case RaridadeConsumivel.impossivel:
+        return 'Impossível';
     }
   }
 
@@ -118,6 +122,8 @@ extension RaridadeConsumivelExtension on RaridadeConsumivel {
         return const Color(0xFF9C27B0); // Roxo
       case RaridadeConsumivel.lendario:
         return const Color(0xFFFF9800); // Laranja/Dourado
+      case RaridadeConsumivel.impossivel:
+        return const Color(0xFFD32F2F); // Vermelho
     }
   }
 }

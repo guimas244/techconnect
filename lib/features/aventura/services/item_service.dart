@@ -66,33 +66,40 @@ class ItemService {
 
   /// Determina a quantidade de atributos baseado nas probabilidades
   int _determinarQuantidadeAtributos() {
-    int chance = _random.nextInt(100) + 1; // 1-100
-    
-    print('🎲 [ItemService] Sorteio quantidade atributos: $chance/100');
-    
-    if (chance <= 2) {
+    // Usa 1-1000 para poder ter 0,5% (5 em 1000)
+    int chance = _random.nextInt(1000) + 1; // 1-1000
+
+    print('🎲 [ItemService] Sorteio quantidade atributos: $chance/1000');
+
+    if (chance <= 1000) {
+      print('🎯 [ItemService] = 5 atributos MÁXIMOS (0.5% chance - Impossível)');
+      return -1; // Flag especial para indicar item impossível
+    }
+    if (chance <= 25) {
       print('🎯 [ItemService] = 5 atributos (2% chance - Lendário)');
       return 5; // 2%
     }
-    if (chance <= 5) {
+    if (chance <= 55) {
       print('🎯 [ItemService] = 4 atributos (3% chance - Épico)');
       return 4; // 3%
     }
-    if (chance <= 15) {
+    if (chance <= 155) {
       print('🎯 [ItemService] = 3 atributos (10% chance - Raro)');
       return 3; // 10%
     }
-    if (chance <= 35) {
+    if (chance <= 355) {
       print('🎯 [ItemService] = 2 atributos (20% chance - Normal)');
       return 2; // 20%
     }
-    print('🎯 [ItemService] = 1 atributo (65% chance - Inferior)');
-    return 1; // 65%
+    print('🎯 [ItemService] = 1 atributo (64.5% chance - Inferior)');
+    return 1; // 64.5%
   }
 
   /// Determina a raridade baseada na quantidade de atributos
   RaridadeItem _determinarRaridade(int quantidadeAtributos) {
     switch (quantidadeAtributos) {
+      case -1:
+        return RaridadeItem.impossivel;
       case 5:
         return RaridadeItem.lendario;
       case 4:
@@ -110,18 +117,29 @@ class ItemService {
   Map<String, int> _gerarAtributos(int quantidade, int tier) {
     List<String> atributosDisponiveis = ['vida', 'energia', 'ataque', 'defesa', 'agilidade'];
     atributosDisponiveis.shuffle(_random);
-    
+
     Map<String, int> atributos = {};
-    
+
+    // Se é item impossível (quantidade = -1), todos os 5 atributos no máximo
+    if (quantidade == -1) {
+      print('⭐ [ItemService] ITEM IMPOSSÍVEL: Todos os 5 atributos no MÁXIMO!');
+      for (String atributo in ['vida', 'energia', 'ataque', 'defesa', 'agilidade']) {
+        int valorMaximo = 10 * tier; // Valor máximo possível
+        atributos[atributo] = valorMaximo;
+        print('🎯 [ItemService] Atributo: $atributo | MÁXIMO | Tier: $tier | Final: $valorMaximo');
+      }
+      return atributos;
+    }
+
     for (int i = 0; i < quantidade; i++) {
       String atributo = atributosDisponiveis[i];
       int valorBase = _random.nextInt(10) + 1; // 1-10 pontos base por atributo
       int valorFinal = valorBase * tier; // Multiplica pelo tier
       atributos[atributo] = valorFinal;
-      
+
       print('🎯 [ItemService] Atributo: $atributo | Base: $valorBase | Tier: $tier | Final: $valorFinal');
     }
-    
+
     return atributos;
   }
 
@@ -172,6 +190,8 @@ class ItemService {
   /// Retorna quantidade de atributos baseada na raridade
   int _quantidadeAtributosPorRaridade(RaridadeItem raridade) {
     switch (raridade) {
+      case RaridadeItem.impossivel:
+        return -1; // Flag para item impossível
       case RaridadeItem.lendario:
         return 5;
       case RaridadeItem.epico:

@@ -12,6 +12,7 @@ import 'modal_selecao_monstro_reforco.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/item_service.dart';
 import '../models/monstro_aventura.dart';
+import '../models/item.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -274,11 +275,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
-    // Filtra apenas monstros que têm item equipado
-    final monstrosComItem = historiaAtual!.monstros.where((m) => m.itemEquipado != null).toList();
+    // Filtra apenas monstros que têm item equipado e que NÃO sejam impossíveis
+    final monstrosComItem = historiaAtual!.monstros
+        .where((m) => m.itemEquipado != null && m.itemEquipado!.raridade != RaridadeItem.impossivel)
+        .toList();
 
     if (monstrosComItem.isEmpty) {
-      _mostrarSnack('Nenhum monstro tem equipamento para reforçar!', erro: true);
+      _mostrarSnack('Nenhum monstro tem equipamento válido! (Itens Impossíveis são imutáveis)', erro: true);
       return;
     }
 
@@ -338,11 +341,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
-    // Filtra apenas monstros que têm item equipado
-    final monstrosComItem = historiaAtual!.monstros.where((m) => m.itemEquipado != null).toList();
+    // Filtra apenas monstros que têm item equipado e que NÃO sejam impossíveis
+    final monstrosComItem = historiaAtual!.monstros
+        .where((m) => m.itemEquipado != null && m.itemEquipado!.raridade != RaridadeItem.impossivel)
+        .toList();
 
     if (monstrosComItem.isEmpty) {
-      _mostrarSnack('Nenhum monstro tem equipamento para reforçar!', erro: true);
+      _mostrarSnack('Nenhum monstro tem equipamento válido! (Itens Impossíveis são imutáveis)', erro: true);
       return;
     }
 
@@ -1297,6 +1302,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         return Icons.diamond;
       case TipoItemConsumivel.fruta:
         return Icons.apple;
+      case TipoItemConsumivel.vidinha:
+        return Icons.favorite;
       case TipoItemConsumivel.pergaminho:
         return Icons.article;
       case TipoItemConsumivel.elixir:

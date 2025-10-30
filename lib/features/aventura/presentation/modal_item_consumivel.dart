@@ -297,6 +297,8 @@ class ModalItemConsumivel extends StatelessWidget {
         return Icons.diamond;
       case TipoItemConsumivel.fruta:
         return Icons.apple;
+      case TipoItemConsumivel.vidinha:
+        return Icons.favorite;
       case TipoItemConsumivel.pergaminho:
         return Icons.article;
       case TipoItemConsumivel.elixir:
@@ -318,6 +320,8 @@ class ModalItemConsumivel extends StatelessWidget {
         return 'Joia';
       case TipoItemConsumivel.fruta:
         return 'Fruta';
+      case TipoItemConsumivel.vidinha:
+        return 'Vidinha';
       case TipoItemConsumivel.pergaminho:
         return 'Pergaminho';
       case TipoItemConsumivel.elixir:
