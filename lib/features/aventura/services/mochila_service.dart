@@ -7,7 +7,7 @@ import '../models/item_consumivel.dart';
 class MochilaService {
   static const String _boxName = 'mochila_box';
   static const String _migrationBoxName = 'app_migration';
-  static const String _currentVersion = '2.2.1';
+  static const String _currentVersion = '2.3.0';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {

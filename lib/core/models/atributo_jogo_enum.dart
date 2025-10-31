@@ -25,11 +25,13 @@ enum AtributoJogo {
   evolucaoGanhoEnergia(min: 1, max: 1), // Ganho de energia por evolução
 
   // Sistema de descoberta de monstros raros da nova coleção (Nostálgicos)
-  // Tier 3-10: 2% de chance | Tier 11+: 3% de chance
+  // Tier 3-10: 2% | Tier 11-99: 4% | Tier 100+: 20% (HARDCORE MODE)
   chanceMonstroColecoRaro(min: 2, max: 2), // 2% de chance base (tier 3-10)
-  chanceMonstroColecoRaroTier11Plus(min: 4, max: 4), // 4% de chance (tier 11+)
+  chanceMonstroColecoRaroTier11Plus(min: 4, max: 4), // 4% de chance (tier 11-99)
+  chanceMonstroColecoRaroTier100Plus(min: 20, max: 20), // 20% de chance (tier 100+ HARDCORE)
   tierMinimoMonstroColecoRaro(min: 3, max: 3), // A partir do tier 3
-  tierBoostMonstroColecoRaro(min: 11, max: 11), // Boost de chance a partir do tier 11
+  tierBoostMonstroColecoRaro(min: 11, max: 11), // Primeiro boost de chance a partir do tier 11
+  tierBoostMonstroColecoRaroHardcore(min: 100, max: 100), // Segundo boost (HARDCORE) a partir do tier 100
 
   // ========================================
   // SISTEMA DE DROPS - ITENS CONSUMÍVEIS
@@ -111,10 +113,14 @@ enum AtributoJogo {
   /// Obtém a chance (em %) de gerar monstro raro baseada no tier
   ///
   /// - Tier 3-10: 2% de chance
-  /// - Tier 11+: 4% de chance (boost no endgame)
+  /// - Tier 11-99: 4% de chance (boost endgame)
+  /// - Tier 100+: 20% de chance (HARDCORE MODE)
   static int chanceMonstroColecoRaroPercent(int tier) {
+    if (tier >= AtributoJogo.tierBoostMonstroColecoRaroHardcore.min) {
+      return AtributoJogo.chanceMonstroColecoRaroTier100Plus.min; // 20% tier 100+ HARDCORE
+    }
     if (tier >= AtributoJogo.tierBoostMonstroColecoRaro.min) {
-      return AtributoJogo.chanceMonstroColecoRaroTier11Plus.min; // 4% tier 11+
+      return AtributoJogo.chanceMonstroColecoRaroTier11Plus.min; // 4% tier 11-99
     }
     return AtributoJogo.chanceMonstroColecoRaro.min; // 2% tier 3-10
   }
@@ -123,8 +129,8 @@ enum AtributoJogo {
   ///
   /// Exemplos:
   /// - Tier 5: 2% de chance (sorteio 0-99, sucesso se < 2)
-  /// - Tier 11: 3% de chance (sorteio 0-99, sucesso se < 3)
-  /// - Tier 15: 3% de chance (sorteio 0-99, sucesso se < 3)
+  /// - Tier 11: 4% de chance (sorteio 0-99, sucesso se < 4)
+  /// - Tier 100: 20% de chance (sorteio 0-99, sucesso se < 20) HARDCORE
   static bool deveGerarMonstroRaro(Random random, int tier) {
     if (!podeGerarMonstroRaro(tier)) {
       print('🌟 [AtributoJogo] Tier $tier menor que o mínimo ${tierMinimoMonstroColecoRaro.min}');

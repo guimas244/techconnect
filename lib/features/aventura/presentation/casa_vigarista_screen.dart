@@ -190,6 +190,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 cost: custoCura,
                 color: const Color(0xFFe63946),
                 onTap: _apostarCura,
+                forceDisabled: _historiaAtual.tier >= 100, // 🔥 HARDCORE: Desabilita cura no tier 100+
               ),
             ),
             const SizedBox(width: 8),
@@ -254,22 +255,26 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
     required VoidCallback onTap,
     String? badge,
     String? customCostIcon, // Ícone customizado para o custo
+    bool forceDisabled = false, // 🔥 HARDCORE: Permite desabilitar forçadamente (tier 100+)
   }) {
     // Se tem ícone customizado, verifica moeda de evento. Caso contrário, verifica score.
     final canAfford = customCostIcon != null
         ? (_mochila?.quantidadeMoedaEvento ?? 0) >= cost
         : _historiaAtual.score >= cost;
 
+    // 🔥 HARDCORE: Se forceDisabled = true, o botão fica desabilitado independente de score
+    final isEnabled = !forceDisabled && canAfford;
+
     return GestureDetector(
-      onTap: canAfford && !_comprando ? onTap : null,
+      onTap: isEnabled && !_comprando ? onTap : null,
       child: AspectRatio(
         aspectRatio: 0.7, // Cards verticais (mais altos que largos)
         child: Container(
           decoration: BoxDecoration(
-            color: (canAfford ? color : Colors.grey.shade800).withValues(alpha: 0.2),
+            color: (isEnabled ? color : Colors.grey.shade800).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: canAfford ? color : Colors.grey.shade700,
+              color: isEnabled ? color : Colors.grey.shade700,
               width: 2,
             ),
           ),
@@ -285,7 +290,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                     style: GoogleFonts.cinzel(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: canAfford ? Colors.white : Colors.grey.shade500,
+                      color: isEnabled ? Colors.white : Colors.grey.shade500,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
@@ -305,7 +310,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                           width: 80,
                           height: 80,
                           fit: BoxFit.contain,
-                          color: canAfford ? null : Colors.grey.shade600,
+                          color: isEnabled ? null : Colors.grey.shade600,
                         ),
                       ),
                     ),
@@ -317,10 +322,10 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.7),
+                            color: (isEnabled ? color : Colors.grey.shade900).withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: canAfford ? Colors.white.withValues(alpha: 0.3) : Colors.grey.shade700,
+                              color: isEnabled ? Colors.white.withValues(alpha: 0.3) : Colors.grey.shade700,
                               width: 1,
                             ),
                           ),
@@ -328,7 +333,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                             badge,
                             style: TextStyle(
                               fontSize: 12,
-                              color: canAfford ? Colors.white : Colors.grey.shade600,
+                              color: isEnabled ? Colors.white : Colors.grey.shade600,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -348,11 +353,11 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                         customCostIcon,
                         width: 20,
                         height: 20,
-                        color: canAfford ? null : Colors.grey.shade600,
+                        color: isEnabled ? null : Colors.grey.shade600,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             Icons.monetization_on,
-                            color: canAfford ? Colors.amber : Colors.grey.shade600,
+                            color: isEnabled ? Colors.amber : Colors.grey.shade600,
                             size: 18,
                           );
                         },
@@ -360,7 +365,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                     else
                       Icon(
                         Icons.monetization_on,
-                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                        color: isEnabled ? Colors.amber : Colors.grey.shade600,
                         size: 18,
                       ),
                     const SizedBox(width: 4),
@@ -368,7 +373,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                       '$cost',
                       style: GoogleFonts.pressStart2p(
                         fontSize: 16,
-                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                        color: isEnabled ? Colors.amber : Colors.grey.shade600,
                       ),
                     ),
                   ],

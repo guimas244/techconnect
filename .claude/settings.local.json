@@ -15,7 +15,8 @@
       "Bash(flutter analyze:*)",
       "Bash(flutter clean:*)",
       "Bash(flutter pub get:*)",
-      "Bash(dart run:*)"
+      "Bash(dart run:*)",
+      "Bash(dart analyze:*)"
     ],
     "deny": [],
     "ask": []

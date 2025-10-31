@@ -152,25 +152,32 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   // ==================== FUNÇÕES HELPER DE PASSIVAS ====================
 
   /// Verifica se algum monstro da equipe tem uma passiva específica
+  /// IMPORTANTE: Passivas do JOGADOR são COMPARTILHADAS entre toda equipe
+  /// Se qualquer um dos 3 monstros tem a passiva, todos podem usar!
   bool _temPassivaNaEquipe(TipoPassiva tipo) {
     return widget.equipeCompleta.any((monstro) =>
       monstro.passiva != null && monstro.passiva!.tipo == tipo
     );
   }
 
-  /// Verifica se tem passiva de Crítico na equipe
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Crítico
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem criticar
   bool get _temPassivaCritico => _temPassivaNaEquipe(TipoPassiva.critico);
 
-  /// Verifica se tem passiva de Esquiva na equipe
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Esquiva
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem esquivar
   bool get _temPassivaEsquiva => _temPassivaNaEquipe(TipoPassiva.esquiva);
 
-  /// Verifica se tem passiva de Cura de Batalha na equipe
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Cura de Batalha
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem curar dobrado
   bool get _temPassivaCuraDeBatalha => _temPassivaNaEquipe(TipoPassiva.curaDeBatalha);
 
-  /// Verifica se tem passiva de Mercador na equipe
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Mercador
+  /// COMPARTILHADA: Afeta drops (qualquer um ter já vale)
   bool get _temPassivaMercador => _temPassivaNaEquipe(TipoPassiva.mercador);
 
-  /// Verifica se tem passiva de Sortudo na equipe
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Sortudo
+  /// COMPARTILHADA: Afeta drops (qualquer um ter já vale)
   bool get _temPassivaSortudo => _temPassivaNaEquipe(TipoPassiva.sortudo);
 
   // ==================== FIM FUNÇÕES HELPER DE PASSIVAS ====================
@@ -1003,19 +1010,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Carrega história atual para atualizar score
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       if (historia != null) {
-        // Calcula score ganho baseado no tier
-        final scoreGanho = ScoreConfig.ehPosTransicao(historia.tier)
-            ? ScoreConfig.SCORE_PONTOS_POR_VITORIA_TIER_11_PLUS
-            : historia.tier;
+        // 🔥 HARDCORE MODE: Tier 100+ não ganha mais score
+        final scoreGanho = historia.tier >= 100
+            ? 0 // Sem score no HARDCORE MODE
+            : (ScoreConfig.ehPosTransicao(historia.tier)
+                ? ScoreConfig.SCORE_PONTOS_POR_VITORIA_TIER_11_PLUS
+                : historia.tier);
 
         // Calcula novo score com limite de pontos extras
         // Score acumula ILIMITADO (para uso na loja)
         // O limite de 150 só é aplicado ao salvar no ranking
         int novoScore = historia.score + scoreGanho;
 
-        print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        if (historia.tier >= 100) {
+          print('🔥 [BatalhaScreen] HARDCORE MODE - Sem ganho de score! (tier ${historia.tier})');
+        } else {
+          print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        }
         print('📊 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
-        if (ScoreConfig.ehPosTransicao(historia.tier)) {
+        if (ScoreConfig.ehPosTransicao(historia.tier) && historia.tier < 100) {
           print('💰 [BatalhaScreen] Score ILIMITADO no tier 11+ (limite de 150 só no ranking)');
         }
         
@@ -1733,7 +1746,23 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
 
-    // NÃO-ELITE: 30% magia, 70% item
+    // NÃO-ELITE: Verifica se tem item equipado primeiro
+    final itemEquipado = widget.inimigo.itemEquipado;
+
+    // Se o monstro tem item equipado, dropa ele (igual aos elites)
+    if (itemEquipado != null) {
+      print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
+      return _DropResultado(
+        item: itemEquipado,
+        tier: itemEquipado.tier,
+        raridade: itemEquipado.raridade,
+        consumiveis: consumiveis,
+        moedaEvento: moedaEvento,
+        dropsDoSortudo: dropsDoSortudo,
+      );
+    }
+
+    // Se não tem item equipado: 30% magia, 70% item (comportamento original)
     final chanceDrop = _random.nextInt(100);
 
     if (chanceDrop < 30) {
@@ -2184,23 +2213,51 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Verifica crítico ANTES da defesa
     bool foiCritico = false;
     int ataqueAntesCritico = ataqueAtual;
+    // Jogador com passiva Crítico
     if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
       ataqueAtual = (ataqueAtual * 2);
       foiCritico = true;
-      print('💥 [PASSIVA CRÍTICO BÁSICO] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
+      print('💥 [PASSIVA CRÍTICO BÁSICO - JOGADOR] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
+    }
+    // Inimigo com passiva Crítico
+    else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.critico && _random.nextInt(100) < 10) {
+      ataqueAtual = (ataqueAtual * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO BÁSICO - INIMIGO] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
     }
 
-    final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
+    // ===== PASSIVA: ESQUIVA =====
+    bool esquivou = false;
+    int danoCalculadoTemp = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
+
+    // Jogador com passiva Esquiva (sendo atacado pelo inimigo)
+    if (!isJogador && _temPassivaEsquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoCalculadoTemp = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA BÁSICO - JOGADOR] Ataque esquivado!');
+    }
+    // Inimigo com passiva Esquiva (sendo atacado pelo jogador)
+    else if (isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.esquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoCalculadoTemp = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA BÁSICO - INIMIGO] Ataque esquivado!');
+    }
+
+    final danoCalculado = danoCalculadoTemp;
     final vidaDepois = vidaAntes - danoCalculado; // Permite vida negativa
 
     // Cria ação no histórico
     final energiaRestaurada = isJogador
         ? (estado.jogador.energia * 0.1).round()
         : (estado.inimigo.energia * 0.1).round();
-    // Monta descrição com crítico
+
+    // Monta descrição com crítico e esquiva
     String descricao;
-    if (foiCritico) {
-      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAntesCritico → ⚔️CRÍTICO!⚔️ ${ataqueAntesCritico}×2 = $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
+    if (esquivou) {
+      String defensorNome = isJogador ? estado.inimigo.tipo.monsterName : estado.jogador.tipo.monsterName;
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! 🌪️ $defensorNome ESQUIVOU! 🌪️ 0 de dano e restaurou $energiaRestaurada de energia.';
+    } else if (foiCritico) {
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAntesCritico → ⚔️CRÍTICO!⚔️ $ataqueAntesCritico×2 = $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
     } else {
       descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
     }

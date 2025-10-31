@@ -3,6 +3,7 @@ import 'dart:math';
 import '../../../core/services/google_drive_service.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/models/atributo_jogo_enum.dart';
+import '../../../core/config/version_config.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
@@ -504,6 +505,7 @@ class AventuraRepository {
       mapaAventura: mapaEscolhido,
       monstrosInimigos: monstrosInimigos,
       runId: runId,
+      version: VersionConfig.currentVersion, // Versão do jogo ao criar aventura
     );
     
     // Salva localmente no HIVE (não no Drive ainda)
@@ -728,16 +730,36 @@ class AventuraRepository {
         itemEquipado = _itemService.gerarItemAleatorio(tierAtual: 1);
         print('🎯 [Repository] Monstro tier 2 recebeu item tier 1: ${itemEquipado.nome}');
       } else if (tierAtual >= 3) {
-        // Tier 3+: 40% de chance de usar item de 1 tier abaixo, 60% chance de item do mesmo tier
-        final chanceItem = random.nextInt(100);
-        if (chanceItem < 40) {
-          // Item de tier anterior COM restrições de dificuldade
-          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
-          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance) - COM RESTRIÇÕES');
+        // 🔥 HARDCORE MODE (Tier 100+): 20% chance de item IMPOSSÍVEL em monstros normais
+        if (tierAtual >= 100) {
+          final chanceImpossivel = random.nextInt(100);
+          if (chanceImpossivel < 20) {
+            // 20% chance: Item IMPOSSÍVEL
+            itemEquipado = _itemService.gerarItemComRaridade(RaridadeItem.impossivel, tierAtual: tierAtual);
+            print('🔥 [HARDCORE] Monstro normal recebeu item IMPOSSÍVEL (${chanceImpossivel}/100 < 20)');
+          } else {
+            // 80% chance: Item normal com restrições
+            final chanceItem = random.nextInt(100);
+            if (chanceItem < 40) {
+              itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+              print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance) - COM RESTRIÇÕES');
+            } else {
+              itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+              print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance) - COM RESTRIÇÕES');
+            }
+          }
         } else {
-          // Item do tier atual COM restrições de dificuldade
-          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
-          print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance) - COM RESTRIÇÕES');
+          // Tier 3-99: 40% de chance de usar item de 1 tier abaixo, 60% chance de item do mesmo tier
+          final chanceItem = random.nextInt(100);
+          if (chanceItem < 40) {
+            // Item de tier anterior COM restrições de dificuldade
+            itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+            print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier ${tierAtual - 1}: ${itemEquipado.nome} (40% chance) - COM RESTRIÇÕES');
+          } else {
+            // Item do tier atual COM restrições de dificuldade
+            itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+            print('🎯 [Repository] Monstro tier $tierAtual recebeu item tier $tierAtual: ${itemEquipado.nome} (60% chance) - COM RESTRIÇÕES');
+          }
         }
       } else {
         // Tier 1: sem itens
@@ -841,9 +863,17 @@ class AventuraRepository {
     final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
     final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
 
-    // Gera item SEMPRE raro ou superior para monstro elite COM restrições de dificuldade
-    final itemElite = _itemService.gerarItemEliteComRestricoes(tierAtual: tierAtual);
-    print('👑 [Repository] Monstro elite recebeu item: ${itemElite.nome} (${itemElite.raridade.nome}) - COM RESTRIÇÕES');
+    // Gera item para monstro elite
+    Item itemElite;
+    if (tierAtual >= 100) {
+      // 🔥 HARDCORE MODE (Tier 100+): Elites SEMPRE dropam item IMPOSSÍVEL (100% chance)
+      itemElite = _itemService.gerarItemComRaridade(RaridadeItem.impossivel, tierAtual: tierAtual);
+      print('🔥 [HARDCORE] Elite recebeu item IMPOSSÍVEL GARANTIDO (tier $tierAtual)');
+    } else {
+      // Tier < 100: Gera item SEMPRE raro ou superior COM restrições de dificuldade
+      itemElite = _itemService.gerarItemEliteComRestricoes(tierAtual: tierAtual);
+      print('👑 [Repository] Monstro elite recebeu item: ${itemElite.nome} (${itemElite.raridade.nome}) - COM RESTRIÇÕES');
+    }
 
     // Calcula atributos base
     final vidaBase = AtributoJogo.vida.sortear(random);
@@ -894,8 +924,18 @@ class AventuraRepository {
     List<Map<String, dynamic>> poolInimigos,
     List<Tipo> tiposBase,
   ) async {
-    // Escolhe um monstro aleatório do pool
-    final monstroData = poolInimigos[random.nextInt(poolInimigos.length)];
+    // FILTRO: Remove monstros de Halloween do pool (eles não aparecem como nostálgicos na aventura)
+    final poolSemHalloween = poolInimigos.where((m) => m['colecao'] != 'halloween').toList();
+
+    if (poolSemHalloween.isEmpty) {
+      print('⚠️ [Repository] Pool sem Halloween está vazio! Usando pool completo como fallback');
+    } else {
+      print('🌟 [Repository] Pool filtrado: ${poolSemHalloween.length} monstros (sem Halloween)');
+    }
+
+    // Escolhe um monstro aleatório do pool FILTRADO (sem Halloween)
+    final poolFinal = poolSemHalloween.isEmpty ? poolInimigos : poolSemHalloween;
+    final monstroData = poolFinal[random.nextInt(poolFinal.length)];
     final tipo = monstroData['tipo'] as Tipo;
     final imagemPath = monstroData['imagem'] as String;
 
@@ -907,16 +947,23 @@ class AventuraRepository {
     final habilidadesBase = GeradorHabilidades.gerarHabilidadesMonstro(tipo, tipoExtra);
     final habilidades = _aplicarEvolucaoHabilidadesInimigo(habilidadesBase, tierAtual, random);
 
-    // Monstros raros têm chance de item igual aos monstros normais (não são elite)
+    // Gera item para monstro raro (nostálgico)
     Item? itemEquipado;
     if (tierAtual == 2) {
       itemEquipado = _itemService.gerarItemAleatorio(tierAtual: 1);
     } else if (tierAtual >= 3) {
-      final chanceItem = random.nextInt(100);
-      if (chanceItem < 40) {
-        itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+      // 🔥 HARDCORE MODE (Tier 100+): Nostálgicos SEMPRE têm item IMPOSSÍVEL
+      if (tierAtual >= 100) {
+        itemEquipado = _itemService.gerarItemComRaridade(RaridadeItem.impossivel, tierAtual: tierAtual);
+        print('🔥 [HARDCORE] Nostálgico recebeu item IMPOSSÍVEL GARANTIDO (tier $tierAtual)');
       } else {
-        itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+        // Tier < 100: Mesma lógica dos monstros normais
+        final chanceItem = random.nextInt(100);
+        if (chanceItem < 40) {
+          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual - 1);
+        } else {
+          itemEquipado = _itemService.gerarItemComRestricoesTier(tierAtual: tierAtual);
+        }
       }
     }
 
@@ -962,16 +1009,22 @@ class AventuraRepository {
   }
 
   /// Sorteia passiva para inimigo (tier 11+, 5% chance, apenas crítico/cura/esquiva)
+  /// TIER 100+ HARDCORE: TODOS os inimigos ganham passivas (100% chance)
   Passiva? _sortearPassivaInimigo(int tierAtual, Random random) {
     // Apenas tier 11+ tem chance de passiva
     if (tierAtual < 11) {
       return null;
     }
 
-    // 5% de chance de ter passiva
-    final chance = random.nextInt(100);
-    if (chance >= 5) {
-      return null; // Não ganhou passiva (95% dos casos)
+    // 🔥 HARDCORE MODE (Tier 100+): TODOS os inimigos ganham passivas (100% chance)
+    final isHardcoreMode = tierAtual >= 100;
+
+    if (!isHardcoreMode) {
+      // Tier 11-99: 5% de chance de ter passiva
+      final chance = random.nextInt(100);
+      if (chance >= 5) {
+        return null; // Não ganhou passiva (95% dos casos)
+      }
     }
 
     // Passivas disponíveis para inimigos: crítico, cura e esquiva
@@ -984,7 +1037,11 @@ class AventuraRepository {
     // Sorteia uma passiva aleatória
     final tipoPassiva = passivasDisponiveis[random.nextInt(passivasDisponiveis.length)];
 
-    print('🎯 [Repository] Inimigo ganhou passiva: ${tipoPassiva.nome} (tier $tierAtual, 5% chance)');
+    if (isHardcoreMode) {
+      print('🔥 [HARDCORE] Inimigo ganhou passiva GARANTIDA: ${tipoPassiva.nome} (tier $tierAtual)');
+    } else {
+      print('🎯 [Repository] Inimigo ganhou passiva: ${tipoPassiva.nome} (tier $tierAtual, 5% chance)');
+    }
 
     return Passiva(tipo: tipoPassiva);
   }

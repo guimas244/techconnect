@@ -26,6 +26,7 @@ import '../presentation/aventura_screen.dart';
 import '../presentation/progresso_screen.dart';
 import '../presentation/modal_tier11_transicao.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/version_config.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -1542,7 +1543,45 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         print('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] historiaAtual ÃƒÆ’Ã‚Â© null, retornando');
         return;
       }
-      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] historiaAtual não ÃƒÆ’Ã‚Â© null, continuando...');
+
+      // Verifica compatibilidade de versão
+      print('🔍 [DEBUG] Verificando versão - Aventura: ${historiaAtual!.version}, Jogo: ${VersionConfig.currentVersion}');
+
+      final versionComparison = VersionConfig.compareVersions(
+        historiaAtual!.version,
+        VersionConfig.currentVersion,
+      );
+
+      print('🔍 [DEBUG] Comparação de versões retornou: $versionComparison');
+
+      if (versionComparison < 0) {
+        // Versão da aventura é menor que a versão atual do jogo
+        print('⚠️ [MapaAventura] Versão incompatível: aventura v${historiaAtual!.version} < jogo v${VersionConfig.currentVersion}');
+
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('⚠️ Versão Incompatível'),
+              content: const Text(
+                'Por favor, crie uma nova aventura para prosseguir.\n\n'
+                'Sua aventura atual foi criada em uma versão anterior do jogo '
+                'e não é compatível com a versão atual.'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
 
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
@@ -1696,6 +1735,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       builder: (BuildContext context) {
         // Verificar se é o andar 10
         bool isAndar10 = historiaAtual?.tier == 10;
+        // Verificar se é o andar 99 (entrada no HARDCORE MODE)
+        bool isAndar99 = historiaAtual?.tier == 99;
 
         // Verificar se é um dos tiers de aumento de dificuldade
         bool isTierDificuldade = podeAvancar && [19, 29, 39, 49].contains(historiaAtual?.tier);
@@ -1707,18 +1748,18 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           title: Row(
             children: [
               Icon(
-                podeAvancar ? (isAndar10 ? Icons.warning : (isTierDificuldade ? Icons.trending_up : Icons.arrow_upward)) : Icons.block,
-                color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
+                podeAvancar ? (isAndar99 ? Icons.warning_amber_rounded : (isAndar10 ? Icons.warning : (isTierDificuldade ? Icons.trending_up : Icons.arrow_upward))) : Icons.block,
+                color: podeAvancar ? (isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green))) : Colors.red,
                 size: 28,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   podeAvancar
-                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier'))
+                    ? (isAndar99 ? '🔥 HARDCORE MODE - Andar 99' : (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier')))
                     : 'Requisitos não atendidos',
                   style: TextStyle(
-                    color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
+                    color: podeAvancar ? (isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green))) : Colors.red,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1763,6 +1804,82 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                         Text(
                           _getMensagemDificuldadeDescricao(historiaAtual!.tier),
                           style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (isAndar99) ...[
+                  // ⚠️ AVISO ESPECIAL PARA O ANDAR 99 → 100 (HARDCORE MODE)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red, width: 2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '🔥 BEM-VINDO AO HARDCORE! 🔥',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Você está prestes a entrar no modo mais difícil do jogo!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '⚔️ MUDANÇAS NO TIER 100+:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('• ❌ Não ganha mais SCORE dos monstros'),
+                        const Text('• 💀 TODOS os inimigos têm passivas de batalha'),
+                        const Text('• 🌟 20% de chance de monstros terem item IMPOSSÍVEL'),
+                        const Text('• 👑 Elites SEMPRE dropam item IMPOSSÍVEL'),
+                        const Text('• 🚫 Loja: Cura desabilitada'),
+                        const Text('• ✨ 20% de chance de encontrar Nostálgicos'),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '💀 Boa sorte, você vai precisar!',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1884,7 +2001,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             if (podeAvancar)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isAndar10 ? Colors.orange : Colors.green,
+                  backgroundColor: isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : Colors.green),
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
@@ -1894,9 +2011,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   _avancarTier();
                 },
                 child: Text(
-                  isAndar10
-                    ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
-                    : 'Confirmar'
+                  isAndar99
+                    ? '🔥 ENTRAR NO HARDCORE'
+                    : (isAndar10
+                        ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
+                        : 'Confirmar')
                 ),
               ),
           ],
