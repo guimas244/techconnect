@@ -48,6 +48,16 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   bool isAdvancingTier = false;
   int _abaAtual = 0; // 0 = Equipe, 1 = Mapa, 2 = Mochila, 3 = Loja, 4 = Progresso
 
+  // Filtro de drops - todas as raridades marcadas por padrão
+  Map<RaridadeItem, bool> _filtroDrops = {
+    RaridadeItem.inferior: true,
+    RaridadeItem.normal: true,
+    RaridadeItem.raro: true,
+    RaridadeItem.epico: true,
+    RaridadeItem.lendario: true,
+    RaridadeItem.impossivel: true,
+  };
+
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
     'assets/mapas_aventura/deserto.jpg',
@@ -67,6 +77,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   @override
   void initState() {
     super.initState();
+    _carregarFiltroDrops();
     _verificarAventuraIniciada();
   }
 
@@ -242,6 +253,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
         ),
         actions: [
+          // Ícone de configuração de filtro de drops
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Filtrar Drops',
+            onPressed: _mostrarFiltroDrops,
+          ),
           // Ícone de refresh - só aparece na aba MAPA
           if (_abaAtual == 1 && historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
             Padding(
@@ -1874,6 +1891,184 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           ],
         );
       },
+    );
+  }
+
+  /// Carrega filtro de drops do SharedPreferences
+  Future<void> _carregarFiltroDrops() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      for (final raridade in RaridadeItem.values) {
+        _filtroDrops[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
+      }
+    });
+  }
+
+  /// Salva filtro de drops no SharedPreferences
+  Future<void> _salvarFiltroDrops() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final entry in _filtroDrops.entries) {
+      await prefs.setBool('filtro_drop_${entry.key.name}', entry.value);
+    }
+  }
+
+  /// Mostra modal de filtro de drops
+  void _mostrarFiltroDrops() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFF1A1A2E),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Título
+                Row(
+                  children: [
+                    const Icon(Icons.tune, color: Colors.amber, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'FILTRAR DROPS',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Informação
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade900.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue, width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Desmarque as raridades que você NÃO quer que apareçam nas recompensas de batalha',
+                          style: TextStyle(
+                            color: Colors.blue.shade100,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Lista de checkboxes
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: RaridadeItem.values.map((raridade) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey.shade700,
+                              width: 2,
+                            ),
+                          ),
+                          child: CheckboxListTile(
+                            title: Text(
+                              raridade.nome,
+                              style: TextStyle(
+                                color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              _filtroDrops[raridade]! ? 'Aparecerá nas recompensas' : 'Não aparecerá nas recompensas',
+                              style: TextStyle(
+                                color: _filtroDrops[raridade]! ? Colors.white70 : Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                            value: _filtroDrops[raridade],
+                            activeColor: raridade.cor,
+                            checkColor: Colors.white,
+                            onChanged: (valor) {
+                              setModalState(() {
+                                setState(() {
+                                  _filtroDrops[raridade] = valor ?? true;
+                                });
+                              });
+                            },
+                            controlAffinity: ListTileControlAffinity.leading,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Botão Salvar
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _salvarFiltroDrops();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Filtro de drops salvo!'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.save),
+                    label: const Text(
+                      'SALVAR FILTRO',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

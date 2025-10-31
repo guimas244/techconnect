@@ -5,15 +5,28 @@ import '../models/magia_drop.dart';
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
 // Removendo import desnecessário
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RecompensaService {
   final Random _random = Random();
   final ItemService _itemService = ItemService();
   final MagiaService _magiaService = MagiaService();
 
+  /// Carrega o filtro de raridades do SharedPreferences
+  Future<Map<RaridadeItem, bool>> _carregarFiltroDrops() async {
+    final prefs = await SharedPreferences.getInstance();
+    final filtro = <RaridadeItem, bool>{};
+
+    for (final raridade in RaridadeItem.values) {
+      filtro[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
+    }
+
+    return filtro;
+  }
+
   /// Gera recompensas baseadas no score do jogador
   /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int
-  Map<String, dynamic> gerarRecompensasPorScore(int score, int tierAtual) {
+  Future<Map<String, dynamic>> gerarRecompensasPorScore(int score, int tierAtual) async {
     print('🎁 [RecompensaService] Gerando recompensas para score: $score, tier: $tierAtual');
 
     if (score < 1) {
@@ -23,12 +36,12 @@ class RecompensaService {
 
     // 1. Drop fixo garantido
     final recompensas = <dynamic>[];
-    recompensas.add(_gerarItemOuMagia(tierAtual, score));
+    recompensas.add(await _gerarItemOuMagia(tierAtual, score));
 
     // 2. Drops adicionais baseados no score (3% por score)
     int dropsAdicionais = _calcularDropsAdicionais(score);
     for (int i = 0; i < dropsAdicionais; i++) {
-      recompensas.add(_gerarItemOuMagia(tierAtual, score));
+      recompensas.add(await _gerarItemOuMagia(tierAtual, score));
     }
 
     // 3. Super Drop (dobrar quantidade) - 1% por 2 de score
@@ -37,19 +50,22 @@ class RecompensaService {
       print('🌟 [RecompensaService] SUPER DROP ATIVADO! Dobrando quantidade de itens');
       final recompensasOriginais = List.from(recompensas);
       for (var _ in recompensasOriginais) {
-        recompensas.add(_gerarItemOuMagia(tierAtual, score));
+        recompensas.add(await _gerarItemOuMagia(tierAtual, score));
       }
     }
 
     // 4. Moeda de Evento (chance independente baseada no tier)
     int moedaEvento = _calcularDropMoedaEvento(tierAtual);
 
-    // Separa itens e magias
+    // Separa itens e magias (ignora nulls que foram filtrados)
     final itens = <Item>[];
     final magias = <MagiaDrop>[];
 
     for (var recompensa in recompensas) {
-      if (recompensa is Item) {
+      if (recompensa == null) {
+        // Item foi filtrado, ignora
+        continue;
+      } else if (recompensa is Item) {
         itens.add(recompensa);
       } else if (recompensa is MagiaDrop) {
         magias.add(recompensa);
@@ -149,28 +165,39 @@ class RecompensaService {
 
   /// Gera um item ou magia com qualidade melhorada baseada no score
   /// Cada 10 de score = +1% chance de raridade melhor
-  dynamic _gerarItemOuMagia(int tierAtual, int score) {
+  Future<dynamic> _gerarItemOuMagia(int tierAtual, int score) async {
     // 30% magia, 70% item (mesmo do sistema atual)
     final numeroSorteado = _random.nextInt(100);
     final ehMagia = numeroSorteado < 30;
     print('🎲 [RecompensaService] Tipo de recompensa: $numeroSorteado/100 (< 30 = magia) → ${ehMagia ? 'MAGIA' : 'ITEM'}');
-    
+
     if (ehMagia) {
       return _gerarMagiaComQualidade(tierAtual, score);
     } else {
-      return _gerarItemComQualidade(tierAtual, score);
+      return await _gerarItemComQualidade(tierAtual, score);
     }
   }
 
   /// Gera item com qualidade melhorada baseada no score
-  Item _gerarItemComQualidade(int tierAtual, int score) {
+  /// Retorna null se o item for filtrado
+  Future<Item?> _gerarItemComQualidade(int tierAtual, int score) async {
+    // Carrega o filtro de drops
+    final filtroRaridades = await _carregarFiltroDrops();
+
     // Calcula boost de qualidade: cada 10 de score = +1% de chance de subir raridade
     final boostQualidade = score ~/ 10; // 1% por cada 10 de score
     print('📊 [RecompensaService] Boost de qualidade: Score $score ÷ 10 = $boostQualidade níveis de boost');
 
-    // Gera item normal primeiro
+    // Gera item normal primeiro (SEM filtro - sorteia normalmente)
     final itemBase = _itemService.gerarItemAleatorio(tierAtual: tierAtual);
     print('🎯 [RecompensaService] Item base gerado: ${itemBase.nome} (${itemBase.raridade.nome})');
+
+    // Verifica se a raridade está permitida no filtro
+    final raridadePermitida = filtroRaridades[itemBase.raridade] ?? true;
+    if (!raridadePermitida) {
+      print('❌ [RecompensaService] Item ${itemBase.raridade.nome} filtrado! Será descartado.');
+      return null;
+    }
 
     // Aplica melhoria de qualidade se necessário
     final raridadeMelhorada = _aplicarMelhoriaQualidade(itemBase.raridade, boostQualidade);

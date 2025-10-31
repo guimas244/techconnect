@@ -1671,9 +1671,18 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final tierAtual = historia.tier;
     final itemService = ItemService();
 
+    // Carrega o filtro de raridades do SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final filtroRaridades = <RaridadeItem, bool>{};
+    for (final raridade in RaridadeItem.values) {
+      filtroRaridades[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
+    }
+    final raridadesFiltradas = filtroRaridades.entries.where((e) => !e.value).map((e) => e.key.nome).join(", ");
+    print('[BatalhaScreen] 🔧 Filtro de drops carregado: ${raridadesFiltradas.isEmpty ? "Nenhuma raridade filtrada" : raridadesFiltradas}');
+
     // Calcula drop de moeda de evento (independente de outros drops)
     final recompensaService = RecompensaService();
-    final resultadoRecompensas = recompensaService.gerarRecompensasPorScore(1, tierAtual);
+    final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
     final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
 
     // ELITE: Dropa o item que ele tem equipado (mínimo Épico)
@@ -1725,8 +1734,21 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
     // Item comum/raro/épico/lendário aleatório
     final item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-    print('[BatalhaScreen] 🎒 Item gerado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
+    print('[BatalhaScreen] 🎒 Item sorteado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
 
+    // Verifica se a raridade do item está permitida no filtro
+    final raridadePermitida = filtroRaridades[item.raridade] ?? true;
+
+    if (!raridadePermitida) {
+      print('[BatalhaScreen] ❌ Item ${item.raridade.nome} filtrado! Nenhum item será dropado.');
+      return _DropResultado(
+        consumiveis: consumiveis,
+        moedaEvento: moedaEvento,
+        dropVeioDoSortudo: dropVeioDoSortudo,
+      );
+    }
+
+    print('[BatalhaScreen] ✅ Item ${item.raridade.nome} permitido, será dropado!');
     return _DropResultado(
       item: item,
       tier: item.tier,
