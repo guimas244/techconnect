@@ -14,7 +14,8 @@
       "Bash(git config:*)",
       "Bash(flutter analyze:*)",
       "Bash(flutter clean:*)",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(dart run:*)"
     ],
     "deny": [],
     "ask": []

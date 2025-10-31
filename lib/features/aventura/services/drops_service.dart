@@ -8,6 +8,104 @@ class DropsService {
   static const String _configKey = 'drops_config';
   static const int maxSlots = 3;
 
+  /// Sorteia múltiplos drops (máximo 3) com chances independentes para cada item
+  ///
+  /// [temPassivaSortudo]: Se true, dá uma segunda chance para CADA item que não dropar
+  ///
+  /// Retorna um Map com:
+  /// - 'drops': List<Drop> com todos os drops obtidos (máximo 3, sem repetir)
+  /// - 'dropsDoSortudo': List<TipoDrop> com os tipos que vieram da passiva Sortudo
+  static Future<Map<String, dynamic>> sortearMultiplosDrops({bool temPassivaSortudo = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final configJson = prefs.getString(_configKey);
+
+    Map<TipoDrop, double> porcentagens;
+    if (configJson == null) {
+      // Usa valores padrão se não houver configuração
+      porcentagens = {
+        TipoDrop.frutaNuty: 0.5,
+        TipoDrop.frutaNutyCristalizada: 0.5,
+        TipoDrop.frutaNutyNegra: 0.5,
+        TipoDrop.vidinha: 0.5,
+        TipoDrop.joiaReforco: 1.0,
+        TipoDrop.pocaoVidaGrande: 2.0,
+        TipoDrop.pedraRecriacao: 2.0,
+        TipoDrop.pocaoVidaPequena: 5.0,
+      };
+    } else {
+      final Map<String, dynamic> configMap = jsonDecode(configJson);
+      porcentagens = {};
+      for (final entry in configMap.entries) {
+        final tipo = TipoDrop.values.firstWhere((t) => t.id == entry.key);
+        porcentagens[tipo] = (entry.value as num).toDouble();
+      }
+    }
+
+    return _sortearMultiplosDropsComPorcentagens(porcentagens, temPassivaSortudo: temPassivaSortudo);
+  }
+
+  /// Sorteia múltiplos drops com sorteios independentes para cada item
+  static Future<Map<String, dynamic>> _sortearMultiplosDropsComPorcentagens(
+    Map<TipoDrop, double> porcentagens, {
+    bool temPassivaSortudo = false,
+  }) async {
+    final random = Random();
+    final dropsObtidos = <Drop>[];
+    final dropsDoSortudo = <TipoDrop>[];
+
+    print('🎲 [DropsService] Iniciando sorteio de múltiplos drops (máximo 3)');
+    print('🎲 [DropsService] Passiva Sortudo: ${temPassivaSortudo ? "ATIVA" : "inativa"}');
+
+    // Para cada tipo de drop, faz um sorteio independente
+    for (final entry in porcentagens.entries) {
+      // Se já temos 3 drops, para
+      if (dropsObtidos.length >= 3) {
+        print('🎲 [DropsService] Limite de 3 drops atingido, ignorando demais sorteios');
+        break;
+      }
+
+      final tipoDrop = entry.key;
+      final chanceDrop = entry.value;
+
+      // PRIMEIRA TENTATIVA
+      final sorteio1 = random.nextDouble() * 100;
+      final ganhouNaTentativa1 = sorteio1 <= chanceDrop;
+
+      print('🎲 [DropsService] ${tipoDrop.nome}: sorteio ${sorteio1.toStringAsFixed(2)}/100 <= ${chanceDrop}% ? ${ganhouNaTentativa1 ? "✅ SIM" : "❌ NÃO"}');
+
+      if (ganhouNaTentativa1) {
+        dropsObtidos.add(Drop(tipo: tipoDrop, quantidade: 1));
+        continue;
+      }
+
+      // SEGUNDA TENTATIVA (SORTUDO)
+      if (temPassivaSortudo) {
+        final sorteio2 = random.nextDouble() * 100;
+        final ganhouNaTentativa2 = sorteio2 <= chanceDrop;
+
+        print('🍀 [SORTUDO] ${tipoDrop.nome}: sorteio ${sorteio2.toStringAsFixed(2)}/100 <= ${chanceDrop}% ? ${ganhouNaTentativa2 ? "✅ SIM" : "❌ NÃO"}');
+
+        if (ganhouNaTentativa2) {
+          dropsObtidos.add(Drop(tipo: tipoDrop, quantidade: 1));
+          dropsDoSortudo.add(tipoDrop);
+        }
+      }
+    }
+
+    print('📊 [DropsService] Resultado final: ${dropsObtidos.length} drops obtidos');
+    if (dropsDoSortudo.isNotEmpty) {
+      print('🍀 [DropsService] Drops do Sortudo: ${dropsDoSortudo.map((t) => t.nome).join(", ")}');
+    }
+
+    return {
+      'drops': dropsObtidos,
+      'dropsDoSortudo': dropsDoSortudo,
+    };
+  }
+
+  /// DEPRECATED: Use sortearMultiplosDrops() ao invés deste método
+  /// Mantido apenas para compatibilidade com código antigo
+  ///
   /// Sorteia um drop baseado nas porcentagens configuradas
   /// Retorna null se não ganhou nenhum drop
   ///
@@ -16,6 +114,7 @@ class DropsService {
   /// Retorna um Map com:
   /// - 'drop': o Drop? sorteado (pode ser null)
   /// - 'veioDoSortudo': bool indicando se o drop veio da segunda chance (passiva Sortudo)
+  @Deprecated('Use sortearMultiplosDrops() para suportar múltiplos drops')
   static Future<Map<String, dynamic>> sortearDrop({bool temPassivaSortudo = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final configJson = prefs.getString(_configKey);

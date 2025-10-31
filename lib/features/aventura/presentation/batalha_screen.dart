@@ -60,7 +60,7 @@ class _DropResultado {
   final MagiaDrop? magia;
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento
-  final bool dropVeioDoSortudo; // Se o drop consumível veio da passiva Sortudo
+  final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
 
   const _DropResultado({
     this.item,
@@ -69,7 +69,7 @@ class _DropResultado {
     this.magia,
     this.consumiveis = const [],
     this.moedaEvento = 0,
-    this.dropVeioDoSortudo = false,
+    this.dropsDoSortudo = const [],
   });
 }
 
@@ -1443,7 +1443,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       magiaRecebida: drop.magia,
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
-      dropVeioDoSortudo: drop.dropVeioDoSortudo,
+      dropsDoSortudo: drop.dropsDoSortudo,
     );
 
     return _PacoteRecompensas(
@@ -1642,36 +1642,43 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
     itemGerado = true;
 
-    // DROPS: Sorteia os drops (poções/pedras) que irão para os slots especiais
+    // DROPS: Sorteia MÚLTIPLOS drops (máximo 3) com chances independentes
     // NÃO adiciona ainda - apenas sorteia e exibe no modal
     // Só será salvo quando o jogador confirmar no modal de recompensas
     final consumiveis = <ItemConsumivel>[];
-    bool dropVeioDoSortudo = false;
+    final dropsDoSortudo = <TipoDrop>[];
     try {
-      // Verifica se tem passiva Sortudo para dar segunda chance de drop
-      final resultado = await DropsService.sortearDrop(temPassivaSortudo: _temPassivaSortudo);
-      final dropConsumivel = resultado['drop'] as Drop?;
-      dropVeioDoSortudo = resultado['veioDoSortudo'] as bool;
+      // Verifica se há espaço disponível antes de sortear
+      final slotsLivres = await DropsService.slotsDisponiveis();
 
-      if (dropConsumivel != null) {
-        // Verifica se há espaço disponível antes de mostrar no modal
-        final slotsLivres = await DropsService.slotsDisponiveis();
-        if (slotsLivres > 0) {
-          consumiveis.add(_converterDropConsumivel(dropConsumivel));
+      if (slotsLivres > 0) {
+        // Sorteia múltiplos drops (cada item tem chance independente)
+        final resultado = await DropsService.sortearMultiplosDrops(temPassivaSortudo: _temPassivaSortudo);
+        final dropsObtidos = resultado['drops'] as List<Drop>;
+        dropsDoSortudo.addAll(resultado['dropsDoSortudo'] as List<TipoDrop>);
 
-          if (dropVeioDoSortudo) {
-            print('[BatalhaScreen] 🍀 Drop consumivel sorteado pela PASSIVA SORTUDO: ${dropConsumivel.tipo.nome}');
-          } else {
-            print('[BatalhaScreen] Drop consumivel sorteado: ${dropConsumivel.tipo.nome} - Slots disponíveis: $slotsLivres');
+        // Limita aos slots disponíveis
+        final dropsParaMostrar = dropsObtidos.take(slotsLivres).toList();
+
+        if (dropsParaMostrar.isNotEmpty) {
+          print('[BatalhaScreen] 🎁 ${dropsParaMostrar.length} drops obtidos (slots disponíveis: $slotsLivres):');
+          for (final drop in dropsParaMostrar) {
+            consumiveis.add(_converterDropConsumivel(drop));
+            final ehDoSortudo = dropsDoSortudo.contains(drop.tipo);
+            print('[BatalhaScreen]   - ${drop.tipo.nome}${ehDoSortudo ? " 🍀 (SORTUDO)" : ""}');
+          }
+
+          if (dropsObtidos.length > slotsLivres) {
+            print('[BatalhaScreen] ⚠️ ${dropsObtidos.length - slotsLivres} drops ignorados (mochila cheia)');
           }
         } else {
-          print('[BatalhaScreen] Drop consumivel ${dropConsumivel.tipo.nome} sorteado mas sem slots (mochila cheia)');
+          print('[BatalhaScreen] ❌ Nenhum drop consumível sorteado desta vez');
         }
       } else {
-        print('[BatalhaScreen] Nenhum drop consumivel sorteado desta vez');
+        print('[BatalhaScreen] ⚠️ Mochila cheia! Nenhum drop será sorteado');
       }
     } catch (e) {
-      print('[BatalhaScreen] Erro ao sortear drop consumivel: $e');
+      print('[BatalhaScreen] ❌ Erro ao sortear drops consumíveis: $e');
     }
 
     final tierAtual = historia.tier;
@@ -1706,7 +1713,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           raridade: item.raridade,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
-          dropVeioDoSortudo: dropVeioDoSortudo,
+          dropsDoSortudo: dropsDoSortudo,
         );
       } else {
         // Fallback caso elite não tenha item (não deveria acontecer)
@@ -1721,7 +1728,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           raridade: itemFallback.raridade,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
-          dropVeioDoSortudo: dropVeioDoSortudo,
+          dropsDoSortudo: dropsDoSortudo,
         );
       }
     }
@@ -1743,7 +1750,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         return _DropResultado(
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
-          dropVeioDoSortudo: dropVeioDoSortudo,
+          dropsDoSortudo: dropsDoSortudo,
         );
       }
 
@@ -1752,7 +1759,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         magia: magia,
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
-        dropVeioDoSortudo: dropVeioDoSortudo,
+        dropsDoSortudo: dropsDoSortudo,
       );
     }
 
@@ -1768,7 +1775,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       return _DropResultado(
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
-        dropVeioDoSortudo: dropVeioDoSortudo,
+        dropsDoSortudo: dropsDoSortudo,
       );
     }
 
@@ -1779,7 +1786,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       raridade: item.raridade,
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
-      dropVeioDoSortudo: dropVeioDoSortudo,
+      dropsDoSortudo: dropsDoSortudo,
     );
   }
 

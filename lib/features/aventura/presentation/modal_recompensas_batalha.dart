@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 
+import '../models/drop.dart';
 import '../models/habilidade.dart';
 import '../models/item.dart';
 import '../models/item_consumivel.dart';
@@ -23,7 +24,7 @@ class RecompensasBatalha {
 
   final int moedaEvento; // Quantidade de moedas de evento recebidas
 
-  final bool dropVeioDoSortudo; // Se o drop consumível veio da passiva Sortudo
+  final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
 
   const RecompensasBatalha({
     this.monstrosEvoluidos = const [],
@@ -35,7 +36,7 @@ class RecompensasBatalha {
     this.magiaRecebida,
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
-    this.dropVeioDoSortudo = false,
+    this.dropsDoSortudo = const [],
   });
 
   bool get temEvolucao => monstrosEvoluidos.isNotEmpty;
@@ -1938,8 +1939,9 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   /// Widget que exibe um DROP (poção/pedra) com imagem maior de assets/drops/
   /// Imagem grande em Row com texto e descrição ao lado
   Widget _buildDropCard(ItemConsumivel item, int index, bool descartado) {
-    // Verifica se é o primeiro item E se veio do Sortudo
-    final bool veioDoSortudo = index == 0 && widget.recompensas.dropVeioDoSortudo && widget.recompensas.temItensConsumiveis;
+    // Verifica se este item específico veio do Sortudo
+    // O item.id contém o TipoDrop.id original (ex: "frutaNuty", "pocaoVidaPequena")
+    final bool veioDoSortudo = widget.recompensas.dropsDoSortudo.any((tipoDrop) => tipoDrop.id == item.id);
 
     return Container(
       decoration: BoxDecoration(
