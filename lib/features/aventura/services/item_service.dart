@@ -292,23 +292,47 @@ class ItemService {
   }
 
   /// Gera um item elite respeitando restrições de dificuldade por tier
-  /// Sorteia normalmente mas garante mínimo ÉPICO
+  /// Tier < 50: mínimo ÉPICO
+  /// Tier 50+: mínimo LENDÁRIO com 10% chance de IMPOSSÍVEL
   Item gerarItemEliteComRestricoes({int tierAtual = 1}) {
-    print('👑 [ItemService] Gerando item ELITE para tier $tierAtual (mínimo: ÉPICO)');
+    print('👑 [ItemService] Gerando item ELITE para tier $tierAtual');
 
-    // Sorteia item normalmente (pode vir Lendário ou até Impossível!)
-    int quantidadeAtributos = _determinarQuantidadeAtributos();
-    RaridadeItem raridade = _determinarRaridade(quantidadeAtributos);
+    RaridadeItem raridade;
+    int quantidadeAtributos;
 
-    print('👑 [ItemService] Item sorteado: ${raridade.nome}');
+    // ===== TIER 50+: LENDÁRIO GARANTIDO + 10% CHANCE DE IMPOSSÍVEL =====
+    if (tierAtual >= 50) {
+      print('👑 [ItemService] Tier 50+: Lendário garantido + 10% chance de Impossível');
 
-    // Se vier abaixo de Épico, força para Épico (mínimo garantido)
-    if (raridade.nivel < RaridadeItem.epico.nivel) {
-      print('👑 [ItemService] Forçando para ÉPICO (era ${raridade.nome})');
-      raridade = RaridadeItem.epico;
-      quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.epico);
+      // 10% de chance de item IMPOSSÍVEL
+      final chanceImpossivel = _random.nextInt(100);
+      if (chanceImpossivel < 10) {
+        print('👑 [ItemService] 🌟 SORTEOU IMPOSSÍVEL! (${chanceImpossivel}/100 < 10)');
+        raridade = RaridadeItem.impossivel;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.impossivel);
+      } else {
+        print('👑 [ItemService] Não sorteou impossível (${chanceImpossivel}/100 >= 10), será LENDÁRIO');
+        raridade = RaridadeItem.lendario;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.lendario);
+      }
     } else {
-      print('👑 [ItemService] Mantendo raridade sorteada: ${raridade.nome}');
+      // ===== TIER < 50: ÉPICO GARANTIDO (comportamento original) =====
+      print('👑 [ItemService] Tier < 50: mínimo ÉPICO');
+
+      // Sorteia item normalmente (pode vir Lendário!)
+      quantidadeAtributos = _determinarQuantidadeAtributos();
+      raridade = _determinarRaridade(quantidadeAtributos);
+
+      print('👑 [ItemService] Item sorteado: ${raridade.nome}');
+
+      // Se vier abaixo de Épico, força para Épico (mínimo garantido)
+      if (raridade.nivel < RaridadeItem.epico.nivel) {
+        print('👑 [ItemService] Forçando para ÉPICO (era ${raridade.nome})');
+        raridade = RaridadeItem.epico;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.epico);
+      } else {
+        print('👑 [ItemService] Mantendo raridade sorteada: ${raridade.nome}');
+      }
     }
 
     // Gera o nome do item

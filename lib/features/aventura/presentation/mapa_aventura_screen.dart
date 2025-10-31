@@ -58,6 +58,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     RaridadeItem.impossivel: true,
   };
 
+  // Valor mínimo para magias (0 = sem filtro)
+  int _valorMinimoMagia = 0;
+  late TextEditingController _valorMinimoMagiaController;
+
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
     'assets/mapas_aventura/deserto.jpg',
@@ -77,8 +81,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   @override
   void initState() {
     super.initState();
+    _valorMinimoMagiaController = TextEditingController(text: _valorMinimoMagia.toString());
     _carregarFiltroDrops();
     _verificarAventuraIniciada();
+  }
+
+  @override
+  void dispose() {
+    _valorMinimoMagiaController.dispose();
+    super.dispose();
   }
 
   @override
@@ -1901,6 +1912,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       for (final raridade in RaridadeItem.values) {
         _filtroDrops[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
       }
+      _valorMinimoMagia = prefs.getInt('filtro_drop_valor_minimo_magia') ?? 0;
+      _valorMinimoMagiaController.text = _valorMinimoMagia.toString();
     });
   }
 
@@ -1910,6 +1923,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     for (final entry in _filtroDrops.entries) {
       await prefs.setBool('filtro_drop_${entry.key.name}', entry.value);
     }
+    await prefs.setInt('filtro_drop_valor_minimo_magia', _valorMinimoMagia);
   }
 
   /// Mostra modal de filtro de drops
@@ -1984,47 +1998,145 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
-                      children: RaridadeItem.values.map((raridade) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey.shade700,
-                              width: 2,
-                            ),
-                          ),
-                          child: CheckboxListTile(
-                            title: Text(
-                              raridade.nome,
-                              style: TextStyle(
-                                color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                      children: [
+                        ...RaridadeItem.values.map((raridade) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey.shade700,
+                                width: 2,
                               ),
                             ),
-                            subtitle: Text(
-                              _filtroDrops[raridade]! ? 'Aparecerá nas recompensas' : 'Não aparecerá nas recompensas',
-                              style: TextStyle(
-                                color: _filtroDrops[raridade]! ? Colors.white70 : Colors.grey.shade600,
-                                fontSize: 12,
+                            child: CheckboxListTile(
+                              title: Text(
+                                raridade.nome,
+                                style: TextStyle(
+                                  color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            value: _filtroDrops[raridade],
-                            activeColor: raridade.cor,
-                            checkColor: Colors.white,
-                            onChanged: (valor) {
-                              setModalState(() {
-                                setState(() {
-                                  _filtroDrops[raridade] = valor ?? true;
+                              subtitle: Text(
+                                _filtroDrops[raridade]! ? 'Aparecerá nas recompensas' : 'Não aparecerá nas recompensas',
+                                style: TextStyle(
+                                  color: _filtroDrops[raridade]! ? Colors.white70 : Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              value: _filtroDrops[raridade],
+                              activeColor: raridade.cor,
+                              checkColor: Colors.white,
+                              onChanged: (valor) {
+                                setModalState(() {
+                                  setState(() {
+                                    _filtroDrops[raridade] = valor ?? true;
+                                  });
                                 });
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
+                          );
+                        }).toList(),
+
+                        // Divisor
+                        const SizedBox(height: 16),
+                        const Divider(color: Colors.white24, thickness: 1),
+                        const SizedBox(height: 16),
+
+                        // Valor mínimo para magias
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade900.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.purple, width: 2),
                           ),
-                        );
-                      }).toList(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.auto_fix_high, color: Colors.purple, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'VALOR MÍNIMO DE MAGIA',
+                                    style: TextStyle(
+                                      color: Colors.purple,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Magias com valor FINAL (base × level) abaixo deste número serão descartadas',
+                                style: TextStyle(
+                                  color: Colors.purple.shade100,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ex: Magia base 10 level 5 = valor final 50 (0 = sem filtro)',
+                                style: TextStyle(
+                                  color: Colors.purple.shade200,
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _valorMinimoMagiaController,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: Colors.white, fontSize: 18),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.black.withOpacity(0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 2),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 2),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 3),
+                                  ),
+                                  hintText: '0',
+                                  hintStyle: TextStyle(color: Colors.purple.shade300),
+                                  prefixIcon: const Icon(Icons.filter_alt, color: Colors.purple),
+                                ),
+                                onChanged: (valor) {
+                                  // Filtra apenas números
+                                  final valorFiltrado = valor.replaceAll(RegExp(r'[^0-9]'), '');
+                                  final valorInt = int.tryParse(valorFiltrado) ?? 0;
+
+                                  // Atualiza o estado
+                                  setModalState(() {
+                                    setState(() {
+                                      _valorMinimoMagia = valorInt;
+                                    });
+                                  });
+
+                                  // Atualiza o controller apenas se o texto filtrado for diferente
+                                  if (valorFiltrado != valor) {
+                                    _valorMinimoMagiaController.value = _valorMinimoMagiaController.value.copyWith(
+                                      text: valorFiltrado,
+                                      selection: TextSelection.collapsed(offset: valorFiltrado.length),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

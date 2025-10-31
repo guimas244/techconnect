@@ -27,8 +27,10 @@ class MagiaService {
         break;
       case TipoHabilidade.suporte:
         final efeitosSupporte = [
-          EfeitoHabilidade.aumentarAtaque, 
-          EfeitoHabilidade.aumentarDefesa, 
+          EfeitoHabilidade.aumentarAtaque,
+          EfeitoHabilidade.aumentarDefesa,
+          EfeitoHabilidade.aumentarVida,
+          EfeitoHabilidade.aumentarEnergia,
           EfeitoHabilidade.curarVida
         ];
         efeitoSorteado = efeitosSupporte[_random.nextInt(efeitosSupporte.length)];
@@ -115,6 +117,12 @@ class MagiaService {
             break;
           case EfeitoHabilidade.aumentarDefesa:
             complemento = 'da Proteção';
+            break;
+          case EfeitoHabilidade.aumentarVida:
+            complemento = 'da Vitalidade';
+            break;
+          case EfeitoHabilidade.aumentarEnergia:
+            complemento = 'da Energia';
             break;
           case EfeitoHabilidade.curarVida:
             complemento = 'Curativa';

@@ -24,6 +24,12 @@ class RecompensaService {
     return filtro;
   }
 
+  /// Carrega o valor mínimo de magia do SharedPreferences
+  Future<int> _carregarValorMinimoMagia() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('filtro_drop_valor_minimo_magia') ?? 0;
+  }
+
   /// Gera recompensas baseadas no score do jogador
   /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int
   Future<Map<String, dynamic>> gerarRecompensasPorScore(int score, int tierAtual) async {
@@ -172,7 +178,7 @@ class RecompensaService {
     print('🎲 [RecompensaService] Tipo de recompensa: $numeroSorteado/100 (< 30 = magia) → ${ehMagia ? 'MAGIA' : 'ITEM'}');
 
     if (ehMagia) {
-      return _gerarMagiaComQualidade(tierAtual, score);
+      return await _gerarMagiaComQualidade(tierAtual, score);
     } else {
       return await _gerarItemComQualidade(tierAtual, score);
     }
@@ -213,14 +219,28 @@ class RecompensaService {
   }
 
   /// Gera magia com level melhorado baseado no score
-  MagiaDrop _gerarMagiaComQualidade(int tierAtual, int score) {
+  /// Retorna null se a magia for filtrada por valor mínimo
+  Future<MagiaDrop?> _gerarMagiaComQualidade(int tierAtual, int score) async {
+    // Carrega o valor mínimo de magia
+    final valorMinimoMagia = await _carregarValorMinimoMagia();
+
     // Magia sempre usa a geração normal - a melhoria vem no level
     final magiaBase = _magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
-    print('🎯 [RecompensaService] Magia base gerada: ${magiaBase.nome} (Level ${magiaBase.level})');
-    
+
     // Aplica boost de level baseado no score (cada 20 de score = chance de +1 level)
     final boostLevel = _calcularBoostLevel(score);
-    
+    final levelFinal = magiaBase.level + boostLevel;
+
+    // Calcula o valor FINAL da magia (valor base × level final)
+    final valorFinal = magiaBase.valor * levelFinal;
+    print('🎯 [RecompensaService] Magia base gerada: ${magiaBase.nome} (Valor base: ${magiaBase.valor}, Level: ${magiaBase.level} + boost $boostLevel = $levelFinal, Valor FINAL: $valorFinal)');
+
+    // Verifica se o valor FINAL da magia está acima do mínimo configurado
+    if (valorMinimoMagia > 0 && valorFinal < valorMinimoMagia) {
+      print('❌ [RecompensaService] Magia com valor FINAL $valorFinal filtrada! (mínimo: $valorMinimoMagia). Será descartada.');
+      return null;
+    }
+
     if (boostLevel > 0) {
       print('⬆️ [RecompensaService] Magia melhorada: level ${magiaBase.level} → ${magiaBase.level + boostLevel}');
       // Cria nova magia com level aumentado
@@ -235,7 +255,7 @@ class RecompensaService {
         dataObtencao: magiaBase.dataObtencao,
       );
     }
-    
+
     print('✨ [RecompensaService] Magia manteve level: ${magiaBase.level}');
     return magiaBase;
   }

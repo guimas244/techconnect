@@ -671,18 +671,24 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           print('💚 [PASSIVA CURA DE BATALHA - INIMIGO] Cura dobrada! $valorCura');
         }
 
+        // ===== BÔNUS DE ENERGIA =====
+        // Energia restante é adicionada como bônus na cura (não afeta custo)
+        int bonusEnergia = isJogador ? estado.energiaAtualJogador : estado.energiaAtualInimigo;
+        int valorCuraTotal = valorCura + bonusEnergia;
+        print('⚡ [BÔNUS DE ENERGIA] Cura base: $valorCura + Energia restante: $bonusEnergia = $valorCuraTotal');
+
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + valorCura).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + valorCuraTotal).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}] + bônus de energia +$bonusEnergia';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + valorCura).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + valorCuraTotal).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}] + bônus de energia +$bonusEnergia';
         }
         break;
         
@@ -1671,14 +1677,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final tierAtual = historia.tier;
     final itemService = ItemService();
 
-    // Carrega o filtro de raridades do SharedPreferences
+    // Carrega o filtro de raridades e valor mínimo de magia do SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final filtroRaridades = <RaridadeItem, bool>{};
     for (final raridade in RaridadeItem.values) {
       filtroRaridades[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
     }
+    final valorMinimoMagia = prefs.getInt('filtro_drop_valor_minimo_magia') ?? 0;
+
     final raridadesFiltradas = filtroRaridades.entries.where((e) => !e.value).map((e) => e.key.nome).join(", ");
     print('[BatalhaScreen] 🔧 Filtro de drops carregado: ${raridadesFiltradas.isEmpty ? "Nenhuma raridade filtrada" : raridadesFiltradas}');
+    print('[BatalhaScreen] 🔧 Valor mínimo de magia: $valorMinimoMagia (0 = sem filtro)');
 
     // Calcula drop de moeda de evento (independente de outros drops)
     final recompensaService = RecompensaService();
@@ -1723,7 +1732,22 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     if (chanceDrop < 30) {
       final magiaService = MagiaService();
       final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
-      print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (tier $tierAtual)');
+
+      // Calcula o valor FINAL da magia (valor base × level)
+      final valorFinal = magia.valor * magia.level;
+      print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (valor base: ${magia.valor}, level: ${magia.level}, valor FINAL: $valorFinal)');
+
+      // Verifica se o valor FINAL da magia está acima do mínimo configurado
+      if (valorMinimoMagia > 0 && valorFinal < valorMinimoMagia) {
+        print('[BatalhaScreen] ❌ Magia com valor FINAL $valorFinal filtrada! (mínimo: $valorMinimoMagia). Nenhuma magia será dropada.');
+        return _DropResultado(
+          consumiveis: consumiveis,
+          moedaEvento: moedaEvento,
+          dropVeioDoSortudo: dropVeioDoSortudo,
+        );
+      }
+
+      print('[BatalhaScreen] ✅ Magia com valor FINAL $valorFinal permitida, será dropada!');
       return _DropResultado(
         magia: magia,
         consumiveis: consumiveis,
