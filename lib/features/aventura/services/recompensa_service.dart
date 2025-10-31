@@ -70,7 +70,19 @@ class RecompensaService {
   /// Tier 1-5: 1-5% de chance
   /// Tier 6-10: 5% de chance
   /// Tier 11+: 10% de chance fixo
+  ///
+  /// EVENTO HALLOWEEN: Apenas até 31/10/2025 23:59:59 (horário de Brasília)
   int _calcularDropMoedaEvento(int tier) {
+    // ========== VERIFICAÇÃO DE DATA DO EVENTO ==========
+    // Evento de Halloween termina em 31/10/2025 às 23:59:59 (horário de Brasília, UTC-3)
+    final agora = DateTime.now().toUtc();
+    final fimEventoUTC = DateTime.utc(2025, 11, 1, 2, 59, 59); // 01/11/2025 02:59:59 UTC = 31/10/2025 23:59:59 BRT
+
+    if (agora.isAfter(fimEventoUTC)) {
+      print('🎃 [RecompensaService] Evento de Halloween encerrado! Moedas não dropam mais. (Fim: 31/10/2025 23:59:59 BRT)');
+      return 0;
+    }
+
     // ========== MODO PRODUÇÃO ==========
     double chance = 0.0;
 

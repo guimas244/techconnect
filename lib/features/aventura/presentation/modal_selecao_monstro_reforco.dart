@@ -203,7 +203,7 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
     bool selecionado,
     Color destaque,
   ) {
-    final item = monstro.itemEquipado!;
+    final item = monstro.itemEquipado; // Removido o ! para aceitar null
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
@@ -256,32 +256,57 @@ class _ModalSelecaoMonstroReforcoState extends State<ModalSelecaoMonstroReforco>
 
                   const SizedBox(height: 4),
 
-                  // Item equipado
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: item.raridade.cor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: item.raridade.cor, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.backpack, size: 11, color: item.raridade.cor),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            'T${item.tier}',
+                  // Item equipado (ou mensagem "Sem item")
+                  if (item != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: item.raridade.cor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: item.raridade.cor, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.backpack, size: 11, color: item.raridade.cor),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              'T${item.tier}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: item.raridade.cor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade400, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.block, size: 11, color: Colors.grey.shade600),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Sem item',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: item.raridade.cor,
+                              color: Colors.grey.shade600,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

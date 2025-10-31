@@ -39,14 +39,17 @@ class _AdminDropsScreenState extends State<AdminDropsScreen> {
         _isLoading = false;
       });
     } else {
-      // Valores padrão
+      // Valores padrão (mesmos do DropsService)
       setState(() {
         _porcentagens = {
-          TipoDrop.pocaoVidaPequena: 5.0,
+          TipoDrop.frutaNuty: 0.5,
+          TipoDrop.frutaNutyCristalizada: 0.5,
+          TipoDrop.frutaNutyNegra: 0.5,
+          TipoDrop.vidinha: 0.5,
+          TipoDrop.joiaReforco: 1.0,
           TipoDrop.pocaoVidaGrande: 2.0,
           TipoDrop.pedraRecriacao: 2.0,
-          TipoDrop.joiaReforco: 1.0,
-          TipoDrop.frutaNuty: 0.5,
+          TipoDrop.pocaoVidaPequena: 5.0,
         };
         _isLoading = false;
       });

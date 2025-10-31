@@ -11,8 +11,12 @@ class DropsService {
   /// Sorteia um drop baseado nas porcentagens configuradas
   /// Retorna null se não ganhou nenhum drop
   ///
-  /// [temPassivaSortudo]: Se true, dobra as chances de drop (passiva Sortudo)
-  static Future<Drop?> sortearDrop({bool temPassivaSortudo = false}) async {
+  /// [temPassivaSortudo]: Se true, dá uma segunda chance caso não venha drop na primeira tentativa
+  ///
+  /// Retorna um Map com:
+  /// - 'drop': o Drop? sorteado (pode ser null)
+  /// - 'veioDoSortudo': bool indicando se o drop veio da segunda chance (passiva Sortudo)
+  static Future<Map<String, dynamic>> sortearDrop({bool temPassivaSortudo = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final configJson = prefs.getString(_configKey);
 
@@ -42,33 +46,49 @@ class DropsService {
     return _sortearComPorcentagens(porcentagens, temPassivaSortudo: temPassivaSortudo);
   }
 
-  static Future<Drop?> _sortearComPorcentagens(
+  static Future<Map<String, dynamic>> _sortearComPorcentagens(
     Map<TipoDrop, double> porcentagens, {
     bool temPassivaSortudo = false,
   }) async {
     final random = Random();
 
-    // ===== PASSIVA: SORTUDO =====
-    // Se tem passiva Sortudo, dobra as chances de todos os drops
-    final Map<TipoDrop, double> porcentagensAjustadas = {};
-    if (temPassivaSortudo) {
-      print('🍀 [PASSIVA SORTUDO] Dobrando chances de drop!');
-      for (final entry in porcentagens.entries) {
-        porcentagensAjustadas[entry.key] = entry.value * 2;
-      }
-    } else {
-      porcentagensAjustadas.addAll(porcentagens);
-    }
-
-    // Tenta sortear cada tipo de drop
-    for (final entry in porcentagensAjustadas.entries) {
+    // PRIMEIRA TENTATIVA (chance normal)
+    print('🎲 [DropsService] Sorteando drop (tentativa 1)...');
+    for (final entry in porcentagens.entries) {
       final chance = random.nextDouble() * 100;
       if (chance <= entry.value) {
-        return Drop(tipo: entry.key, quantidade: 1);
+        print('✅ [DropsService] Drop obtido na primeira tentativa: ${entry.key.nome}');
+        return {
+          'drop': Drop(tipo: entry.key, quantidade: 1),
+          'veioDoSortudo': false,
+        };
       }
     }
 
-    return null; // Não ganhou nenhum drop
+    // ===== PASSIVA: SORTUDO =====
+    // Se não ganhou nada E tem passiva Sortudo, dá uma SEGUNDA CHANCE!
+    if (temPassivaSortudo) {
+      print('🍀 [PASSIVA SORTUDO] Não veio drop... Tentando novamente! (segunda chance)');
+
+      for (final entry in porcentagens.entries) {
+        final chance = random.nextDouble() * 100;
+        if (chance <= entry.value) {
+          print('✅ [PASSIVA SORTUDO] Drop obtido na SEGUNDA tentativa: ${entry.key.nome}');
+          return {
+            'drop': Drop(tipo: entry.key, quantidade: 1),
+            'veioDoSortudo': true,
+          };
+        }
+      }
+
+      print('❌ [PASSIVA SORTUDO] Nenhum drop mesmo com segunda chance');
+    }
+
+    print('❌ [DropsService] Nenhum drop obtido');
+    return {
+      'drop': null,
+      'veioDoSortudo': false,
+    };
   }
 
   /// Adiciona um drop à mochila do jogador

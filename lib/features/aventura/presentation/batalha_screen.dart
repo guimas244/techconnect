@@ -60,6 +60,7 @@ class _DropResultado {
   final MagiaDrop? magia;
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento
+  final bool dropVeioDoSortudo; // Se o drop consumível veio da passiva Sortudo
 
   const _DropResultado({
     this.item,
@@ -68,6 +69,7 @@ class _DropResultado {
     this.magia,
     this.consumiveis = const [],
     this.moedaEvento = 0,
+    this.dropVeioDoSortudo = false,
   });
 }
 
@@ -653,13 +655,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     switch (habilidade.efeito) {
       case EfeitoHabilidade.curarVida:
         // ===== PASSIVA: CURA DE BATALHA =====
-        // Se jogador tem passiva de Cura de Batalha, dobra a cura
+        // Se jogador ou inimigo tem passiva de Cura de Batalha, dobra a cura
         int valorCura = habilidade.valorEfetivo;
         bool curaDobrada = false;
+        // Jogador com passiva Cura de Batalha
         if (isJogador && _temPassivaCuraDeBatalha) {
           valorCura = valorCura * 2;
           curaDobrada = true;
-          print('💚 [PASSIVA CURA DE BATALHA] Cura dobrada! $valorCura');
+          print('💚 [PASSIVA CURA DE BATALHA - JOGADOR] Cura dobrada! $valorCura');
+        }
+        // Inimigo com passiva Cura de Batalha
+        else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.curaDeBatalha) {
+          valorCura = valorCura * 2;
+          curaDobrada = true;
+          print('💚 [PASSIVA CURA DE BATALHA - INIMIGO] Cura dobrada! $valorCura');
         }
 
         if (isJogador) {
@@ -673,7 +682,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           int novaVida = (estado.vidaAtualInimigo + valorCura).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
         }
         break;
         
@@ -815,10 +824,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // ===== PASSIVA: CRÍTICO (APLICADO ANTES DA DEFESA) =====
     bool foiCritico = false;
     int danoAntesCritico = danoComAtaque;
+    // Jogador com passiva Crítico
     if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
       danoComAtaque = (danoComAtaque * 2);
       foiCritico = true;
-      print('💥 [PASSIVA CRÍTICO] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+      print('💥 [PASSIVA CRÍTICO - JOGADOR] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+    }
+    // Inimigo com passiva Crítico
+    else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.critico && _random.nextInt(100) < 10) {
+      danoComAtaque = (danoComAtaque * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO - INIMIGO] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
     }
 
     // Calcula efetividade de tipo usando tipo da habilidade
@@ -846,11 +862,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     bool esquivou = false;
 
     // ===== PASSIVA: ESQUIVA =====
-    // Verifica se jogador tem passiva de esquiva e está sendo atacado (10% chance de esquivar)
+    // Jogador com passiva Esquiva (sendo atacado)
     if (!isJogador && _temPassivaEsquiva && _random.nextInt(100) < 10) {
       esquivou = true;
       danoFinal = 0; // Anula o dano
-      print('🌪️ [PASSIVA ESQUIVA] Ataque esquivado!');
+      print('🌪️ [PASSIVA ESQUIVA - JOGADOR] Ataque esquivado!');
+    }
+    // Inimigo com passiva Esquiva (sendo atacado)
+    else if (isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.esquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoFinal = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA - INIMIGO] Ataque esquivado!');
     }
 
     if (isJogador) {
@@ -1415,6 +1437,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       magiaRecebida: drop.magia,
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
+      dropVeioDoSortudo: drop.dropVeioDoSortudo,
     );
 
     return _PacoteRecompensas(
@@ -1617,15 +1640,24 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // NÃO adiciona ainda - apenas sorteia e exibe no modal
     // Só será salvo quando o jogador confirmar no modal de recompensas
     final consumiveis = <ItemConsumivel>[];
+    bool dropVeioDoSortudo = false;
     try {
-      // Verifica se tem passiva Sortudo para dobrar chances de drop
-      final dropConsumivel = await DropsService.sortearDrop(temPassivaSortudo: _temPassivaSortudo);
+      // Verifica se tem passiva Sortudo para dar segunda chance de drop
+      final resultado = await DropsService.sortearDrop(temPassivaSortudo: _temPassivaSortudo);
+      final dropConsumivel = resultado['drop'] as Drop?;
+      dropVeioDoSortudo = resultado['veioDoSortudo'] as bool;
+
       if (dropConsumivel != null) {
         // Verifica se há espaço disponível antes de mostrar no modal
         final slotsLivres = await DropsService.slotsDisponiveis();
         if (slotsLivres > 0) {
           consumiveis.add(_converterDropConsumivel(dropConsumivel));
-          print('[BatalhaScreen] Drop consumivel sorteado: ${dropConsumivel.tipo.nome} - Slots disponíveis: $slotsLivres');
+
+          if (dropVeioDoSortudo) {
+            print('[BatalhaScreen] 🍀 Drop consumivel sorteado pela PASSIVA SORTUDO: ${dropConsumivel.tipo.nome}');
+          } else {
+            print('[BatalhaScreen] Drop consumivel sorteado: ${dropConsumivel.tipo.nome} - Slots disponíveis: $slotsLivres');
+          }
         } else {
           print('[BatalhaScreen] Drop consumivel ${dropConsumivel.tipo.nome} sorteado mas sem slots (mochila cheia)');
         }
@@ -1656,6 +1688,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           raridade: item.raridade,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
+          dropVeioDoSortudo: dropVeioDoSortudo,
         );
       } else {
         // Fallback caso elite não tenha item (não deveria acontecer)
@@ -1670,6 +1703,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           raridade: itemFallback.raridade,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
+          dropVeioDoSortudo: dropVeioDoSortudo,
         );
       }
     }
@@ -1685,6 +1719,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         magia: magia,
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
+        dropVeioDoSortudo: dropVeioDoSortudo,
       );
     }
 
@@ -1698,6 +1733,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       raridade: item.raridade,
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
+      dropVeioDoSortudo: dropVeioDoSortudo,
     );
   }
 

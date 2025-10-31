@@ -1,6 +1,7 @@
 import '../../../shared/models/tipo_enum.dart';
 import 'habilidade.dart';
 import 'item.dart';
+import 'passiva.dart';
 
 class MonstroInimigo {
   final Tipo tipo;
@@ -18,6 +19,7 @@ class MonstroInimigo {
   final int level; // Level do monstro
   final bool isElite; // Se é um monstro elite
   final bool isRaro; // Se é um monstro raro da nova coleção
+  final Passiva? passiva; // Passiva do inimigo (tier 11+, 5% chance)
 
   const MonstroInimigo({
     required this.tipo,
@@ -35,6 +37,7 @@ class MonstroInimigo {
     this.level = 1, // Level inicial é 1
     this.isElite = false, // Por padrão não é elite
     this.isRaro = false, // Por padrão não é raro
+    this.passiva, // Passiva do inimigo (opcional)
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -73,6 +76,9 @@ class MonstroInimigo {
       level: json['level'] ?? 1,
       isElite: json['isElite'] ?? false,
       isRaro: json['isRaro'] ?? false,
+      passiva: json['passiva'] != null
+          ? Passiva.fromJson(json['passiva'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -93,6 +99,7 @@ class MonstroInimigo {
       'level': level,
       'isElite': isElite,
       'isRaro': isRaro,
+      'passiva': passiva?.toJson(),
     };
   }
 
@@ -112,6 +119,7 @@ class MonstroInimigo {
     int? level,
     bool? isElite,
     bool? isRaro,
+    Passiva? passiva,
   }) {
     return MonstroInimigo(
       tipo: tipo ?? this.tipo,
@@ -129,6 +137,7 @@ class MonstroInimigo {
       level: level ?? this.level,
       isElite: isElite ?? this.isElite,
       isRaro: isRaro ?? this.isRaro,
+      passiva: passiva ?? this.passiva,
     );
   }
 

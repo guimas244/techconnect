@@ -19,6 +19,7 @@ import '../models/item.dart';
 import '../models/progresso_diario.dart';
 import '../../../shared/models/tipo_enum.dart';
 import 'modal_nuty_negra_utilizada.dart';
+import '../providers/progresso_bonus_provider.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -152,6 +153,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     final item = mochila!.itens[index];
     if (item == null) return;
 
+    print('🔍 [MochilaScreen] Usando item: ${item.nome} (ID: ${item.id}, Tipo: ${item.tipo.name}, Raridade: ${item.raridade.name})');
+
     if (item.tipo == TipoItemConsumivel.pocao) {
       await _usarPocao(index, item);
       return;
@@ -168,14 +171,19 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     }
 
     if (item.tipo == TipoItemConsumivel.fruta) {
+      print('🍇 [MochilaScreen] Item é FRUTA, raridade: ${item.raridade.name}, ID: ${item.id}');
       // Distingue entre Fruta Nuty (lendária), Fruta Nuty Cristalizada (épica) e Fruta Nuty Negra (épica)
       if (item.raridade == RaridadeConsumivel.lendario) {
+        print('🥥 [MochilaScreen] Chamando _usarFrutaNuty (lendário)');
         await _usarFrutaNuty(index, item);
       } else {
+        print('🍇 [MochilaScreen] Fruta épica detectada, verificando ID...');
         // Distingue entre Nuty Cristalizada e Nuty Negra pelo ID
         if (item.id == 'frutaNutyNegra') {
+          print('🖤 [MochilaScreen] ID é frutaNutyNegra - Chamando _usarFrutaNutyNegra');
           await _usarFrutaNutyNegra(index, item);
         } else {
+          print('💎 [MochilaScreen] ID é ${item.id} - Chamando _usarFrutaNutyCristalizada');
           await _usarFrutaNutyCristalizada(index, item);
         }
       }
@@ -183,10 +191,12 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     }
 
     if (item.tipo == TipoItemConsumivel.ovoEvento) {
+      print('🥚 [MochilaScreen] Item é OVO EVENTO');
       await _usarOvoEvento();
       return;
     }
 
+    print('❓ [MochilaScreen] Item não reconhecido, usando _consumirItem genérico');
     await _consumirItem(index, item, mensagem: '${item.nome} usado!');
   }
 
@@ -573,17 +583,17 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
-    final email = user.email!;
-
     // Sorteia um tipo aleatório
     final random = Random();
     final tipos = Tipo.values.where((t) => t != Tipo.normal).toList();
     final tipoSorteado = tipos[random.nextInt(tipos.length)];
 
+    print('🖤 [FrutaNutyNegra] Tipo sorteado: ${tipoSorteado.displayName} (${tipoSorteado.name})');
+
     // Carrega o progresso diário
     final prefs = await SharedPreferences.getInstance();
     final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final progressoJson = prefs.getString('progressoDiario_$email');
+    final progressoJson = prefs.getString('progresso_diario');
 
     ProgressoDiario progresso;
     if (progressoJson != null) {
@@ -591,24 +601,39 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         Map<String, dynamic>.from(json.decode(progressoJson) as Map)
       );
 
+      print('🖤 [FrutaNutyNegra] Progresso carregado - Kills antes: ${progresso.killsPorTipo}');
+
       // Verifica se precisa mudar o dia
       if (progresso.data != hoje) {
+        print('🖤 [FrutaNutyNegra] Finalizando dia anterior (${progresso.data}) e iniciando novo dia ($hoje)');
         progresso = progresso.finalizarDia(hoje);
       }
     } else {
+      print('🖤 [FrutaNutyNegra] Criando novo progresso diário');
       progresso = ProgressoDiario(data: hoje);
     }
+
+    print('🖤 [FrutaNutyNegra] Kills do tipo ${tipoSorteado.name} ANTES: ${progresso.killsPorTipo[tipoSorteado.name] ?? 0}');
 
     // Adiciona 10 kills do tipo sorteado
     for (int i = 0; i < 10; i++) {
       progresso = progresso.adicionarKill(tipoSorteado);
     }
 
+    print('🖤 [FrutaNutyNegra] Kills do tipo ${tipoSorteado.name} DEPOIS: ${progresso.killsPorTipo[tipoSorteado.name] ?? 0}');
+    print('🖤 [FrutaNutyNegra] Total de kills no dia: ${progresso.totalKills}');
+    print('🖤 [FrutaNutyNegra] Todos os kills: ${progresso.killsPorTipo}');
+
     // Salva o progresso atualizado
     await prefs.setString(
-      'progressoDiario_$email',
+      'progresso_diario',
       json.encode(progresso.toJson()),
     );
+
+    print('🖤 [FrutaNutyNegra] Progresso salvo com sucesso!');
+
+    // Recarrega os bônus para refletir os novos kills
+    await ref.read(progressoBonusStateProvider.notifier).reload();
 
     // Mostra modal informando qual tipo ganhou os kills
     if (!mounted) return;

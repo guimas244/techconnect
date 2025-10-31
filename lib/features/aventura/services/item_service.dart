@@ -33,6 +33,34 @@ class ItemService {
     );
   }
 
+  /// Gera um item aleatório para LOJA (2x mais chance de itens melhores)
+  Item gerarItemAleatorioLoja({int tierAtual = 1}) {
+    print('🛒 [ItemService - LOJA] Gerando item para tier $tierAtual (drop rate melhorado!)');
+
+    // Usa probabilidades melhoradas da loja
+    int quantidadeAtributos = _determinarQuantidadeAtributosLoja();
+
+    // Determina a raridade baseada na quantidade de atributos
+    RaridadeItem raridade = _determinarRaridade(quantidadeAtributos);
+
+    // Gera o nome do item baseado na raridade
+    String nome = GeradorNomesItens.gerarNomeItem();
+
+    // Gera os atributos do item (com multiplicação por tier)
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+
+    print('✅ [ItemService - LOJA] Item gerado: $nome (${raridade.nome}) | Tier: $tierAtual | Total atributos: ${atributos.values.fold(0, (sum, value) => sum + value)}');
+
+    return Item(
+      id: _gerarId(),
+      nome: nome,
+      raridade: raridade,
+      atributos: atributos,
+      dataObtencao: DateTime.now(),
+      tier: tierAtual,
+    );
+  }
+
   /// Gera um item aleatório respeitando restrições de dificuldade por tier
   Item gerarItemComRestricoesTier({int tierAtual = 1}) {
     print('🔒 [ItemService] Gerando item com restrições para tier $tierAtual');
@@ -93,6 +121,42 @@ class ItemService {
     }
     print('🎯 [ItemService] = 1 atributo (64.5% chance - Inferior)');
     return 1; // 64.5%
+  }
+
+  /// Determina a quantidade de atributos para LOJA (2x mais chance de itens melhores)
+  /// Impossible: 0.5% → 1%
+  /// Legendary: 2% → 4%
+  /// Epic: 3% → 6%
+  /// Rare: 10% → 20%
+  /// Normal: 20% → 40%
+  /// Inferior: 64.5% → 29%
+  int _determinarQuantidadeAtributosLoja() {
+    int chance = _random.nextInt(1000) + 1; // 1-1000
+
+    print('🛒 [ItemService - LOJA] Sorteio quantidade atributos: $chance/1000');
+
+    if (chance <= 10) {
+      print('🎯 [ItemService - LOJA] = 5 atributos MÁXIMOS (1% chance - Impossível)');
+      return -1; // Flag especial para indicar item impossível
+    }
+    if (chance <= 50) {
+      print('🎯 [ItemService - LOJA] = 5 atributos (4% chance - Lendário)');
+      return 5; // 4%
+    }
+    if (chance <= 110) {
+      print('🎯 [ItemService - LOJA] = 4 atributos (6% chance - Épico)');
+      return 4; // 6%
+    }
+    if (chance <= 310) {
+      print('🎯 [ItemService - LOJA] = 3 atributos (20% chance - Raro)');
+      return 3; // 20%
+    }
+    if (chance <= 710) {
+      print('🎯 [ItemService - LOJA] = 2 atributos (40% chance - Normal)');
+      return 2; // 40%
+    }
+    print('🎯 [ItemService - LOJA] = 1 atributo (29% chance - Inferior)');
+    return 1; // 29%
   }
 
   /// Determina a raridade baseada na quantidade de atributos

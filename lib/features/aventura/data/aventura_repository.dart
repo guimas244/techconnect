@@ -8,6 +8,7 @@ import '../models/monstro_aventura.dart';
 import '../models/monstro_inimigo.dart';
 import '../models/item.dart';
 import '../models/habilidade.dart';
+import '../models/passiva.dart';
 import '../utils/gerador_habilidades.dart';
 import '../services/item_service.dart';
 import '../services/ranking_service.dart';
@@ -766,6 +767,9 @@ class AventuraRepository {
       print('   - Energia: $energiaBase+${niveisEvolucao * AtributoJogo.evolucaoGanhoEnergia.min}=$energiaFinal');
       print('   - Coleção: ${monstroData['colecao']}');
 
+      // Sorteia passiva para o inimigo (tier 11+, 5% chance)
+      final passiva = _sortearPassivaInimigo(tierAtual, random);
+
       final monstro = MonstroInimigo(
         tipo: tipo,
         tipoExtra: tipoExtra,
@@ -778,6 +782,7 @@ class AventuraRepository {
         habilidades: habilidades,
         itemEquipado: itemEquipado,
         level: tierAtual, // Level = tier do mapa
+        passiva: passiva, // Passiva sorteada (tier 11+, 5% chance)
       );
       
       monstrosInimigos.add(monstro);
@@ -862,6 +867,9 @@ class AventuraRepository {
     print('   - Item elite: ${itemElite.nome}');
     print('   - Coleção: ${monstroData['colecao']}');
 
+    // Sorteia passiva para o elite (tier 11+, 5% chance)
+    final passiva = _sortearPassivaInimigo(tierAtual, random);
+
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
@@ -875,6 +883,7 @@ class AventuraRepository {
       itemEquipado: itemElite,
       level: tierAtual,
       isElite: true, // Marca como elite
+      passiva: passiva, // Passiva sorteada (tier 11+, 5% chance)
     );
   }
 
@@ -931,6 +940,9 @@ class AventuraRepository {
     print('   - Item: ${itemEquipado?.nome ?? 'Nenhum'}');
     print('   - Coleção: ${monstroData['colecao']}');
 
+    // Sorteia passiva para o raro (tier 11+, 5% chance)
+    final passiva = _sortearPassivaInimigo(tierAtual, random);
+
     return MonstroInimigo(
       tipo: tipo,
       tipoExtra: tipoExtra,
@@ -945,7 +957,36 @@ class AventuraRepository {
       level: tierAtual,
       isElite: false, // Não é elite, é monstro raro
       isRaro: true, // NOVO: Marca como monstro raro
+      passiva: passiva, // Passiva sorteada (tier 11+, 5% chance)
     );
+  }
+
+  /// Sorteia passiva para inimigo (tier 11+, 5% chance, apenas crítico/cura/esquiva)
+  Passiva? _sortearPassivaInimigo(int tierAtual, Random random) {
+    // Apenas tier 11+ tem chance de passiva
+    if (tierAtual < 11) {
+      return null;
+    }
+
+    // 5% de chance de ter passiva
+    final chance = random.nextInt(100);
+    if (chance >= 5) {
+      return null; // Não ganhou passiva (95% dos casos)
+    }
+
+    // Passivas disponíveis para inimigos: crítico, cura e esquiva
+    final passivasDisponiveis = [
+      TipoPassiva.critico,
+      TipoPassiva.curaDeBatalha,
+      TipoPassiva.esquiva,
+    ];
+
+    // Sorteia uma passiva aleatória
+    final tipoPassiva = passivasDisponiveis[random.nextInt(passivasDisponiveis.length)];
+
+    print('🎯 [Repository] Inimigo ganhou passiva: ${tipoPassiva.nome} (tier $tierAtual, 5% chance)');
+
+    return Passiva(tipo: tipoPassiva);
   }
 
   /// Aplica evolução aleatória nas habilidades dos monstros inimigos baseado no tier

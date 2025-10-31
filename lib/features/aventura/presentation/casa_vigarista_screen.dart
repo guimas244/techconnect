@@ -525,9 +525,9 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
         score: _historiaAtual.score - custoItem,
       );
 
-      // 3. Gera item (simula processamento)
+      // 3. Gera item com probabilidades melhoradas da loja (2x chance de itens melhores)
       await Future.delayed(const Duration(milliseconds: 800));
-      final item = _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier);
+      final item = _itemService.gerarItemAleatorioLoja(tierAtual: _historiaAtual.tier);
 
       print('✅ [Loja] Item gerado: ${item.nome}');
 
@@ -888,9 +888,10 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
       // Aguarda um frame para garantir que o loading apareça
       await Future.delayed(const Duration(milliseconds: 100));
 
+      // Gera 3 itens com probabilidades melhoradas da loja (2x chance de itens melhores)
       final itens = List.generate(
         3,
-        (_) => _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier),
+        (_) => _itemService.gerarItemAleatorioLoja(tierAtual: _historiaAtual.tier),
       );
 
       final historiaAtualizada = _historiaAtual.copyWith(

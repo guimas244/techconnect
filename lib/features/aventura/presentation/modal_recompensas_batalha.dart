@@ -23,6 +23,8 @@ class RecompensasBatalha {
 
   final int moedaEvento; // Quantidade de moedas de evento recebidas
 
+  final bool dropVeioDoSortudo; // Se o drop consumível veio da passiva Sortudo
+
   const RecompensasBatalha({
     this.monstrosEvoluidos = const [],
     this.ganhosAtributos = const {},
@@ -33,6 +35,7 @@ class RecompensasBatalha {
     this.magiaRecebida,
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
+    this.dropVeioDoSortudo = false,
   });
 
   bool get temEvolucao => monstrosEvoluidos.isNotEmpty;
@@ -1935,84 +1938,128 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   /// Widget que exibe um DROP (poção/pedra) com imagem maior de assets/drops/
   /// Imagem grande em Row com texto e descrição ao lado
   Widget _buildDropCard(ItemConsumivel item, int index, bool descartado) {
+    // Verifica se é o primeiro item E se veio do Sortudo
+    final bool veioDoSortudo = index == 0 && widget.recompensas.dropVeioDoSortudo && widget.recompensas.temItensConsumiveis;
+
     return Container(
       decoration: BoxDecoration(
-        color: descartado ? Colors.grey.shade200 : Colors.amber.shade50,
+        color: descartado ? Colors.grey.shade200 : (veioDoSortudo ? Colors.green.shade50 : Colors.amber.shade50),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: descartado ? Colors.grey.shade400 : Colors.amber.shade700,
+          color: descartado ? Colors.grey.shade400 : (veioDoSortudo ? Colors.green.shade700 : Colors.amber.shade700),
           width: 2,
         ),
       ),
       padding: const EdgeInsets.all(8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
         children: [
-          // Imagem MAIOR do drop (assets/drops/)
-          Opacity(
-            opacity: descartado ? 0.4 : 1.0,
-            child: item.iconPath.isNotEmpty
-                ? Image.asset(
-                    item.iconPath,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      _getIconForType(item.tipo),
-                      size: 60,
-                      color: Colors.amber.shade700,
+          // Mensagem especial do Sortudo (se aplicável)
+          if (veioDoSortudo) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.shade700,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🍀 PASSIVA SORTUDO',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                  )
-                : Icon(
-                    _getIconForType(item.tipo),
-                    size: 60,
-                    color: Colors.amber.shade700,
                   ),
-          ),
-          const SizedBox(width: 12),
-          // Informações do item ao lado
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Ícone de status (guardar/descartar) + Nome
-                Row(
-                  children: [
-                    Icon(
-                      descartado ? Icons.delete : Icons.inventory_2,
-                      size: 16,
-                      color: descartado ? Colors.red.shade600 : Colors.green.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        item.nome,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: descartado ? Colors.grey.shade600 : Colors.grey.shade800,
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Imagem MAIOR do drop (assets/drops/)
+              Opacity(
+                opacity: descartado ? 0.4 : 1.0,
+                child: item.iconPath.isNotEmpty
+                    ? Image.asset(
+                        item.iconPath,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          _getIconForType(item.tipo),
+                          size: 60,
+                          color: veioDoSortudo ? Colors.green.shade700 : Colors.amber.shade700,
                         ),
+                      )
+                    : Icon(
+                        _getIconForType(item.tipo),
+                        size: 60,
+                        color: veioDoSortudo ? Colors.green.shade700 : Colors.amber.shade700,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              // Informações do item ao lado
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Ícone de status (guardar/descartar) + Nome
+                    Row(
+                      children: [
+                        Icon(
+                          descartado ? Icons.delete : Icons.inventory_2,
+                          size: 16,
+                          color: descartado ? Colors.red.shade600 : Colors.green.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.nome,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: descartado ? Colors.grey.shade600 : Colors.grey.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Descrição do que o item faz
+                    Text(
+                      item.descricao,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: descartado ? Colors.grey.shade500 : Colors.grey.shade600,
+                        height: 1.2,
                       ),
                     ),
+                    // Mensagem adicional do Sortudo
+                    if (veioDoSortudo) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'A sorte favoreceu você nesta batalha!',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 4),
-                // Descrição do que o item faz
-                Text(
-                  item.descricao,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: descartado ? Colors.grey.shade500 : Colors.grey.shade600,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
