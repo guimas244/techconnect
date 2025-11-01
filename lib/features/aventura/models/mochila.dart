@@ -6,8 +6,9 @@ class Mochila {
 
   static const int totalSlots = 30;
   static const int slotsIniciaisDesbloqueados = 3;
-  static const int slotMoedaEvento = 3; // Posição 4 (índice 3) é reservada para moeda de evento
+  static const int slotMoedaEvento = 3; // Posição 4 (índice 3) é reservada para moeda de evento/Halloween
   static const int slotOvoEvento = 4; // Posição 5 (índice 4) é reservada para ovo de evento
+  static const int slotMoedaChave = 5; // Posição 6 (índice 5) é reservada para moeda chave
 
   Mochila({
     List<ItemConsumivel?>? itens,
@@ -190,6 +191,70 @@ class Mochila {
   Mochila inicializarOvoEvento() {
     if (itens[slotOvoEvento] == null) {
       return adicionarOvoEvento(0);
+    }
+    return this;
+  }
+
+  // Obtém quantidade de moeda chave
+  int get quantidadeMoedaChave {
+    final moeda = itens[slotMoedaChave];
+    if (moeda != null && moeda.tipo == TipoItemConsumivel.moedaChave) {
+      return moeda.quantidade;
+    }
+    return 0;
+  }
+
+  // Adiciona moedas chave
+  Mochila adicionarMoedaChave(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final moedaAtual = novosItens[slotMoedaChave];
+
+    if (moedaAtual != null && moedaAtual.tipo == TipoItemConsumivel.moedaChave) {
+      // Atualiza quantidade existente
+      novosItens[slotMoedaChave] = moedaAtual.copyWith(
+        quantidade: moedaAtual.quantidade + quantidade,
+      );
+    } else {
+      // Cria nova moeda chave
+      novosItens[slotMoedaChave] = ItemConsumivel(
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
+        quantidade: quantidade,
+        raridade: RaridadeConsumivel.lendario,
+      );
+    }
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Remove moedas chave (retorna null se não tiver moedas suficientes)
+  Mochila? removerMoedaChave(int quantidade) {
+    final moedaAtual = itens[slotMoedaChave];
+
+    if (moedaAtual == null || moedaAtual.tipo != TipoItemConsumivel.moedaChave) {
+      return null; // Não tem moeda
+    }
+
+    if (moedaAtual.quantidade < quantidade) {
+      return null; // Não tem moedas suficientes
+    }
+
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final novaQuantidade = moedaAtual.quantidade - quantidade;
+
+    // Mantém a moeda mesmo com 0 quantidade
+    novosItens[slotMoedaChave] = moedaAtual.copyWith(quantidade: novaQuantidade);
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Inicializa moeda chave com 0 se não existir
+  Mochila inicializarMoedaChave() {
+    if (itens[slotMoedaChave] == null) {
+      return adicionarMoedaChave(0);
     }
     return this;
   }

@@ -79,8 +79,10 @@ enum TipoItemConsumivel {
   pergaminho,
   elixir,
   fragmento,
-  moedaEvento, // Moeda de evento (Halloween, etc)
+  moedaEvento, // Moeda de evento (Halloween, etc) - DEPRECATED, use moedaHalloween
+  moedaHalloween, // Moeda de Halloween (válida até 31/10)
   ovoEvento, // Ovo de evento (Halloween, etc)
+  moedaChave, // Moeda Chave (começa a dropar em 01/11)
 }
 
 enum RaridadeConsumivel {

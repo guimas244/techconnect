@@ -22,7 +22,8 @@ class RecompensasBatalha {
 
   final List<ItemConsumivel> itensConsumiveisRecebidos;
 
-  final int moedaEvento; // Quantidade de moedas de evento recebidas
+  final int moedaEvento; // Quantidade de moedas de evento recebidas (moedaHalloween)
+  final int moedaChave; // Quantidade de moedas chave recebidas
 
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
 
@@ -36,6 +37,7 @@ class RecompensasBatalha {
     this.magiaRecebida,
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
+    this.moedaChave = 0,
     this.dropsDoSortudo = const [],
   });
 
@@ -59,6 +61,7 @@ class ModalRecompensasBatalha extends StatefulWidget {
     List<ItemConsumivel> itensParaGuardar,
     Set<int> slotsParaLiberar,
     int moedaEvento,
+    int moedaChave,
   ) onGuardarItensNaMochila;
   final Future<void> Function() onConcluir;
 
@@ -303,17 +306,18 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     });
 
     try {
-      // SEMPRE salva se tiver moeda de evento, mesmo que descarte todos os itens
-      if (salvarItens || widget.recompensas.moedaEvento > 0) {
+      // SEMPRE salva se tiver moedas de evento/chave, mesmo que descarte todos os itens
+      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0) {
         print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
           widget.recompensas.moedaEvento,
+          widget.recompensas.moedaChave,
         );
         print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
       } else {
-        print('[ModalRecompensas] ⏭️ Pulando salvamento (sem itens e sem moeda)');
+        print('[ModalRecompensas] ⏭️ Pulando salvamento (sem itens e sem moedas)');
       }
       print('[ModalRecompensas] 🏁 Chamando onConcluir...');
       await widget.onConcluir();
@@ -2518,7 +2522,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
       case TipoItemConsumivel.moedaEvento:
+      case TipoItemConsumivel.moedaHalloween:
         return Icons.stars;
+      case TipoItemConsumivel.moedaChave:
+        return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
     }

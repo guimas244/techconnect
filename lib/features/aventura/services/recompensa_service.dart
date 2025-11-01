@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../models/item.dart';
 import '../models/magia_drop.dart';
+import '../config/evento_config.dart';
 // Removendo import não usado
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
@@ -31,13 +32,13 @@ class RecompensaService {
   }
 
   /// Gera recompensas baseadas no score do jogador
-  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int
+  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int, 'moedaChave': int
   Future<Map<String, dynamic>> gerarRecompensasPorScore(int score, int tierAtual) async {
     print('🎁 [RecompensaService] Gerando recompensas para score: $score, tier: $tierAtual');
 
     if (score < 1) {
       print('❌ [RecompensaService] Score insuficiente ($score < 1)');
-      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0};
+      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0, 'moedaChave': 0};
     }
 
     // 1. Drop fixo garantido
@@ -63,6 +64,9 @@ class RecompensaService {
     // 4. Moeda de Evento (chance independente baseada no tier)
     int moedaEvento = _calcularDropMoedaEvento(tierAtual);
 
+    // 5. Moeda Chave (chance independente baseada no tier - 10x menos que moeda evento)
+    int moedaChave = _calcularDropMoedaChave(tierAtual);
+
     // Separa itens e magias (ignora nulls que foram filtrados)
     final itens = <Item>[];
     final magias = <MagiaDrop>[];
@@ -78,13 +82,14 @@ class RecompensaService {
       }
     }
 
-    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento');
+    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave');
 
     return {
       'itens': itens,
       'magias': magias,
       'superDrop': superDrop,
       'moedaEvento': moedaEvento,
+      'moedaChave': moedaChave,
     };
   }
 
@@ -121,6 +126,37 @@ class RecompensaService {
 
     if (dropou) {
       print('🪙 [RecompensaService] MOEDA DE EVENTO DROPADA! (Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');
+      return 1;
+    }
+
+    return 0;
+  }
+
+  /// Calcula drop de Moeda Chave (10x menos chance que moeda de Halloween)
+  /// Começa a dropar a partir de 01/11
+  /// Tier 1-5: 0.1-0.5% de chance
+  /// Tier 6-10: 0.5% de chance
+  /// Tier 11+: 1.0% de chance fixo
+  int _calcularDropMoedaChave(int tier) {
+    // Verifica se a moeda chave pode dropar (a partir de 01/11)
+    if (!EventoConfig.moedaChavePodeDropar) {
+      return 0;
+    }
+
+    double chance = 0.0;
+    if (tier <= 5) {
+      chance = tier * 0.1; // 0.1% no tier 1, 0.2% no tier 2, etc.
+    } else if (tier <= 10) {
+      chance = 0.5;
+    } else {
+      chance = 1.0; // 1% fixo tier 11+
+    }
+
+    final roll = _random.nextDouble() * 100;
+    final dropou = roll < chance;
+
+    if (dropou) {
+      print('🔑 [RecompensaService] MOEDA CHAVE DROPADA! (Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');
       return 1;
     }
 

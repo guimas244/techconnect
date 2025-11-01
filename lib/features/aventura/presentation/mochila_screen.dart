@@ -1413,7 +1413,10 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
       case TipoItemConsumivel.moedaEvento:
+      case TipoItemConsumivel.moedaHalloween:
         return Icons.stars;
+      case TipoItemConsumivel.moedaChave:
+        return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
     }

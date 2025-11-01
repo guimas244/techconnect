@@ -306,7 +306,10 @@ class ModalItemConsumivel extends StatelessWidget {
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
       case TipoItemConsumivel.moedaEvento:
+      case TipoItemConsumivel.moedaHalloween:
         return Icons.stars;
+      case TipoItemConsumivel.moedaChave:
+        return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
     }
@@ -330,6 +333,10 @@ class ModalItemConsumivel extends StatelessWidget {
         return 'Fragmento';
       case TipoItemConsumivel.moedaEvento:
         return 'Moeda de Evento';
+      case TipoItemConsumivel.moedaHalloween:
+        return 'Moeda de Halloween';
+      case TipoItemConsumivel.moedaChave:
+        return 'Moeda Chave';
       case TipoItemConsumivel.ovoEvento:
         return 'Ovo do Evento';
     }

@@ -143,8 +143,10 @@ class MochilaService {
       final itensLimpos = mochila.itens.map((item) {
         if (item == null) return null;
 
-        // Mantém moeda de evento e ovo de evento (slots fixos)
+        // Mantém moedas de evento e ovo de evento (slots fixos)
         if (item.tipo == TipoItemConsumivel.moedaEvento ||
+            item.tipo == TipoItemConsumivel.moedaHalloween ||
+            item.tipo == TipoItemConsumivel.moedaChave ||
             item.tipo == TipoItemConsumivel.ovoEvento) {
           return item;
         }

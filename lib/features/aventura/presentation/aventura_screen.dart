@@ -19,6 +19,7 @@ import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/developer_config.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/version_config.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -363,6 +364,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         tier: 1,
         runId: runId,
         dataCriacao: DateTime.now(), // Data de criação no horário atual do telefone
+        version: VersionConfig.currentVersion, // Versão atual do jogo
       );
 
       print('🎲 [AventuraScreen] Monstros sorteados localmente');
