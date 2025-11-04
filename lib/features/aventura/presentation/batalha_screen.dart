@@ -54,24 +54,30 @@ class _ResultadoEvolucao {
 }
 
 class _DropResultado {
-  final Item? item;
+  final Item? item; // Mantido para compatibilidade com drops de elites/equipados
   final int? tier;
   final RaridadeItem? raridade;
-  final MagiaDrop? magia;
+  final MagiaDrop? magia; // Mantido para compatibilidade
+  final List<Item> itens; // NOVO: Múltiplos itens do sistema de drops independentes
+  final List<MagiaDrop> magias; // NOVO: Múltiplas magias do sistema de drops independentes
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
+  final bool superDrop; // Se ativou o super drop
 
   const _DropResultado({
     this.item,
     this.tier,
     this.raridade,
     this.magia,
+    this.itens = const [],
+    this.magias = const [],
     this.consumiveis = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
     this.dropsDoSortudo = const [],
+    this.superDrop = false,
   });
 }
 
@@ -1457,10 +1463,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       tierItem: drop.tier,
       raridadeItem: drop.raridade,
       magiaRecebida: drop.magia,
+      itensRecebidos: drop.itens, // NOVO: Lista de itens do sistema independente
+      magiasRecebidas: drop.magias, // NOVO: Lista de magias do sistema independente
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
       moedaChave: drop.moedaChave,
       dropsDoSortudo: drop.dropsDoSortudo,
+      superDrop: drop.superDrop,
     );
 
     return _PacoteRecompensas(
@@ -1713,15 +1722,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     print('[BatalhaScreen] 🔧 Filtro de drops carregado: ${raridadesFiltradas.isEmpty ? "Nenhuma raridade filtrada" : raridadesFiltradas}');
     print('[BatalhaScreen] 🔧 Valor mínimo de magia: $valorMinimoMagia (0 = sem filtro)');
 
-    // Calcula drop de moedas (independente de outros drops)
-    final recompensaService = RecompensaService();
-    final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
-    final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
-    final moedaChave = resultadoRecompensas['moedaChave'] as int;
-
-    // ELITE: Dropa o item que ele tem equipado (mínimo Épico)
+    // ELITE: Dropa o item que ele tem equipado (mínimo Épico) + usa sistema novo para magias/moedas
     if (widget.inimigo.isElite) {
       final item = widget.inimigo.itemEquipado;
+
+      // Gera magias e moedas usando o novo sistema
+      final recompensaService = RecompensaService();
+      final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
+      final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+      final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+      final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       if (item != null) {
         print('[BatalhaScreen] 👑 Elite dropou o item equipado: ${item.nome} (${item.raridade.nome})');
@@ -1729,10 +1740,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           item: item,
           tier: item.tier,
           raridade: item.raridade,
+          magias: magias,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
           dropsDoSortudo: dropsDoSortudo,
+          superDrop: superDrop,
         );
       } else {
         // Fallback caso elite não tenha item (não deveria acontecer)
@@ -1745,85 +1758,62 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           item: itemFallback,
           tier: itemFallback.tier,
           raridade: itemFallback.raridade,
+          magias: magias,
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
           dropsDoSortudo: dropsDoSortudo,
+          superDrop: superDrop,
         );
       }
     }
 
-    // NÃO-ELITE: Verifica se tem item equipado primeiro
+    // NÃO-ELITE com item equipado: Dropa o item equipado + usa sistema novo para magias/moedas
     final itemEquipado = widget.inimigo.itemEquipado;
-
-    // Se o monstro tem item equipado, dropa ele (igual aos elites)
     if (itemEquipado != null) {
+      // Gera magias e moedas usando o novo sistema
+      final recompensaService = RecompensaService();
+      final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
+      final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+      final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+      final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final superDrop = resultadoRecompensas['superDrop'] as bool;
+
       print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
       return _DropResultado(
         item: itemEquipado,
         tier: itemEquipado.tier,
         raridade: itemEquipado.raridade,
+        magias: magias,
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
+        moedaChave: moedaChave,
         dropsDoSortudo: dropsDoSortudo,
+        superDrop: superDrop,
       );
     }
 
-    // Se não tem item equipado: 30% magia, 70% item (comportamento original)
-    final chanceDrop = _random.nextInt(100);
+    // NOVO SISTEMA: Drops INDEPENDENTES de itens e magias
+    print('[BatalhaScreen] 🎲 Usando sistema de drops independentes');
+    final recompensaService = RecompensaService();
+    final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
 
-    if (chanceDrop < 30) {
-      final magiaService = MagiaService();
-      final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
+    final itens = resultadoRecompensas['itens'] as List<Item>;
+    final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+    final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+    final moedaChave = resultadoRecompensas['moedaChave'] as int;
+    final superDrop = resultadoRecompensas['superDrop'] as bool;
 
-      // Calcula o valor FINAL da magia (valor base × level)
-      final valorFinal = magia.valor * magia.level;
-      print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (valor base: ${magia.valor}, level: ${magia.level}, valor FINAL: $valorFinal)');
+    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop');
 
-      // Verifica se o valor FINAL da magia está acima do mínimo configurado
-      if (valorMinimoMagia > 0 && valorFinal < valorMinimoMagia) {
-        print('[BatalhaScreen] ❌ Magia com valor FINAL $valorFinal filtrada! (mínimo: $valorMinimoMagia). Nenhuma magia será dropada.');
-        return _DropResultado(
-          consumiveis: consumiveis,
-          moedaEvento: moedaEvento,
-          moedaChave: moedaChave,
-          dropsDoSortudo: dropsDoSortudo,
-        );
-      }
-
-      print('[BatalhaScreen] ✅ Magia com valor FINAL $valorFinal permitida, será dropada!');
-      return _DropResultado(
-        magia: magia,
-        consumiveis: consumiveis,
-        moedaEvento: moedaEvento,
-        dropsDoSortudo: dropsDoSortudo,
-      );
-    }
-
-    // Item comum/raro/épico/lendário aleatório
-    final item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-    print('[BatalhaScreen] 🎒 Item sorteado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
-
-    // Verifica se a raridade do item está permitida no filtro
-    final raridadePermitida = filtroRaridades[item.raridade] ?? true;
-
-    if (!raridadePermitida) {
-      print('[BatalhaScreen] ❌ Item ${item.raridade.nome} filtrado! Nenhum item será dropado.');
-      return _DropResultado(
-        consumiveis: consumiveis,
-        moedaEvento: moedaEvento,
-        dropsDoSortudo: dropsDoSortudo,
-      );
-    }
-
-    print('[BatalhaScreen] ✅ Item ${item.raridade.nome} permitido, será dropado!');
     return _DropResultado(
-      item: item,
-      tier: item.tier,
-      raridade: item.raridade,
+      itens: itens,
+      magias: magias,
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
+      moedaChave: moedaChave,
       dropsDoSortudo: dropsDoSortudo,
+      superDrop: superDrop,
     );
   }
 

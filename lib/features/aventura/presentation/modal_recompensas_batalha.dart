@@ -14,11 +14,14 @@ class RecompensasBatalha {
   final Map<MonstroAventura, Map<String, int>> ganhosAtributos;
   final Map<MonstroAventura, Map<String, dynamic>?> habilidadesEvoluidas;
 
-  final Item? itemRecebido;
+  final Item? itemRecebido; // Mantido para compatibilidade (drops de elites/equipados)
   final int? tierItem;
   final RaridadeItem? raridadeItem;
 
-  final MagiaDrop? magiaRecebida;
+  final MagiaDrop? magiaRecebida; // Mantido para compatibilidade
+
+  final List<Item> itensRecebidos; // NOVO: Múltiplos itens do sistema de drops independentes
+  final List<MagiaDrop> magiasRecebidas; // NOVO: Múltiplas magias do sistema de drops independentes
 
   final List<ItemConsumivel> itensConsumiveisRecebidos;
 
@@ -26,6 +29,7 @@ class RecompensasBatalha {
   final int moedaChave; // Quantidade de moedas chave recebidas
 
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
+  final bool superDrop; // Se ativou o super drop
 
   const RecompensasBatalha({
     this.monstrosEvoluidos = const [],
@@ -35,15 +39,18 @@ class RecompensasBatalha {
     this.tierItem,
     this.raridadeItem,
     this.magiaRecebida,
+    this.itensRecebidos = const [],
+    this.magiasRecebidas = const [],
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
     this.dropsDoSortudo = const [],
+    this.superDrop = false,
   });
 
   bool get temEvolucao => monstrosEvoluidos.isNotEmpty;
-  bool get temEquipamento => itemRecebido != null;
-  bool get temMagia => magiaRecebida != null;
+  bool get temEquipamento => itemRecebido != null || itensRecebidos.isNotEmpty;
+  bool get temMagia => magiaRecebida != null || magiasRecebidas.isNotEmpty;
   bool get temEquipamentoOuMagia => temEquipamento || temMagia;
   bool get temItensConsumiveis => itensConsumiveisRecebidos.isNotEmpty;
   bool get temMoedaEvento => moedaEvento > 0;
@@ -86,6 +93,11 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   bool _equipamentoExpandido = false;
   bool _itensExpandido = false;
 
+  // Controle individual de expansão para cada item/magia do novo sistema
+  final Map<String, bool> _itensExpandidos = {}; // key: "item_$index"
+  final Map<String, bool> _magiasExpandidas = {}; // key: "magia_$index"
+
+  // Sistema antigo: controle de item/magia única
   bool _itemResolvido = false;
   bool _magiaResolvida = false;
 
@@ -95,6 +107,11 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   MonstroAventura? _monstroSelecionadoMagia;
   Habilidade? _habilidadeSelecionada;
   bool _processandoMagia = false;
+
+  // Sistema novo: controle individual para cada magia
+  final Map<String, MonstroAventura?> _monstrosSelecionadosMagias = {}; // key: "magia_$index"
+  final Map<String, Habilidade?> _habilidadesSelecionadasMagias = {}; // key: "magia_$index"
+  final Map<String, bool> _processandoMagias = {}; // key: "magia_$index"
 
   late List<ItemConsumivel> _itensParaGuardar;
   final Set<int> _novosItensDescartados = {};
@@ -159,10 +176,39 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                       if (widget.recompensas.temEvolucao) _buildEvolucaoRetratil(),
                       if (widget.recompensas.temEvolucao)
                         const SizedBox(height: 12),
-                      if (widget.recompensas.temEquipamentoOuMagia)
+
+                      // Sistema antigo: item único
+                      if (widget.recompensas.itemRecebido != null) ...[
                         _buildEquipamentoRetratil(),
-                      if (widget.recompensas.temEquipamentoOuMagia)
                         const SizedBox(height: 12),
+                      ],
+
+                      // Sistema antigo: magia única
+                      if (widget.recompensas.magiaRecebida != null) ...[
+                        _buildMagiaRetratil(),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // Sistema novo: múltiplos itens (cada um em sua própria aba)
+                      ...widget.recompensas.itensRecebidos.asMap().entries.map((entry) {
+                        return Column(
+                          children: [
+                            _buildItemRetratil(entry.value, entry.key),
+                            const SizedBox(height: 12),
+                          ],
+                        );
+                      }),
+
+                      // Sistema novo: múltiplas magias (cada uma em sua própria aba)
+                      ...widget.recompensas.magiasRecebidas.asMap().entries.map((entry) {
+                        return Column(
+                          children: [
+                            _buildMagiaRetratilNova(entry.value, entry.key),
+                            const SizedBox(height: 12),
+                          ],
+                        );
+                      }),
+
                       if (widget.recompensas.temItensConsumiveis)
                         _buildItensRetratil(),
                     ],
@@ -1001,22 +1047,19 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     }
   }
   Widget _buildEquipamentoRetratil() {
-    final temItem = widget.recompensas.itemRecebido != null;
-    final temMagia = widget.recompensas.magiaRecebida != null;
+    // Verifica drops do sistema antigo (compatibilidade)
+    // IMPORTANTE: Este método é APENAS para o sistema antigo (drops de elites/equipados)
+    // Os drops do novo sistema (independentes) têm suas próprias abas individuais
+    final temItemAntigo = widget.recompensas.itemRecebido != null;
+    final temMagiaAntiga = widget.recompensas.magiaRecebida != null;
+
+    final temItem = temItemAntigo;
+    final temMagia = temMagiaAntiga;
     final resolvido = (!temItem || _itemResolvido) && (!temMagia || _magiaResolvida);
 
-    // Define tier e raridade fora do if para usar depois
+    // Define tier e raridade para o título (sistema antigo apenas)
     final raridade = widget.recompensas.raridadeItem?.nome.toUpperCase() ?? 'DESCONHECIDA';
     final tier = widget.recompensas.tierItem?.toString() ?? '-';
-
-    final partesTitulo = <String>[];
-    if (temItem) {
-      partesTitulo.add('EQUIPAMENTO TIER $tier ($raridade)');
-    }
-    if (temMagia) {
-      partesTitulo.add('MAGIA RECEBIDA');
-    }
-    final titulo = partesTitulo.join(' - ');
 
     return Container(
       decoration: BoxDecoration(
@@ -1136,9 +1179,262 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             ),
           ),
           if (_equipamentoExpandido) ...[
-            if (temItem) _buildItemContent(),
-            if (temItem && temMagia) const SizedBox(height: 12),
-            if (temMagia) _buildMagiaContent(),
+            // Sistema antigo: item único
+            if (temItemAntigo) _buildItemContent(),
+
+            if ((temItem) && (temMagia)) const SizedBox(height: 12),
+
+            // Sistema antigo: magia única
+            if (temMagiaAntiga) _buildMagiaContent(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Seção retrátil para um item individual (sistema novo)
+  Widget _buildItemRetratil(Item item, int index) {
+    final destaque = item.raridade.cor;
+    final key = 'item_$index';
+    final expandido = _itensExpandidos[key] ?? false;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: destaque, width: 2),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _itensExpandidos[key] = !expandido;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.backpack, color: destaque, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EQUIPAMENTO ${index + 1}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tier ${item.tier} - ${item.raridade.nome}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    expandido ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey.shade700,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expandido) _buildItemContentNovo(item),
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Seção retrátil para uma magia individual (sistema antigo compatibilidade)
+  Widget _buildMagiaRetratil() {
+    final magia = widget.recompensas.magiaRecebida!;
+    const destaque = Colors.purpleAccent;
+    final expandido = _equipamentoExpandido;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: destaque, width: 2),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _equipamentoExpandido = !_equipamentoExpandido;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_fix_high, color: destaque, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'MAGIA RECEBIDA',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    expandido ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey.shade700,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expandido) _buildMagiaContent(),
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Seção retrátil para uma magia individual (sistema novo)
+  Widget _buildMagiaRetratilNova(MagiaDrop magia, int index) {
+    const destaque = Colors.purpleAccent;
+    final key = 'magia_$index';
+    final expandido = _magiasExpandidas[key] ?? false;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: destaque, width: 2),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _magiasExpandidas[key] = !expandido;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_fix_high, color: destaque, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'MAGIA ${index + 1}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Level ${magia.level}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    expandido ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey.shade700,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expandido) _buildMagiaContentNova(magia, index),
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Método para exibir um item da lista (sistema independente)
+  Widget _buildItemContentNovo(Item item) {
+    final destaque = item.raridade.cor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [destaque.withOpacity(0.15), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: destaque, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.backpack, color: destaque),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.nome,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: destaque.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: destaque),
+                ),
+                child: Text(
+                  'Tier ${item.tier} - ${item.raridade.nome}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: destaque,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (item.atributos.values.any((valor) => valor != 0)) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Bônus do equipamento:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...item.atributos.entries
+                .where((entry) => entry.value != 0)
+                .map((entry) => _buildAtributoLinha(entry.key, entry.value)),
           ],
         ],
       ),
@@ -1464,6 +1760,306 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       ),
     );
   }
+  // NOVO: Método para exibir uma magia da lista (sistema independente)
+  Widget _buildMagiaContentNova(MagiaDrop magia, int index) {
+    const destaque = Colors.purpleAccent;
+    final key = 'magia_$index';
+    final monstroSelecionado = _monstrosSelecionadosMagias[key];
+    final habilidadeSelecionada = _habilidadesSelecionadasMagias[key];
+    final processando = _processandoMagias[key] ?? false;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: destaque.withOpacity(0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Image.asset(
+                _getImagemTipoMagia(magia),
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  magia.nome,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            magia.descricao,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _buildInfoChip('Tipo', magia.tipo.nome, destaque),
+              _buildInfoChip('Efeito', magia.efeito.nome, destaque),
+              _buildInfoChip('Valor', magia.valorEfetivo.toString(), Colors.orangeAccent),
+              _buildInfoChip('Level', magia.level.toString(), Colors.lightBlueAccent),
+              _buildInfoChip('Custo', '${magia.custoEnergia} EN', Colors.greenAccent),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Escolha um monstro para aprender:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GerenciadorEquipamentosMonstros(
+            monstros: widget.timeJogador,
+            monstroSelecionado: monstroSelecionado,
+            corDestaque: destaque,
+            onSelecionarMonstro: (monstro) {
+              setState(() {
+                _monstrosSelecionadosMagias[key] = monstro;
+                _habilidadesSelecionadasMagias[key] = null;
+              });
+            },
+            onVisualizarEquipamento: _mostrarDetalhesItem,
+          ),
+          if (monstroSelecionado != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Escolha qual habilidade será substituída:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (monstroSelecionado.habilidades.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Este monstro não possui habilidades para substituir.',
+                  style: TextStyle(fontSize: 12, color: Colors.white60),
+                ),
+              )
+            else
+              Column(
+                children: monstroSelecionado.habilidades.map((habilidade) {
+                  final selecionada = habilidadeSelecionada == habilidade;
+                  final valorCalculado = habilidade.valorEfetivo;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _habilidadesSelecionadasMagias[key] = selecionada ? null : habilidade;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selecionada ? destaque : Colors.grey.shade300,
+                          width: selecionada ? 2.5 : 1.5,
+                        ),
+                        boxShadow: selecionada ? [
+                          BoxShadow(
+                            color: destaque.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ] : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: selecionada ? destaque : Colors.grey.shade300,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: selecionada
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 18,
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.all(6),
+                                      child: Image.asset(
+                                        _getImagemTipoHabilidade(habilidade),
+                                        width: 20,
+                                        height: 20,
+                                        fit: BoxFit.contain,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      habilidade.nome,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Image.asset(
+                                          habilidade.tipoElemental.iconAsset,
+                                          width: 14,
+                                          height: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Lv.${habilidade.level}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.amber.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: habilidade.tipo.cor.withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            habilidade.tipo.nome,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: habilidade.tipo.cor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  habilidade.descricao,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatBox(
+                                        label: habilidade.efeito.nome,
+                                        value: valorCalculado.toString(),
+                                        color: Colors.orange.shade600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildStatBox(
+                                      label: 'Custo',
+                                      value: '${habilidade.custoEnergia} EN',
+                                      color: Colors.blue.shade600,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              IconButton(
+                onPressed: processando ? null : () => _descartarMagiaNova(magia, index),
+                icon: const Icon(Icons.delete),
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.red.shade400,
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: !processando ? () => _equiparMagiaNova(magia, index) : null,
+                  icon: processando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome),
+                  label: Text(processando ? 'Aprendendo...' : 'Aprender Magia'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: destaque,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: destaque.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMagiaContent() {
     final magia = widget.recompensas.magiaRecebida!;
     const destaque = Colors.purpleAccent;
@@ -2490,6 +3086,77 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     } catch (e) {
       if (mounted) {
         setState(() => _processandoMagia = false);
+        _mostrarSnack('Erro ao descartar magia: $e', erro: true);
+      }
+    }
+  }
+
+  // NOVO: Equipar magia do sistema independente
+  Future<void> _equiparMagiaNova(MagiaDrop magia, int index) async {
+    final key = 'magia_$index';
+    final monstro = _monstrosSelecionadosMagias[key];
+    if (monstro == null) {
+      _mostrarSnack('Selecione um monstro para aprender a magia.', erro: true);
+      return;
+    }
+    if (monstro.habilidades.isEmpty) {
+      _mostrarSnack(
+        'Este monstro não possui habilidades para substituir.',
+        erro: true,
+      );
+      return;
+    }
+    final habilidadeSelecionada = _habilidadesSelecionadasMagias[key];
+    if (habilidadeSelecionada == null) {
+      _mostrarSnack(
+        'Escolha qual habilidade será substituída.',
+        erro: true,
+      );
+      return;
+    }
+
+    setState(() => _processandoMagias[key] = true);
+    try {
+      await widget.onEquiparMagia(
+        monstro,
+        magia,
+        habilidadeSelecionada,
+      );
+      if (mounted) {
+        setState(() {
+          _processandoMagias[key] = false;
+          // Limpa a seleção após equipar
+          _monstrosSelecionadosMagias[key] = null;
+          _habilidadesSelecionadasMagias[key] = null;
+        });
+        _mostrarSnack('${magia.nome} aprendida por ${monstro.nome}!');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _processandoMagias[key] = false);
+        _mostrarSnack('Erro ao aprender magia: $e', erro: true);
+      }
+    }
+  }
+
+  // NOVO: Descartar magia do sistema independente
+  Future<void> _descartarMagiaNova(MagiaDrop magia, int index) async {
+    final key = 'magia_$index';
+    setState(() => _processandoMagias[key] = true);
+    try {
+      await widget.onDescartarMagia(magia);
+      if (mounted) {
+        setState(() {
+          _processandoMagias[key] = false;
+          // Limpa a seleção após descartar
+          _monstrosSelecionadosMagias[key] = null;
+          _habilidadesSelecionadasMagias[key] = null;
+        });
+        _mostrarSnack('${magia.nome} foi descartada.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _processandoMagias[key] = false);
         _mostrarSnack('Erro ao descartar magia: $e', erro: true);
       }
     }

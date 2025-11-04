@@ -41,23 +41,48 @@ class RecompensaService {
       return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0, 'moedaChave': 0};
     }
 
-    // 1. Drop fixo garantido
-    final recompensas = <dynamic>[];
-    recompensas.add(await _gerarItemOuMagia(tierAtual, score));
+    final itens = <Item>[];
+    final magias = <MagiaDrop>[];
 
-    // 2. Drops adicionais baseados no score (3% por score)
-    int dropsAdicionais = _calcularDropsAdicionais(score);
-    for (int i = 0; i < dropsAdicionais; i++) {
-      recompensas.add(await _gerarItemOuMagia(tierAtual, score));
+    // 1. Drop de ITEM (70% chance fixa)
+    int quantidadeItens = _calcularQuantidadeDrops(70.0);
+    for (int i = 0; i < quantidadeItens; i++) {
+      final item = await _gerarItemComQualidade(tierAtual, score);
+      if (item != null) {
+        itens.add(item);
+      }
+    }
+
+    // 2. Drop de MAGIA (30% chance fixa)
+    int quantidadeMagias = _calcularQuantidadeDrops(30.0);
+    for (int i = 0; i < quantidadeMagias; i++) {
+      final magia = await _gerarMagiaComQualidade(tierAtual, score);
+      if (magia != null) {
+        magias.add(magia);
+      }
     }
 
     // 3. Super Drop (dobrar quantidade) - 1% por 2 de score
     bool superDrop = _calcularSuperDrop(score);
     if (superDrop) {
-      print('🌟 [RecompensaService] SUPER DROP ATIVADO! Dobrando quantidade de itens');
-      final recompensasOriginais = List.from(recompensas);
-      for (var _ in recompensasOriginais) {
-        recompensas.add(await _gerarItemOuMagia(tierAtual, score));
+      print('🌟 [RecompensaService] SUPER DROP ATIVADO! Dobrando quantidade de itens e magias');
+
+      // Dobra itens
+      final itensOriginais = itens.length;
+      for (int i = 0; i < itensOriginais; i++) {
+        final item = await _gerarItemComQualidade(tierAtual, score);
+        if (item != null) {
+          itens.add(item);
+        }
+      }
+
+      // Dobra magias
+      final magiasOriginais = magias.length;
+      for (int i = 0; i < magiasOriginais; i++) {
+        final magia = await _gerarMagiaComQualidade(tierAtual, score);
+        if (magia != null) {
+          magias.add(magia);
+        }
       }
     }
 
@@ -66,21 +91,6 @@ class RecompensaService {
 
     // 5. Moeda Chave (chance independente baseada no tier - 10x menos que moeda evento)
     int moedaChave = _calcularDropMoedaChave(tierAtual);
-
-    // Separa itens e magias (ignora nulls que foram filtrados)
-    final itens = <Item>[];
-    final magias = <MagiaDrop>[];
-
-    for (var recompensa in recompensas) {
-      if (recompensa == null) {
-        // Item foi filtrado, ignora
-        continue;
-      } else if (recompensa is Item) {
-        itens.add(recompensa);
-      } else if (recompensa is MagiaDrop) {
-        magias.add(recompensa);
-      }
-    }
 
     print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave');
 
@@ -167,29 +177,18 @@ class RecompensaService {
     return 0;
   }
 
-  /// Calcula quantos drops adicionais baseado no score
-  /// Cada 1 de score = 3% de chance de drop adicional
-  /// Se passar de 100%, é garantido e o excesso vai para o próximo
-  int _calcularDropsAdicionais(int score) {
-    final chanceTotal = score * 3; // 3% por score
-    int dropsGarantidos = chanceTotal ~/ 100; // Quantos drops são garantidos
-    int chanceRestante = chanceTotal % 100; // Chance restante em %
-    
-    print('📊 [RecompensaService] Drops adicionais: Score $score × 3% = ${chanceTotal}% total');
-    print('📊 [RecompensaService] = $dropsGarantidos garantidos + ${chanceRestante}% restante');
-    
-    // Sorteia para a chance restante
-    if (chanceRestante > 0) {
-      final numeroSorteado = _random.nextInt(100);
-      final ganhouExtra = numeroSorteado < chanceRestante;
-      print('🎲 [RecompensaService] Sorteio extra: $numeroSorteado/100 (precisa < $chanceRestante) → ${ganhouExtra ? 'GANHOU' : 'não ganhou'}');
-      if (ganhouExtra) {
-        dropsGarantidos++;
-      }
-    }
-    
-    print('🎯 [RecompensaService] Total drops adicionais: $dropsGarantidos');
-    return dropsGarantidos;
+  /// Calcula quantidade de drops independentes (itens ou magias)
+  /// chanceBase: 70% para itens, 30% para magias (chance fixa)
+  /// Sorteia se dropa ou não baseado na chance
+  int _calcularQuantidadeDrops(double chanceBase) {
+    final tipoString = chanceBase == 70.0 ? 'ITEM' : 'MAGIA';
+
+    final numeroSorteado = _random.nextInt(100);
+    final dropou = numeroSorteado < chanceBase;
+
+    print('🎲 [RecompensaService] Sorteio $tipoString: $numeroSorteado/100 (precisa < ${chanceBase.toInt()}) → ${dropou ? 'DROPOU' : 'não dropou'}');
+
+    return dropou ? 1 : 0;
   }
 
   /// Calcula se ativa Super Drop
@@ -209,25 +208,11 @@ class RecompensaService {
     return ativou;
   }
 
-  /// Gera um item ou magia com qualidade melhorada baseada no score
-  /// Cada 10 de score = +1% chance de raridade melhor
-  Future<dynamic> _gerarItemOuMagia(int tierAtual, int score) async {
-    // 30% magia, 70% item (mesmo do sistema atual)
-    final numeroSorteado = _random.nextInt(100);
-    final ehMagia = numeroSorteado < 30;
-    print('🎲 [RecompensaService] Tipo de recompensa: $numeroSorteado/100 (< 30 = magia) → ${ehMagia ? 'MAGIA' : 'ITEM'}');
-
-    if (ehMagia) {
-      return await _gerarMagiaComQualidade(tierAtual, score);
-    } else {
-      return await _gerarItemComQualidade(tierAtual, score);
-    }
-  }
 
   /// Gera item com qualidade melhorada baseada no score
   /// Retorna null se o item for filtrado
   Future<Item?> _gerarItemComQualidade(int tierAtual, int score) async {
-    // Carrega o filtro de drops
+    // Carrega filtro de raridades configurado pelo usuário
     final filtroRaridades = await _carregarFiltroDrops();
 
     // Calcula boost de qualidade: cada 10 de score = +1% de chance de subir raridade
@@ -261,7 +246,7 @@ class RecompensaService {
   /// Gera magia com level melhorado baseado no score
   /// Retorna null se a magia for filtrada por valor mínimo
   Future<MagiaDrop?> _gerarMagiaComQualidade(int tierAtual, int score) async {
-    // Carrega o valor mínimo de magia
+    // Carrega filtro de valor mínimo configurado pelo usuário
     final valorMinimoMagia = await _carregarValorMinimoMagia();
 
     // Magia sempre usa a geração normal - a melhoria vem no level
