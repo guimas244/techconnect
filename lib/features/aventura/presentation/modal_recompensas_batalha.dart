@@ -209,7 +209,9 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                         );
                       }),
 
-                      if (widget.recompensas.temItensConsumiveis)
+                      if (widget.recompensas.temItensConsumiveis ||
+                          widget.recompensas.temMoedaEvento ||
+                          widget.recompensas.moedaChave > 0)
                         _buildItensRetratil(),
                     ],
                   ),
@@ -2468,7 +2470,13 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
           // Moeda de Evento (sempre coletada, não pode ser descartada)
           if (temMoeda) ...[
             _buildMoedaEventoCard(),
-            if (temItens) const SizedBox(height: 8),
+            const SizedBox(height: 8),
+          ],
+
+          // Moeda Chave (sempre coletada, não pode ser descartada)
+          if (widget.recompensas.moedaChave > 0) ...[
+            _buildMoedaChaveCard(),
+            const SizedBox(height: 8),
           ],
 
           // Lista vertical de drops (não grid)
@@ -2769,6 +2777,116 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                   ),
                   child: const Text(
                     'LENDÁRIO',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoedaChaveCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD), // Fundo azul claro
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFF2196F3), // Azul
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2196F3).withOpacity(0.3),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Ícone da moeda chave
+          const Icon(
+            Icons.vpn_key,
+            size: 60,
+            color: Color(0xFF2196F3),
+          ),
+          const SizedBox(width: 12),
+          // Informações da moeda
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícone de coletado + Nome
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    const Expanded(
+                      child: Text(
+                        'Moeda Chave',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    // Quantidade
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2196F3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'x${widget.recompensas.moedaChave}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Descrição
+                const Text(
+                  'Moeda rara coletada automaticamente! Use para desbloquear conteúdos especiais.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Tag de raridade
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2196F3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'ÉPICO',
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
