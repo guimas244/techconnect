@@ -7,6 +7,7 @@ import '../models/mochila.dart';
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
 import '../services/mochila_service.dart';
+import '../config/evento_config.dart';
 import 'models/resultado_loja.dart';
 import 'roleta_halloween_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -257,9 +258,9 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
     String? customCostIcon, // Ícone customizado para o custo
     bool forceDisabled = false, // 🔥 HARDCORE: Permite desabilitar forçadamente (tier 100+)
   }) {
-    // Se tem ícone customizado, verifica moeda de evento. Caso contrário, verifica score.
+    // Se tem ícone customizado, verifica se evento está ativo. Caso contrário, verifica score.
     final canAfford = customCostIcon != null
-        ? (_mochila?.quantidadeMoedaEvento ?? 0) >= cost
+        ? EventoConfig.eventoHalloweenAtivo // Evento de Halloween desativado
         : _historiaAtual.score >= cost;
 
     // 🔥 HARDCORE: Se forceDisabled = true, o botão fica desabilitado independente de score
@@ -1055,15 +1056,15 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
   /// Abre a roleta de Halloween com cartas
   Future<void> _abrirRoleta() async {
-    print('🎰 [Roleta] Iniciando roleta de sorteio...');
+    print('🎰 [Roleta] Tentativa de abrir roleta...');
 
-    // Verifica se tem moeda de evento
-    final temMoedas = (_mochila?.quantidadeMoedaEvento ?? 0) >= custoRoleta;
-    if (!temMoedas) {
+    // Verifica se o evento está ativo
+    if (!EventoConfig.eventoHalloweenAtivo) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Você não tem moedas de evento suficientes!'),
-          backgroundColor: Colors.red,
+          content: Text('🎃 Evento de Halloween encerrado! A roleta não está mais disponível.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -1161,21 +1162,9 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
         return;
       }
 
-      final mochilaAtualizada = _mochila!.removerMoedaEvento(custoRoleta);
-      if (mochilaAtualizada == null) {
-        print('❌ [Roleta] Erro: não foi possível remover moeda de evento');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao processar pagamento!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => _comprando = false);
-        return;
-      }
-
-      // Salva mochila atualizada
-      await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
+      // Evento encerrado - não remove moedas mais
+      // Mochila permanece a mesma
+      final mochilaAtualizada = _mochila!;
       setState(() {
         _mochila = mochilaAtualizada;
       });

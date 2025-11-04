@@ -98,19 +98,15 @@ class RecompensaService {
   /// Tier 6-10: 5% de chance
   /// Tier 11+: 10% de chance fixo
   ///
-  /// EVENTO HALLOWEEN: Apenas até 31/10/2025 23:59:59 (horário de Brasília)
+  /// EVENTO HALLOWEEN: ENCERRADO (flag manual em EventoConfig)
   int _calcularDropMoedaEvento(int tier) {
-    // ========== VERIFICAÇÃO DE DATA DO EVENTO ==========
-    // Evento de Halloween termina em 31/10/2025 às 23:59:59 (horário de Brasília, UTC-3)
-    final agora = DateTime.now().toUtc();
-    final fimEventoUTC = DateTime.utc(2025, 11, 1, 2, 59, 59); // 01/11/2025 02:59:59 UTC = 31/10/2025 23:59:59 BRT
-
-    if (agora.isAfter(fimEventoUTC)) {
-      print('🎃 [RecompensaService] Evento de Halloween encerrado! Moedas não dropam mais. (Fim: 31/10/2025 23:59:59 BRT)');
+    // Verifica se o evento de Halloween está ativo
+    if (!EventoConfig.moedaHalloweenPodeDropar) {
+      // Evento encerrado - não dropa mais
       return 0;
     }
 
-    // ========== MODO PRODUÇÃO ==========
+    // ========== LÓGICA DE DROP (quando evento ativo) ==========
     double chance = 0.0;
 
     if (tier <= 5) {
@@ -138,8 +134,14 @@ class RecompensaService {
   /// Tier 6-10: 0.5% de chance
   /// Tier 11+: 1.0% de chance fixo
   int _calcularDropMoedaChave(int tier) {
+    // Debug: mostra data atual e se pode dropar
+    final agora = DateTime.now();
+    final podeDropar = EventoConfig.moedaChavePodeDropar;
+    print('🔍 [RecompensaService] Verificando moeda chave - Data atual: $agora, Pode dropar: $podeDropar');
+
     // Verifica se a moeda chave pode dropar (a partir de 01/11)
-    if (!EventoConfig.moedaChavePodeDropar) {
+    if (!podeDropar) {
+      print('❌ [RecompensaService] Moeda chave NÃO pode dropar ainda (antes de 01/11)');
       return 0;
     }
 
@@ -154,6 +156,8 @@ class RecompensaService {
 
     final roll = _random.nextDouble() * 100;
     final dropou = roll < chance;
+
+    print('🎲 [RecompensaService] Rolando moeda chave: Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%, Dropou: $dropou');
 
     if (dropou) {
       print('🔑 [RecompensaService] MOEDA CHAVE DROPADA! (Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');

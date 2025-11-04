@@ -335,7 +335,7 @@ Finalizar documentação e preparar para deploy.
 - [ ] Atualizar `REGRAS_SCORE_V2.md` com versão final
 - [ ] Criar/atualizar `CHANGELOG.md` com mudanças:
   ```markdown
-  ## [v2.3.0] - Score System V2
+  ## [v2.3.1] - Score System V2
 
   ### Added
   - Limite de 50 pontos no ranking até tier 10
@@ -407,7 +407,7 @@ Finalizar documentação e preparar para deploy.
 - **Compatibilidade:** Garantir que aventuras antigas não quebrem com novo sistema
 - **Migração:** Se necessário, criar script de migração para dados existentes
 - **Rollback:** Manter código anterior comentado caso precise reverter
-- **Versionamento:** Considerar incrementar versão major (v2.3.0) pelas mudanças significativas
+- **Versionamento:** Considerar incrementar versão major (v2.3.1) pelas mudanças significativas
 
 ---
 

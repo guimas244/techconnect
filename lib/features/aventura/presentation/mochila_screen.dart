@@ -1099,18 +1099,18 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       );
     }
 
-    // Slot de moeda de evento (index 3) - sempre visível, clicável para detalhes
-    if (index == Mochila.slotMoedaEvento) {
+    // Slot de moeda chave (index 27 - 4º da linha 5) - sempre visível, clicável para detalhes
+    if (index == Mochila.slotMoedaChave) {
       final moeda = item;
       final quantidade = moeda?.quantidade ?? 0;
 
       // Cria item temporário se não existir (para permitir clique mesmo com quantidade 0)
       final moedaParaMostrar = moeda ?? ItemConsumivel(
-        id: 'moeda_evento',
-        nome: 'Moeda de Evento',
-        descricao: 'Moeda especial de evento usada na roleta de sorteio!',
-        tipo: TipoItemConsumivel.moedaEvento,
-        iconPath: 'assets/eventos/halloween/moeda_halloween.png',
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave. Muito rara!',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
         quantidade: 0,
         raridade: RaridadeConsumivel.lendario,
       );
@@ -1125,105 +1125,105 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
               color: Colors.black.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: const Color(0xFFFF9800), // Laranja lendário
+                color: const Color(0xFFFFD700), // Dourado para a chave
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF9800).withOpacity(0.3),
+                  color: const Color(0xFFFFD700).withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
               ],
             ),
             child: Stack(
-          children: [
-            // Imagem da moeda
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/eventos/halloween/moeda_halloween.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.stars,
-                      size: 30,
-                      color: Color(0xFFFF9800),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Badge de quantidade estilo estrela de level
-            Positioned(
-              right: 2,
-              bottom: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFFF9800),
-                      const Color(0xFFFFB74D),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: const Color(0xFFFFE0B2),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 4,
-                      offset: const Offset(1, 1),
+              children: [
+                // Imagem da moeda chave
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/eventos/halloween/moeda_chave.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.key,
+                          size: 30,
+                          color: Color(0xFFFFD700),
+                        );
+                      },
                     ),
-                  ],
-                ),
-                child: Text(
-                  '$quantidade',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
                   ),
                 ),
-              ),
-            ),
 
-            // Ícone de permanente (canto superior esquerdo)
-            Positioned(
-              left: 4,
-              top: 4,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  shape: BoxShape.circle,
+                // Badge de quantidade estilo estrela de level
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFFD700),
+                          const Color(0xFFFFE55C),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: const Color(0xFFFFF9C4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '$quantidade',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black,
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.lock,
-                  size: 12,
-                  color: Color(0xFFFF9800),
+
+                // Ícone de permanente (canto superior esquerdo)
+                Positioned(
+                  left: 4,
+                  top: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock,
+                      size: 12,
+                      color: Color(0xFFFFD700),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       );

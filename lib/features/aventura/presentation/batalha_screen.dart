@@ -1910,14 +1910,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Inicia com a mochila base
     Mochila mochila = mochilaBase;
 
-    // Adiciona moeda de evento primeiro (slot fixo 3)
-    if (moedaEvento > 0) {
-      print('[BatalhaScreen] 🪙 Adicionando $moedaEvento moeda(s) de evento à mochila');
-      mochila = mochila.adicionarMoedaEvento(moedaEvento);
-      print('[BatalhaScreen] ✅ Moeda de evento adicionada! Total: ${mochila.quantidadeMoedaEvento}');
-    }
-
-    // Adiciona moeda chave (slot fixo 5)
+    // Adiciona moeda chave (slot 27 - 4º da linha 5)
     if (moedaChave > 0) {
       print('[BatalhaScreen] 🔑 Adicionando $moedaChave moeda(s) chave à mochila');
       mochila = mochila.adicionarMoedaChave(moedaChave);

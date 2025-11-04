@@ -1,26 +1,15 @@
 /// Configurações de eventos do jogo
 class EventoConfig {
+  /// Flag manual para controlar se o evento de Halloween está ativo
+  /// DESATIVADO MANUALMENTE - Evento encerrado
+  static const bool eventoHalloweenAtivo = false;
+
   /// Data de término do evento de Halloween (01/11)
   /// Após esta data:
   /// - Moeda de Halloween para de dropar
   /// - Moeda Chave começa a dropar
   /// - Roleta da loja fica bloqueada
   static final DateTime dataFimHalloween = DateTime(DateTime.now().year, 11, 1);
-
-  /// Verifica se estamos no período do evento de Halloween
-  /// Halloween vai de 01/10 até 31/10 (meia-noite)
-  static bool get eventoHalloweenAtivo {
-    final agora = DateTime.now();
-    final anoAtual = agora.year;
-
-    // Início: 01/10 00:00
-    final inicioHalloween = DateTime(anoAtual, 10, 1);
-
-    // Fim: 01/11 00:00 (ou seja, até 31/10 23:59:59)
-    final fimHalloween = DateTime(anoAtual, 11, 1);
-
-    return agora.isAfter(inicioHalloween) && agora.isBefore(fimHalloween);
-  }
 
   /// Verifica se a moeda de Halloween ainda pode dropar
   /// Para de dropar em 01/11
