@@ -83,13 +83,37 @@ class _ModalLojaGanandiusState extends State<ModalLojaGanandius> {
       passiva2 = TipoPassiva.values.firstWhere((p) => p.name == passivasSalvas[1]);
       print('🎲 [GANANDIUS] Passivas carregadas da memória: ${passiva1.nome}, ${passiva2.nome}');
     } else {
-      // Sorteia 2 passivas aleatórias
-      final random = Random();
-      final todasPassivas = List<TipoPassiva>.from(TipoPassiva.values);
-      todasPassivas.shuffle(random);
+      // Busca passivas já equipadas na equipe
+      final passivasEquipadas = _historiaAtual.monstros
+          .where((m) => m.passiva != null)
+          .map((m) => m.passiva!.tipo)
+          .toSet();
 
-      passiva1 = todasPassivas[0];
-      passiva2 = todasPassivas[1];
+      print('🔍 [GANANDIUS] Passivas já equipadas: ${passivasEquipadas.map((p) => p.nome).join(", ")}');
+
+      // Filtra passivas disponíveis (que não estão equipadas)
+      final passivasDisponiveis = TipoPassiva.values
+          .where((p) => !passivasEquipadas.contains(p))
+          .toList();
+
+      if (passivasDisponiveis.isEmpty) {
+        print('⚠️ [GANANDIUS] Todas as passivas já estão equipadas!');
+        _mostrarErro('Todos os seus monstros já possuem passivas!');
+        return;
+      }
+
+      if (passivasDisponiveis.length == 1) {
+        print('⚠️ [GANANDIUS] Apenas 1 passiva disponível!');
+        passiva1 = passivasDisponiveis[0];
+        passiva2 = passivasDisponiveis[0]; // Mesma passiva (única disponível)
+      } else {
+        // Sorteia 2 passivas diferentes das disponíveis
+        final random = Random();
+        passivasDisponiveis.shuffle(random);
+
+        passiva1 = passivasDisponiveis[0];
+        passiva2 = passivasDisponiveis[1];
+      }
 
       // Salva as passivas sorteadas
       await prefs.setStringList(chavePassivas, [passiva1.name, passiva2.name]);

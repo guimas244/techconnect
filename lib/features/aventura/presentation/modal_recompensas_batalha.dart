@@ -97,6 +97,11 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   final Map<String, bool> _itensExpandidos = {}; // key: "item_$index"
   final Map<String, bool> _magiasExpandidas = {}; // key: "magia_$index"
 
+  // Sistema novo: controle individual para cada item
+  final Map<String, MonstroAventura?> _monstrosSelecionadosItens = {}; // key: "item_$index"
+  final Map<String, bool> _processandoItens = {}; // key: "item_$index"
+  final Map<String, bool> _itensResolvidos = {}; // key: "item_$index"
+
   // Sistema antigo: controle de item/magia única
   bool _itemResolvido = false;
   bool _magiaResolvida = false;
@@ -1252,7 +1257,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
               ),
             ),
           ),
-          if (expandido) _buildItemContentNovo(item),
+          if (expandido) _buildItemContentNovo(item, index),
         ],
       ),
     );
@@ -1374,8 +1379,13 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
   }
 
   // NOVO: Método para exibir um item da lista (sistema independente)
-  Widget _buildItemContentNovo(Item item) {
+  Widget _buildItemContentNovo(Item item, int index) {
     final destaque = item.raridade.cor;
+    final key = 'item_$index';
+    final monstroSelecionado = _monstrosSelecionadosItens[key];
+    final processando = _processandoItens[key] ?? false;
+    final resolvido = _itensResolvidos[key] ?? false;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1438,6 +1448,63 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                 .where((entry) => entry.value != 0)
                 .map((entry) => _buildAtributoLinha(entry.key, entry.value)),
           ],
+          const SizedBox(height: 12),
+          Text(
+            'Escolha um monstro para equipar:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GerenciadorEquipamentosMonstros(
+            monstros: widget.timeJogador,
+            monstroSelecionado: monstroSelecionado,
+            corDestaque: destaque,
+            onSelecionarMonstro: (monstro) {
+              setState(() {
+                _monstrosSelecionadosItens[key] = monstro;
+              });
+            },
+            onVisualizarEquipamento: _mostrarDetalhesItem,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              IconButton(
+                onPressed: processando || resolvido
+                    ? null
+                    : () => _descartarItemNovo(item, index),
+                icon: const Icon(Icons.delete),
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.red.shade400,
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: (!processando && !resolvido)
+                      ? () => _equiparItemNovo(item, index)
+                      : null,
+                  icon: processando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_circle_outline),
+                  label: Text(processando ? 'Equipando...' : 'Equipar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: destaque,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: destaque.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -3140,6 +3207,54 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     } catch (e) {
       if (mounted) {
         setState(() => _processandoItem = false);
+        _mostrarSnack('Erro ao descartar item: $e', erro: true);
+      }
+    }
+  }
+
+  // Métodos para múltiplos itens (sistema novo)
+  Future<void> _equiparItemNovo(Item item, int index) async {
+    final key = 'item_$index';
+    final monstro = _monstrosSelecionadosItens[key];
+    if (monstro == null) {
+      _mostrarSnack('Selecione um monstro para equipar o item.', erro: true);
+      return;
+    }
+
+    setState(() => _processandoItens[key] = true);
+    try {
+      await widget.onEquiparItem(monstro, item);
+      if (mounted) {
+        setState(() {
+          _itensResolvidos[key] = true;
+          _processandoItens[key] = false;
+        });
+        _mostrarSnack('${item.nome} equipado em ${monstro.nome}!');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _processandoItens[key] = false);
+        _mostrarSnack('Erro ao equipar item: $e', erro: true);
+      }
+    }
+  }
+
+  Future<void> _descartarItemNovo(Item item, int index) async {
+    final key = 'item_$index';
+    setState(() => _processandoItens[key] = true);
+    try {
+      await widget.onDescartarItem(item);
+      if (mounted) {
+        setState(() {
+          _itensResolvidos[key] = true;
+          _processandoItens[key] = false;
+          _monstrosSelecionadosItens[key] = null;
+        });
+        _mostrarSnack('${item.nome} descartado.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _processandoItens[key] = false);
         _mostrarSnack('Erro ao descartar item: $e', erro: true);
       }
     }

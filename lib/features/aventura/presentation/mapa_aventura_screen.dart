@@ -1407,9 +1407,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_${historiaAtual!.tier}';
       final jaPegouGratuito = prefs.getBool(chaveGratuito) ?? false;
 
-      // Carrega o contador de compras para este tier
-      final chaveCompras = 'ganandius_compras_${emailJogador}_tier_${historiaAtual!.tier}';
+      // Carrega o contador de compras PARA ESTE RUN (não por tier)
+      final runId = historiaAtual!.runId;
+      final chaveCompras = 'ganandius_compras_${emailJogador}_run_$runId';
       final comprasRealizadas = prefs.getInt(chaveCompras) ?? 0;
+
+      print('🔍 [MapaAventura] Carregando compras do run $runId: $comprasRealizadas compras realizadas');
 
       if (!mounted) return;
 
@@ -1440,10 +1443,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
           comprasRealizadas: comprasRealizadas,
           onCompraRealizada: () async {
-            // Incrementa o contador de compras para este tier
+            // Incrementa o contador de compras PARA ESTE RUN
             final novoContador = comprasRealizadas + 1;
             await prefs.setInt(chaveCompras, novoContador);
-            print('✅ [MapaAventura] Compra #$novoContador registrada para tier ${historiaAtual!.tier}');
+            print('✅ [MapaAventura] Compra #$novoContador registrada para run $runId (tier ${historiaAtual!.tier})');
           },
         ),
       );

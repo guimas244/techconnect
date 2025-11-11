@@ -1633,7 +1633,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Lista de todos os tiers possíveis (11, 21, 31, 41, etc até 200)
+      // Lista de todos os tiers de loja (11, 21, 31, 41, etc até 200)
       final tiers = List.generate(20, (index) => 11 + (index * 10));
 
       int totalRemovidos = 0;
@@ -1645,19 +1645,24 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
           totalRemovidos++;
         }
 
-        // Remove contador de compras
-        final chaveCompras = 'ganandius_compras_${emailJogador}_tier_$tier';
-        if (prefs.containsKey(chaveCompras)) {
-          await prefs.remove(chaveCompras);
-          totalRemovidos++;
-        }
-
         // Remove passivas sorteadas
         final chavePassivas = 'ganandius_passivas_sorteadas_tier_$tier';
         if (prefs.containsKey(chavePassivas)) {
           await prefs.remove(chavePassivas);
           totalRemovidos++;
         }
+      }
+
+      // Remove TODOS os contadores de compras por run
+      // Busca todas as chaves que começam com o padrão de compras
+      final todasChaves = prefs.getKeys();
+      final chavesCompras = todasChaves.where((key) =>
+        key.startsWith('ganandius_compras_${emailJogador}_run_')
+      ).toList();
+
+      for (final chave in chavesCompras) {
+        await prefs.remove(chave);
+        totalRemovidos++;
       }
 
       print('🧹 [GANANDIUS RESET] $totalRemovidos chaves removidas para nova aventura');

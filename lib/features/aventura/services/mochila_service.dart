@@ -7,7 +7,7 @@ import '../models/item_consumivel.dart';
 class MochilaService {
   static const String _boxName = 'mochila_box';
   static const String _migrationBoxName = 'app_migration';
-  static const String _currentVersion = '2.3.1';
+  static const String _currentVersion = '2.3.2';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
@@ -130,7 +130,7 @@ class MochilaService {
     // Migração 2.1.0: Remove poções e pedras de reforço
     mochilaAtual = await _aplicarMigracao2_1_0(emailLimpo, mochilaAtual);
 
-    // Migração 2.3.1: Move itens de evento para linha 5 e converte moedas em ovos
+    // Migração 2.3.2: Move itens de evento para linha 5 e converte moedas em ovos
     mochilaAtual = await _aplicarMigracao2_3_1(emailLimpo, mochilaAtual);
 
     return mochilaAtual;
@@ -194,7 +194,7 @@ class MochilaService {
     }
   }
 
-  /// Migração 2.3.1: Move itens de evento para linha 5 e converte moedas de Halloween em ovos
+  /// Migração 2.3.2: Move itens de evento para linha 5 e converte moedas de Halloween em ovos
   static Future<Mochila> _aplicarMigracao2_3_1(String emailLimpo, Mochila mochila) async {
     try {
       final migrationBox = await Hive.openBox(_migrationBoxName);
@@ -204,11 +204,11 @@ class MochilaService {
       final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
 
       if (jaMigrado) {
-        print('✅ [MochilaService] Migração 2.3.1 já foi aplicada anteriormente');
+        print('✅ [MochilaService] Migração 2.3.2 já foi aplicada anteriormente');
         return mochila;
       }
 
-      print('🔄 [MochilaService] Aplicando migração 2.3.1: Movendo itens de evento para linha 5');
+      print('🔄 [MochilaService] Aplicando migração 2.3.2: Movendo itens de evento para linha 5');
 
       // Chama o método de migração da mochila
       final mochilaMigrada = mochila.migrarItensEventoParaLinha5();
@@ -219,11 +219,11 @@ class MochilaService {
       // Marca como migrado
       await migrationBox.put(chave, true);
 
-      print('✅ [MochilaService] Migração 2.3.1 concluída com sucesso');
+      print('✅ [MochilaService] Migração 2.3.2 concluída com sucesso');
       return mochilaMigrada;
 
     } catch (e, stack) {
-      print('❌ [MochilaService] Erro na migração 2.3.1: $e');
+      print('❌ [MochilaService] Erro na migração 2.3.2: $e');
       print(stack);
       // Em caso de erro, retorna a mochila original
       return mochila;

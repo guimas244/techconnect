@@ -2958,6 +2958,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final bool foiEsquiva = acao.descricao.contains('Ataque esquivado!') || acao.descricao.contains('🌪️ ESQUIVOU!');
     final bool foiCuraDobrada = acao.descricao.contains('💚 (DOBRADO!)');
 
+    // ROUND 0 sempre mostra imagem do jogador (bônus de progressão)
+    final bool isRound0 = acao.atacante == 'Sistema' && acao.habilidadeNome == 'ROUND 0';
+
     // Define cores baseado no tipo de ação especial
     Color corFundo;
     Color corBorda;
@@ -3004,7 +3007,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 image: AssetImage(
                   acao.atacante == 'Coleção Nostálgica'
                       ? 'assets/icons_gerais/magia_cura.png'
-                      : (isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem),
+                      : (isRound0 || isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem),
                 ),
                 fit: BoxFit.cover,
               ),
