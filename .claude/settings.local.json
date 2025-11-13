@@ -1,25 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(echo:*)",
-      "Bash(done)",
-      "Bash(xargs file:*)",
-      "Bash(xargs:*)",
-      "Bash(awk:*)",
-      "Bash(do echo \"=== $f ===\")",
-      "Bash(head:*)",
-      "Bash(python3:*)",
-      "Bash(git restore:*)",
-      "Bash(git push:*)",
-      "Bash(git config:*)",
-      "Bash(flutter analyze:*)",
-      "Bash(flutter clean:*)",
-      "Bash(flutter pub get:*)",
-      "Bash(dart run:*)",
-      "Bash(dart analyze:*)",
-      "Bash(find:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(node convert_images.js:*)",
+      "Bash(images_base64.txt)"
     ],
     "deny": [],
     "ask": []

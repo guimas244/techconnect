@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Techterra - Calculadora de Maestria (Single File)</title>
+<style>
+  :root{
+    --bg1:#f8fafc; --bg2:#eef2f7; --card:#ffffff; --border:#dbe1ea; --ink:#0f172a;
+    --muted:#64748b; --brand:#0ea5e9; --ok:#10b981; --warn:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px}
+  h1{margin:0 0 16px;font-size:28px;letter-spacing:-.02em}
+  button{cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 14px;font-weight:600}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .grid{display:grid;gap:18px}
+  .grid.main{grid-template-columns:1fr; }
+  @media(min-width:1024px){ .grid.main{grid-template-columns:1fr 2fr;} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 2px 8px rgba(2,8,23,.04)}
+  .card .pad{padding:16px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .muted{color:var(--muted);font-size:12px}
+  .input, select{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font:inherit}
+  .progress{height:8px;background:#e6edf6;border-radius:999px;overflow:hidden}
+  .progress .bar{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);width:0}
+  .badge{border:1px solid var(--border);border-radius:999px;font-size:12px;padding:6px 10px}
+  .badge.ok{border-color:#86efac;background:#ecfdf5}
+  .badge.warn{border-color:#fecaca;background:#fef2f2}
+  .uploader{width:112px;height:112px;border:1px dashed var(--border);border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f1f5f9}
+  .uploader img{width:100%;height:100%;object-fit:cover}
+  .life-grid{display:grid;grid-template-columns:3fr 1fr;gap:8px}
+  .life-grid .lbl{align-self:center;font-size:14px}
+  .types-grid{display:grid;grid-template-columns:1fr;gap:12px;min-width:0}
+  @media(min-width:768px){ .types-grid{grid-template-columns:1fr 1fr;} }
+  .type-card{display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:14px;padding:12px;background:#fff;min-width:0}
+  .type-ico{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;background:#f8fafc;flex:0 0 auto}
+  .type-row{display:grid;gap:8px;align-items:center; grid-template-columns:150px 1fr 1fr; min-width:0}
+  .type-row > *{min-width:0}
+  .type-name{font-weight:600;font-size:14px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  dialog{border:none;border-radius:16px;max-width:800px;width:calc(100% - 24px);padding:0;box-shadow:0 10px 40px rgba(2,8,23,.25)}
+  dialog::backdrop{background:rgba(15,23,42,.45)}
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th,.tbl td{border-bottom:1px solid var(--border);padding:10px 8px;font-size:14px;text-align:left}
+  .tbl th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .footer-tip{margin-top:12px;font-size:12px;color:var(--muted)}
+  .totals{display:flex;align-items:center;gap:8px}
+  .pill{padding:6px 10px;border-radius:999px;background:#f1f5f9;border:1px solid var(--border);font-size:12px}
+  select{max-width:100%}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row" style="margin-bottom:14px">
+      <h1>Techterra Calculadora de Maestria</h1>
+      <div class="row" style="gap:8px">
+        <button id="btnConfig" class="btn" type="button">⚙️ Configurar</button>
+      </div>
+    </div>
+
+    <div id="exportArea" class="grid main">
+      <!-- Painel do treinador -->
+      <div class="card">
+        <div class="pad grid" style="gap:14px">
+          <div class="row"><strong>Perfil do treinador</strong></div>
+
+          <div class="row" style="align-items:flex-start;gap:12px">
+            <label class="uploader" title="Anexar imagem">
+              <input id="imgInput" type="file" accept="image/*" style="display:none">
+              <img id="imgPreview" alt="Anexar imagem">
+            </label>
+            <div style="flex:1" class="grid" >
+              <label class="muted">Anexar imagem</label>
+              <small class="muted">PNG/JPG até ~4 MB</small>
+            </div>
+          </div>
+
+          <div>
+            <label class="muted">Nome</label>
+            <input id="nome" class="input" placeholder="Nome do treinador">
+          </div>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div>
+              <label class="muted">Anos de treinador</label>
+              <input id="anos" type="number" min="0" class="input">
+              <div id="diasHint" class="muted" style="margin-top:4px"></div>
+            </div>
+            <div>
+              <label class="muted">Dedicação geral</label>
+              <input id="dedGeral" type="number" min="0" max="100" class="input">
+            </div>
+            <div>
+              <label class="muted">Potencial geral</label>
+              <input id="potGeral" type="number" min="0" max="100" class="input">
+            </div>
+          </div>
+
+          <div>
+            <div class="row" style="margin-bottom:8px">
+              <div class="pill">Dedicação por aspecto de vida</div>
+              <div id="lifeBadge" class="badge">Total 0%</div>
+            </div>
+            <div class="progress" style="margin-bottom:8px"><div id="lifeBar" class="bar"></div></div>
+            <div class="life-grid" id="lifeGrid"></div>
+            <div id="lifeWarn" class="muted" style="color:var(--warn);display:none">A soma deve ser 100%</div>
+
+            <div class="card" style="margin-top:10px">
+              <div class="pad row">
+                <div><strong>Índice ponderado de dedicação</strong></div>
+                <div id="weighted" class="pill">0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maestria por tipo -->
+      <div class="card">
+        <div class="pad grid" style="gap:14px">
+          <div class="row">
+            <strong>Maestria por tipo</strong>
+            <div class="totals">
+              <span id="typeBadge" class="badge">Total 0%</span>
+            </div>
+          </div>
+          <div class="progress" style="margin-bottom:8px"><div id="typeBar" class="bar"></div></div>
+          <div id="typesGrid" class="types-grid"></div>
+
+          <div class="row" style="justify-content:flex-end">
+            <button id="btnGerar" class="btn primary" disabled>⬇️ Gerar registro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-tip">Dica: valores ficam salvos automaticamente no cache do navegador.</div>
+  </div>
+
+  <!-- Modal de Configuração (pesos fixos, só leitura) -->
+  <dialog id="dlg">
+    <div class="pad grid" style="gap:14px">
+      <div class="row">
+        <strong>Tabela de maestrias e pesos</strong>
+        <button class="btn" onclick="dlg.close()">OK</button>
+      </div>
+
+      <div class="card"><div class="pad">
+        <div class="muted" style="margin-bottom:6px">Edite os valores alvo de cada nível de maestria. Os pesos abaixo são fixos.</div>
+        <table class="tbl" id="tblMasteries">
+          <thead><tr><th>Nome</th><th style="width:140px">Valor</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div></div>
+
+      <div class="card"><div class="pad">
+        <div class="row"><span class="muted">Pesos de dedicação por aspecto de vida (fixos)</span></div>
+        <table class="tbl" id="tblPesos">
+          <thead><tr><th>Aspecto</th><th style="width:140px">Peso</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div></div>
+    </div>
+  </dialog>
+
+<script>
+// ---------- Dados e estado ----------
+const LS = {
+  masteryLevels: "techterra_mastery_levels_v1",
+  trainerPanel: "techterra_trainer_panel_v1",
+  lifeDedication: "techterra_life_dedication_v1",
+  typeDedication: "techterra_type_dedication_v1",
+  uploadedImage: "techterra_uploaded_image_v1",
+};
+
+const defaultMasteries = [
+  { name: "Sem Maestria", value: 0 },
+  { name: "Inexperiente", value: 1 },
+  { name: "Iniciante", value: 10 },
+  { name: "Treinador", value: 100 },
+  { name: "Especialista", value: 200 },
+  { name: "Mestre", value: 300 },
+  { name: "Campeão", value: 400 },
+  { name: "Raiz", value: 500 },
+  { name: "Pilar", value: 600 },
+  { name: "Lenda", value: 800 },
+  { name: "Deus", value: 1000 },
+];
+
+const lifeFields = [
+  "Vida pessoal",
+  "Batalha de cidade",
+  "Batalha de floresta",
+  "Campeonatos",
+  "Treinamento",
+  "Estudo geral de monstros",
+  "Criação",
+  "Domar",
+  "Artesão",
+  "Estudo de taticas",
+];
+
+// Pesos FIXOS (não editáveis)
+const fixedWeights = {
+  "Vida pessoal": 0,
+  "Batalha de cidade": 1.2,
+  "Batalha de floresta": 1.4,
+  "Campeonatos": 1.5,
+  "Treinamento": 1.3,
+  "Estudo geral de monstros": 1.1,
+  "Criação": 1,
+  "Domar": 1.3,
+  "Artesão": 1,
+  "Estudo de taticas": 1.4,
+};
+
+const typeList = [
+  "Normal","Planta","Inseto","Venenoso","Fera","Zumbi","Marinho","Voador","Subterrâneo","Terrestre","Fogo","Gelo","Água","Vento","Elétrico","Pedra","Luz","Trevas","Nostálgico","Místico","Dragão","Alien","Dócrates","Fantasma","Psíquico","Mágico","Tecnologia","Tempo","Desconhecido","Deus"
+];
+
+const typeIcon = {
+  "Normal":"🌀","Planta":"🌿","Inseto":"🐞","Venenoso":"☠️","Fera":"🐺","Zumbi":"🧟","Marinho":"🌊","Voador":"🪽",
+  "Subterrâneo":"⛏️","Terrestre":"🪵","Fogo":"🔥","Gelo":"❄️","Água":"💧","Vento":"🌬️","Elétrico":"⚡","Pedra":"🪨",
+  "Luz":"✨","Trevas":"🌑","Nostálgico":"🕰️","Místico":"🔮","Dragão":"🐉","Alien":"👽","Dócrates":"🏛️","Fantasma":"👻",
+  "Psíquico":"🧠","Mágico":"🪄","Tecnologia":"🤖","Tempo":"⌛","Desconhecido":"❔","Deus":"👑"
+};
+
+// Placeholder SVG para imagem padrão
+const PLACEHOLDER = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">
+    <defs>
+      <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#f8fafc"/><stop offset="1" stop-color="#e2e8f0"/>
+      </linearGradient>
+    </defs>
+    <rect x="1" y="1" width="110" height="110" rx="14" fill="url(#g)" stroke="#dbe1ea"/>
+    <g fill="#94a3b8">
+      <circle cx="56" cy="44" r="10"/>
+      <path d="M22 88c7-15 18-24 34-24s27 9 34 24" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+      <path d="M56 34v20M46 44h20" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </svg>
+`);
+
+let masteries = load(LS.masteryLevels, defaultMasteries);
+let trainer = load(LS.trainerPanel, { nome:"", anos:0, dedicacaoGeral:0, potencialGeral:0 });
+let life = load(LS.lifeDedication, Object.fromEntries(lifeFields.map(k=>[k,0])));
+let types = load(LS.typeDedication, typeList.map(t=>({type:t,pct:0,potencial:50})) );
+let photo = localStorage.getItem(LS.uploadedImage) || "";
+
+// ---------- Helpers ----------
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function load(key, fallback){
+  const v = localStorage.getItem(key);
+  if(!v) return fallback;
+  try{ return JSON.parse(v); }catch{ return fallback; }
+}
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function sum(arr){ return arr.reduce((a,b)=>a+Number(b||0),0); }
+
+function refreshTrainerUI(){
+  nome.value = trainer.nome;
+  anos.value = trainer.anos;
+  dedGeral.value = trainer.dedicacaoGeral;
+  potGeral.value = trainer.potencialGeral;
+  diasHint.textContent = `Equivale a ${Math.max(0, Number(trainer.anos||0))*365} dias`;
+  imgPreview.src = photo ? photo : PLACEHOLDER;
+  imgPreview.alt = photo ? "Imagem do personagem" : "Anexar imagem";
+}
+
+function refreshLifeUI(){
+  lifeGrid.innerHTML = "";
+  lifeFields.forEach(k=>{
+    const rowLbl = document.createElement('div');
+    rowLbl.className = "lbl";
+    rowLbl.textContent = k;
+    const rowInp = document.createElement('div');
+    const inp = document.createElement('input');
+    inp.type = "number"; inp.className = "input"; inp.value = life[k]; inp.min=0; inp.max=100;
+    inp.addEventListener('input', e=>{
+      life[k] = clamp(Number(e.target.value||0), 0, 100);
+      save(LS.lifeDedication, life);
+      refreshLifeTotals();
+      refreshWeighted();
+    });
+    rowInp.appendChild(inp);
+    const pct = document.createElement('span'); pct.textContent = " %"; pct.className="muted"; pct.style.marginLeft="6px";
+    rowInp.appendChild(pct);
+    lifeGrid.appendChild(rowLbl);
+    lifeGrid.appendChild(rowInp);
+  });
+  refreshLifeTotals();
+  refreshWeighted();
+}
+
+function refreshLifeTotals(){
+  const total = sum(Object.values(life));
+  lifeBar.style.width = Math.min(100,total) + "%";
+  lifeBadge.textContent = `Total ${total}%`;
+  lifeBadge.className = "badge " + (total===100 ? "ok":"warn");
+  lifeWarn.style.display = total===100 ? "none":"block";
+  btnGerar.disabled = !(total===100 && sum(types.map(t=>t.pct))===100);
+}
+
+function refreshWeighted(){
+  const total = lifeFields.reduce((acc,k)=> acc + Number(life[k]||0) * Number(fixedWeights[k]||0), 0);
+  weighted.textContent = total.toFixed(2);
+}
+
+function option10to100(){
+  const f = document.createDocumentFragment();
+  for(let i=10;i<=100;i+=10){
+    const o = document.createElement('option');
+    o.value=i; o.textContent=i;
+    f.appendChild(o);
+  }
+  return f;
+}
+
+function refreshTypesUI(){
+  typesGrid.innerHTML = "";
+  types.forEach((t,idx)=>{
+    const card = document.createElement('div'); card.className="type-card";
+
+    const ico = document.createElement('div'); ico.className="type-ico"; ico.textContent = typeIcon[t.type] || "🔹";
+    const row = document.createElement('div'); row.className="type-row";
+
+    const name = document.createElement('div'); name.className="type-name"; name.textContent = t.type;
+    const pctBox = document.createElement('div'); pctBox.style.display="flex"; pctBox.style.alignItems="center"; pctBox.style.gap="6px"; pctBox.style.minWidth="0";
+    const pct = document.createElement('input'); pct.type="number"; pct.className="input"; pct.value=t.pct; pct.min=0; pct.max=100; pct.style.minWidth="0";
+    pct.addEventListener('input', e=>{
+      types[idx].pct = clamp(Number(e.target.value||0),0,100); save(LS.typeDedication, types); refreshTypeTotals();
+    });
+    const pctLbl = document.createElement('span'); pctLbl.textContent="%"; pctLbl.className="muted";
+    pctBox.appendChild(pct); pctBox.appendChild(pctLbl);
+
+    const pot = document.createElement('select'); pot.className="input"; pot.appendChild(option10to100()); pot.value=t.potencial; pot.style.minWidth="0";
+    pot.addEventListener('change', e=>{ types[idx].potencial = Number(e.target.value); save(LS.typeDedication, types); });
+
+    row.appendChild(name); row.appendChild(pctBox); row.appendChild(pot);
+    card.appendChild(ico); card.appendChild(row);
+    typesGrid.appendChild(card);
+  });
+  refreshTypeTotals();
+}
+
+function refreshTypeTotals(){
+  const total = sum(types.map(t=>t.pct));
+  typeBar.style.width = Math.min(100,total) + "%";
+  typeBadge.textContent = `Total ${total}%`;
+  typeBadge.className = "badge " + (total===100 ? "ok":"warn");
+  btnGerar.disabled = !(sum(Object.values(life))===100 && total===100);
+}
+
+// Config modal (pesos fixos, só leitura)
+function openConfig(){
+  const tbM = document.querySelector('#tblMasteries tbody'); tbM.innerHTML="";
+  masteries.forEach((m,i)=>{
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td');
+    const inp1 = document.createElement('input');
+    inp1.className="input"; inp1.value=m.name;
+    inp1.addEventListener('input',e=>{ masteries[i].name=e.target.value; save(LS.masteryLevels, masteries); });
+    td1.appendChild(inp1);
+    const td2 = document.createElement('td');
+    const inp2 = document.createElement('input');
+    inp2.type="number"; inp2.className="input"; inp2.value=m.value;
+    inp2.addEventListener('input',e=>{ masteries[i].value=Number(e.target.value||0); save(LS.masteryLevels, masteries); });
+    td2.appendChild(inp2);
+    tr.appendChild(td1); tr.appendChild(td2); tbM.appendChild(tr);
+  });
+
+  const tbP = document.querySelector('#tblPesos tbody'); tbP.innerHTML="";
+  lifeFields.forEach(k=>{
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.textContent=k;
+    const td2 = document.createElement('td'); td2.textContent = fixedWeights[k];
+    tr.appendChild(td1); tr.appendChild(td2); tbP.appendChild(tr);
+  });
+
+  dlg.showModal();
+}
+
+// Export desenhado em canvas (sem travessão no título)
+function roundedRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+async function gerarRegistro(){
+  const totalLife = sum(Object.values(life));
+  const totalTypes = sum(types.map(t=>t.pct));
+  if(totalLife!==100 || totalTypes!==100) return;
+
+  const W = 1600, H = 1200;
+  const cnv = document.createElement('canvas'); cnv.width=W; cnv.height=H;
+  const ctx = cnv.getContext('2d');
+
+  // Fundo
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#f8fafc'); g.addColorStop(1,'#e2e8f0');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // Header (sem travessão)
+  ctx.fillStyle = '#0f172a'; ctx.font = 'bold 40px Inter,Segoe UI,Arial'; ctx.fillText('Techterra - Registro de Maestria', 48, 70);
+  ctx.font = '16px Inter,Segoe UI,Arial'; ctx.fillStyle = '#64748b';
+  const indice = lifeFields.reduce((acc,k)=>acc + Number(life[k]||0)*Number(fixedWeights[k]||0), 0).toFixed(2);
+  ctx.fillText(`Indice ponderado: ${indice}`, 48, 100);
+
+  // Card perfil
+  roundedRect(ctx, 40, 130, 700, 400, 18);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.strokeStyle = '#dbe1ea'; ctx.stroke();
+
+  // Foto
+  const X=60,Y=150,S=160;
+  roundedRect(ctx, X-4,Y-4,S+8,S+8,16); ctx.fillStyle='#f1f5f9'; ctx.fill(); ctx.strokeStyle='#dbe1ea'; ctx.stroke();
+  if(photo){
+    const img = await new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.src=photo; });
+    ctx.save(); roundedRect(ctx, X, Y, S, S, 14); ctx.clip(); ctx.drawImage(img, X, Y, S, S); ctx.restore();
+  }else{
+    ctx.fillStyle = '#94a3b8'; ctx.font='bold 14px Inter,Arial'; ctx.fillText('Anexar imagem', X+18, Y+S/2+6);
+  }
+
+  // Textos perfil
+  ctx.fillStyle='#0f172a'; ctx.font='bold 28px Inter,Arial'; ctx.fillText(trainer.nome||'-', 240, 180);
+  ctx.font='16px Inter,Arial'; ctx.fillStyle='#334155';
+  ctx.fillText(`Anos de treinador: ${trainer.anos||0}  •  Dias: ${Math.max(0, Number(trainer.anos||0))*365}`, 240, 215);
+  ctx.fillText(`Dedicação geral: ${trainer.dedicacaoGeral||0}%  •  Potencial geral: ${trainer.potencialGeral||0}%`, 240, 245);
+
+  // Vida, duas colunas
+  let vx=60, vy=280; const vcol=330; const vline=28;
+  ctx.font='16px Inter,Arial'; ctx.fillStyle='#0f172a';
+  lifeFields.forEach((k,idx)=>{
+    const col = idx<5 ? 0:1;
+    const x = vx + col*vcol;
+    const y = vy + (idx%5)*vline;
+    ctx.fillText(`${k}: ${life[k]}%  (peso ${fixedWeights[k]})`, x, y);
+  });
+
+  // Card tipos
+  roundedRect(ctx, 780, 130, 780, 400, 18); ctx.fillStyle='#ffffff'; ctx.fill(); ctx.strokeStyle='#dbe1ea'; ctx.stroke();
+  ctx.fillStyle='#0f172a'; ctx.font='bold 20px Inter,Arial'; ctx.fillText('Maestria por tipo', 800, 170);
+  ctx.font='16px Inter,Arial'; ctx.fillStyle='#334155';
+  // 2 por linha
+  const startX=800, startY=200, colW=370, rowH=28;
+  types.forEach((t,i)=>{
+    const col = i%2; const row = Math.floor(i/2);
+    const x = startX + col*colW; const y = startY + row*rowH;
+    const ico = (typeIcon[t.type] || '🔹') + ' ';
+    ctx.fillText(`${ico}${t.type} - ${t.pct}% • Pot ${t.potencial}`, x, y);
+  });
+
+  // Rodapé
+  const dt = new Date().toLocaleString();
+  ctx.font='12px Inter,Arial'; ctx.fillStyle='#64748b';
+  ctx.fillText(`Gerado em ${dt}`, 48, H-32);
+
+  // Baixar
+  const url = cnv.toDataURL('image/jpeg', 0.95);
+  const a = document.createElement('a'); a.href=url; a.download=`techterra_registro_${Date.now()}.jpg`; a.click();
+}
+
+// ---------- Ligações de UI ----------
+const dlg = document.getElementById('dlg');
+btnConfig.addEventListener('click', openConfig);
+dlg.addEventListener('close', ()=>{});
+
+// Upload
+imgInput.addEventListener('change', e=>{
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    photo = reader.result;
+    localStorage.setItem(LS.uploadedImage, photo);
+    imgPreview.src = photo;
+  };
+  reader.readAsDataURL(f);
+});
+
+// Inputs simples
+nome.addEventListener('input', e=>{ trainer.nome=e.target.value; save(LS.trainerPanel, trainer); });
+anos.addEventListener('input', e=>{ trainer.anos=clamp(Number(e.target.value||0),0,999); save(LS.trainerPanel, trainer); refreshTrainerUI(); });
+dedGeral.addEventListener('input', e=>{ trainer.dedicacaoGeral=clamp(Number(e.target.value||0),0,100); save(LS.trainerPanel, trainer); });
+potGeral.addEventListener('input', e=>{ trainer.potencialGeral=clamp(Number(e.target.value||0),0,100); save(LS.trainerPanel, trainer); });
+
+btnGerar.addEventListener('click', gerarRegistro);
+
+// Inicialização
+refreshTrainerUI();
+refreshLifeUI();
+refreshTypesUI();
+
+</script>
+</body>
+</html>
