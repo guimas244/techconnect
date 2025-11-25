@@ -85,7 +85,7 @@ class DriveClientFactory {
       print('❌ [DEBUG] Erro na autenticação: $e');
       print('❌ [DEBUG] SOLUÇÃO: Configure o SHA-1 fingerprint no Google Cloud Console');
       print('❌ [DEBUG] SHA-1: EE:9D:36:26:2A:AE:45:A8:00:71:22:39:A0:E1:C5:6D:39:1F:3F:1F');
-      print('❌ [DEBUG] Package: com.example.techconnect');
+      print('❌ [DEBUG] Package: com.guimas.mybestiary');
       rethrow;
     }
   }

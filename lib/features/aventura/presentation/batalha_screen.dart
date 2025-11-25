@@ -141,16 +141,24 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   void _inicializarBatalha() {
     print('??? [BatalhaScreen] Inicializando batalha...');
-    
+
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
-    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0);
-    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0);
-    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0);
-    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0);
+
+    // Carrega bônus de progressão para o tipo do jogador
+    final bonusProgresso = ref.read(progressoBonusStateProvider);
+    final bonusTipo = bonusProgresso[widget.jogador.tipo] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+
+    print('?? [Progressão] Bônus para tipo ${widget.jogador.tipo.displayName}: HP+${bonusTipo['HP']} ATK+${bonusTipo['ATK']} DEF+${bonusTipo['DEF']} SPD+${bonusTipo['SPD']}');
+
+    // Aplica bônus do item + bônus de progressão
+    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0) + (bonusTipo['ATK'] ?? 0);
+    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0) + (bonusTipo['DEF'] ?? 0);
+    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
+    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
     final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
-    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0);
+    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + (bonusTipo['SPD'] ?? 0);
 
     // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
@@ -175,8 +183,8 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Determina quem começa baseado na agilidade
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
-    
-    print('?? [Stats] Jogador: ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
+
+    print('?? [Stats] Jogador: ATK=$ataqueComItem (base:${widget.jogador.ataque} item:${item?.ataque ?? 0} prog:${bonusTipo['ATK']}) DEF=$defesaComItem (base:${widget.jogador.defesa} item:${item?.defesa ?? 0} prog:${bonusTipo['DEF']}) HP=$vidaAtualComItem/$vidaComItem (base:${widget.jogador.vida} item:${item?.vida ?? 0} prog:${bonusTipo['HP']}) AGI=$agilidadeComItem (base:${widget.jogador.agilidade} item:${item?.agilidade ?? 0} prog:${bonusTipo['SPD']})');
     print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
