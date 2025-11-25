@@ -27,6 +27,7 @@ class RecompensasBatalha {
 
   final int moedaEvento; // Quantidade de moedas de evento recebidas (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave recebidas
+  final int planis; // Quantidade de Planis (moeda do Criadouro)
 
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
@@ -44,6 +45,7 @@ class RecompensasBatalha {
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
+    this.planis = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -54,6 +56,7 @@ class RecompensasBatalha {
   bool get temEquipamentoOuMagia => temEquipamento || temMagia;
   bool get temItensConsumiveis => itensConsumiveisRecebidos.isNotEmpty;
   bool get temMoedaEvento => moedaEvento > 0;
+  bool get temPlanis => planis > 0;
 }
 
 class ModalRecompensasBatalha extends StatefulWidget {
@@ -69,6 +72,7 @@ class ModalRecompensasBatalha extends StatefulWidget {
     Set<int> slotsParaLiberar,
     int moedaEvento,
     int moedaChave,
+    int planis,
   ) onGuardarItensNaMochila;
   final Future<void> Function() onConcluir;
 
@@ -359,14 +363,15 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     });
 
     try {
-      // SEMPRE salva se tiver moedas de evento/chave, mesmo que descarte todos os itens
-      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0) {
+      // SEMPRE salva se tiver moedas de evento/chave/planis, mesmo que descarte todos os itens
+      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0 || widget.recompensas.planis > 0) {
         print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
           widget.recompensas.moedaEvento,
           widget.recompensas.moedaChave,
+          widget.recompensas.planis,
         );
         print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
       } else {
@@ -2546,6 +2551,12 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             const SizedBox(height: 8),
           ],
 
+          // Planis (sempre coletada, não pode ser descartada)
+          if (widget.recompensas.planis > 0) ...[
+            _buildPlanisCard(),
+            const SizedBox(height: 8),
+          ],
+
           // Lista vertical de drops (não grid)
           if (temItens)
             ListView.separated(
@@ -2954,6 +2965,125 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                   ),
                   child: const Text(
                     'ÉPICO',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanisCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9), // Fundo verde claro
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFF4CAF50), // Verde
+          width: 3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Ícone da Planis (emoji de planta/semente)
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: Text(
+                '🌱',
+                style: TextStyle(fontSize: 36),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Informações da Planis
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ícone de coletado + Nome
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    const Expanded(
+                      child: Text(
+                        'Planis',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    // Quantidade
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'x${widget.recompensas.planis}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Descrição
+                const Text(
+                  'Moeda do Criadouro! Use para comprar itens e cuidar do seu mascote.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Tag de raridade
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'CRIADOURO',
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,

@@ -396,6 +396,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
                     children: [
+                      // 1. Aventura
                       _buildMenuCard(
                         icon: Icons.explore,
                         label: 'Aventura',
@@ -423,18 +424,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           }
                         } : null,
                       ),
+                      // 2. Criação (Criadouro)
+                      _buildMenuCard(
+                        icon: Icons.pets,
+                        label: 'Criação',
+                        color: _isDriveConnected ? const Color(0xFF9C27B0) : Colors.grey,
+                        onTap: _isDriveConnected ? () => context.go('/criadouro') : null,
+                      ),
+                      // 3. Ranking
                       _buildMenuCard(
                         icon: Icons.leaderboard,
                         label: 'Ranking',
                         color: _isDriveConnected ? const Color(0xFFE53E3E) : Colors.grey,
                         onTap: _isDriveConnected ? () => context.go('/ranking') : null,
                       ),
+                      // 4. Admin
                       _buildMenuCard(
                         icon: Icons.admin_panel_settings,
                         label: 'Admin',
                         color: _isDriveConnected ? const Color(0xFF3182CE) : Colors.grey,
                         onTap: _isDriveConnected ? () => context.go('/admin') : null,
                       ),
+                      // 5. Jogador
                       _buildMenuCard(
                         icon: Icons.person,
                         label: 'Jogador',

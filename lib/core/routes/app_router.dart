@@ -9,6 +9,7 @@ import '../../features/aventura/presentation/admin_drops_screen.dart';
 import '../../features/aventura/presentation/mapa_aventura_screen.dart';
 import '../../features/aventura/presentation/ranking_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/criadouro/presentation/criadouro_screen.dart';
 import '../../features/jogador/presentation/colecao_screen.dart';
 import '../../features/jogador/presentation/jogador_screen.dart';
 import '../../features/jogador/presentation/vantagens_screen.dart';
@@ -45,6 +46,10 @@ class AppRouter {
       GoRoute(
         path: AppConstants.rankingRoute,
         builder: (context, state) => const RankingScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.criadouroRoute,
+        builder: (context, state) => const CriadouroScreen(),
       ),
       GoRoute(
         path: AppConstants.adminRoute,

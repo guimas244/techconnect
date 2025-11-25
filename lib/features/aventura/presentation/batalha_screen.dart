@@ -38,6 +38,7 @@ import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
 import 'modal_monstro_aventura.dart';
 import 'modal_vidinha_utilizada.dart';
+import '../../criadouro/providers/criadouro_provider.dart';
 
 class _ResultadoEvolucao {
   final HistoriaJogador historiaAtualizada;
@@ -63,6 +64,7 @@ class _DropResultado {
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave
+  final int planis; // Quantidade de Planis (moeda do Criadouro)
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
 
@@ -76,6 +78,7 @@ class _DropResultado {
     this.consumiveis = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
+    this.planis = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -213,31 +216,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   Future<void> _inicializarBatalha() async {
     print('??? [BatalhaScreen] Inicializando batalha...');
 
-<<<<<<< HEAD
-=======
     // ROUND 0: Carregar bônus de progressão
     await _carregarBonusProgressao();
-    
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
+
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
 
-<<<<<<< HEAD
-    // Carrega bônus de progressão para o tipo do jogador
-    final bonusProgresso = ref.read(progressoBonusStateProvider);
-    final bonusTipo = bonusProgresso[widget.jogador.tipo] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
-
-    print('?? [Progressão] Bônus para tipo ${widget.jogador.tipo.displayName}: HP+${bonusTipo['HP']} ATK+${bonusTipo['ATK']} DEF+${bonusTipo['DEF']} SPD+${bonusTipo['SPD']}');
-
-    // Aplica bônus do item + bônus de progressão
-    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0) + (bonusTipo['ATK'] ?? 0);
-    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0) + (bonusTipo['DEF'] ?? 0);
-    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
-    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
-    final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
-    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + (bonusTipo['SPD'] ?? 0);
-=======
     // ROUND 0: Aplica bônus de progressão + item
     final bonusHP = bonusProgressao['HP'] ?? 0;
     final bonusATK = bonusProgressao['ATK'] ?? 0;
@@ -250,7 +235,6 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + bonusHP;
     final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
     final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + bonusSPD;
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
 
     // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
@@ -277,11 +261,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
 
-<<<<<<< HEAD
-    print('?? [Stats] Jogador: ATK=$ataqueComItem (base:${widget.jogador.ataque} item:${item?.ataque ?? 0} prog:${bonusTipo['ATK']}) DEF=$defesaComItem (base:${widget.jogador.defesa} item:${item?.defesa ?? 0} prog:${bonusTipo['DEF']}) HP=$vidaAtualComItem/$vidaComItem (base:${widget.jogador.vida} item:${item?.vida ?? 0} prog:${bonusTipo['HP']}) AGI=$agilidadeComItem (base:${widget.jogador.agilidade} item:${item?.agilidade ?? 0} prog:${bonusTipo['SPD']})');
-=======
     print('?? [Stats] Jogador (COM BÔNUS): ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
     print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
@@ -1430,7 +1410,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           onDescartarMagia: (magia) async {
             print('[BatalhaScreen] Magia descartada: ${magia.nome}');
           },
-          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave) =>
+          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave, planis) =>
               _guardarItensNaMochila(
                 pacote.emailJogador,
                 pacote.mochila,
@@ -1438,6 +1418,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 slots,
                 moedaEvento: moedaEvento,
                 moedaChave: moedaChave,
+                planis: planis,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
         ),
@@ -1491,6 +1472,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
       moedaChave: drop.moedaChave,
+      planis: drop.planis, // Moeda do Criadouro
       dropsDoSortudo: drop.dropsDoSortudo,
       superDrop: drop.superDrop,
     );
@@ -1755,6 +1737,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final planis = resultadoRecompensas['planis'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       if (item != null) {
@@ -1767,6 +1750,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
+          planis: planis,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -1785,6 +1769,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
+          planis: planis,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -1800,6 +1785,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final planis = resultadoRecompensas['planis'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
@@ -1811,6 +1797,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
         moedaChave: moedaChave,
+        planis: planis,
         dropsDoSortudo: dropsDoSortudo,
         superDrop: superDrop,
       );
@@ -1825,9 +1812,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
     final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
     final moedaChave = resultadoRecompensas['moedaChave'] as int;
+    final planis = resultadoRecompensas['planis'] as int;
     final superDrop = resultadoRecompensas['superDrop'] as bool;
 
-    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop');
+    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, planis: $planis, superDrop: $superDrop');
 
     return _DropResultado(
       itens: itens,
@@ -1835,6 +1823,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
       moedaChave: moedaChave,
+      planis: planis,
       dropsDoSortudo: dropsDoSortudo,
       superDrop: superDrop,
     );
@@ -1912,12 +1901,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Set<int> slotsParaLiberar, {
     int moedaEvento = 0,
     int moedaChave = 0,
+    int planis = 0,
   }) async {
-    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave');
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave + $planis planis');
 
-    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0) {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0 && planis == 0) {
       print('[BatalhaScreen] Nenhum drop para salvar');
       return;
+    }
+
+    // Adiciona Planis ao Criadouro
+    if (planis > 0) {
+      print('[BatalhaScreen] 🌱 Adicionando $planis Planis ao Criadouro');
+      ref.read(criadouroProvider.notifier).adicionarPlanis(planis);
+      print('[BatalhaScreen] ✅ Planis adicionados!');
     }
 
     // Inicia com a mochila base
