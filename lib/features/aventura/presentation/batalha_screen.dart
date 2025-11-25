@@ -64,7 +64,7 @@ class _DropResultado {
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave
-  final int planis; // Quantidade de Planis (moeda do Criadouro)
+  final int teks; // Quantidade de Teks (moeda do Criadouro)
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
 
@@ -78,7 +78,7 @@ class _DropResultado {
     this.consumiveis = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
-    this.planis = 0,
+    this.teks = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -1410,7 +1410,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           onDescartarMagia: (magia) async {
             print('[BatalhaScreen] Magia descartada: ${magia.nome}');
           },
-          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave, planis) =>
+          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave, teks) =>
               _guardarItensNaMochila(
                 pacote.emailJogador,
                 pacote.mochila,
@@ -1418,7 +1418,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 slots,
                 moedaEvento: moedaEvento,
                 moedaChave: moedaChave,
-                planis: planis,
+                teks: teks,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
         ),
@@ -1472,7 +1472,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
       moedaChave: drop.moedaChave,
-      planis: drop.planis, // Moeda do Criadouro
+      teks: drop.teks, // Moeda do Criadouro
       dropsDoSortudo: drop.dropsDoSortudo,
       superDrop: drop.superDrop,
     );
@@ -1737,7 +1737,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
-      final planis = resultadoRecompensas['planis'] as int;
+      final teks = resultadoRecompensas['teks'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       if (item != null) {
@@ -1750,7 +1750,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
-          planis: planis,
+          teks: teks,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -1769,7 +1769,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
-          planis: planis,
+          teks: teks,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -1785,7 +1785,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
-      final planis = resultadoRecompensas['planis'] as int;
+      final teks = resultadoRecompensas['teks'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
@@ -1797,7 +1797,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
         moedaChave: moedaChave,
-        planis: planis,
+        teks: teks,
         dropsDoSortudo: dropsDoSortudo,
         superDrop: superDrop,
       );
@@ -1812,10 +1812,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
     final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
     final moedaChave = resultadoRecompensas['moedaChave'] as int;
-    final planis = resultadoRecompensas['planis'] as int;
+    final teks = resultadoRecompensas['teks'] as int;
     final superDrop = resultadoRecompensas['superDrop'] as bool;
 
-    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, planis: $planis, superDrop: $superDrop');
+    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, teks: $teks, superDrop: $superDrop');
 
     return _DropResultado(
       itens: itens,
@@ -1823,7 +1823,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
       moedaChave: moedaChave,
-      planis: planis,
+      teks: teks,
       dropsDoSortudo: dropsDoSortudo,
       superDrop: superDrop,
     );
@@ -1901,20 +1901,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Set<int> slotsParaLiberar, {
     int moedaEvento = 0,
     int moedaChave = 0,
-    int planis = 0,
+    int teks = 0,
   }) async {
-    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave + $planis planis');
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave + $teks teks');
 
-    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0 && planis == 0) {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0 && teks == 0) {
       print('[BatalhaScreen] Nenhum drop para salvar');
       return;
     }
 
-    // Adiciona Planis ao Criadouro
-    if (planis > 0) {
-      print('[BatalhaScreen] 🌱 Adicionando $planis Planis ao Criadouro');
-      ref.read(criadouroProvider.notifier).adicionarPlanis(planis);
-      print('[BatalhaScreen] ✅ Planis adicionados!');
+    // Adiciona Teks ao Criadouro
+    if (teks > 0) {
+      print('[BatalhaScreen] 🌱 Adicionando $teks Teks ao Criadouro');
+      ref.read(criadouroProvider.notifier).adicionarTeks(teks);
+      print('[BatalhaScreen] ✅ Teks adicionados!');
     }
 
     // Inicia com a mochila base

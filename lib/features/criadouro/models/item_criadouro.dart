@@ -12,6 +12,7 @@ class ItemCriadouro {
   final TipoEfeito? tipoEfeitoExtra; // Efeito secundário opcional
   final double? valorEfeitoExtra;
   final String? descricao;
+  final String? iconPath; // Caminho da imagem do item (opcional)
 
   const ItemCriadouro({
     required this.id,
@@ -23,6 +24,7 @@ class ItemCriadouro {
     this.tipoEfeitoExtra,
     this.valorEfeitoExtra,
     this.descricao,
+    this.iconPath,
   });
 
   factory ItemCriadouro.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class ItemCriadouro {
           ? (json['valorEfeitoExtra'] as num).toDouble()
           : null,
       descricao: json['descricao'] as String?,
+      iconPath: json['iconPath'] as String?,
     );
   }
 
@@ -60,6 +63,7 @@ class ItemCriadouro {
       if (tipoEfeitoExtra != null) 'tipoEfeitoExtra': tipoEfeitoExtra!.name,
       if (valorEfeitoExtra != null) 'valorEfeitoExtra': valorEfeitoExtra,
       if (descricao != null) 'descricao': descricao,
+      if (iconPath != null) 'iconPath': iconPath,
     };
   }
 
@@ -81,36 +85,31 @@ class ItensCriadouro {
   static const List<ItemCriadouro> todos = [
     // 🍖 Alimentação
     ItemCriadouro(
-      id: 'racao_basica',
-      nome: 'Ração Básica',
+      id: 'estiga',
+      nome: 'Estiga',
       categoria: CategoriaItem.alimentacao,
       preco: 5,
       tipoEfeito: TipoEfeito.fome,
       valorEfeito: 20,
+      iconPath: 'assets/criadouro/comidas/comida_basica.png',
     ),
     ItemCriadouro(
-      id: 'racao_premium',
-      nome: 'Ração Premium',
+      id: 'refeicao_basica',
+      nome: 'Refeição Básica',
       categoria: CategoriaItem.alimentacao,
       preco: 15,
       tipoEfeito: TipoEfeito.fome,
       valorEfeito: 50,
+      iconPath: 'assets/criadouro/comidas/comida_media.png',
     ),
     ItemCriadouro(
-      id: 'banquete',
-      nome: 'Banquete',
+      id: 'refeicao_avancada',
+      nome: 'Refeição Avançada',
       categoria: CategoriaItem.alimentacao,
       preco: 30,
       tipoEfeito: TipoEfeito.fome,
       valorEfeito: 100,
-    ),
-    ItemCriadouro(
-      id: 'nuty',
-      nome: 'Nuty',
-      categoria: CategoriaItem.alimentacao,
-      preco: 3,
-      tipoEfeito: TipoEfeito.fome,
-      valorEfeito: 10,
+      iconPath: 'assets/criadouro/comidas/comida_avancada.png',
     ),
 
     // 💧 Hidratação
@@ -118,55 +117,24 @@ class ItensCriadouro {
       id: 'agua',
       nome: 'Água',
       categoria: CategoriaItem.hidratacao,
-      preco: 3,
+      preco: 1,
       tipoEfeito: TipoEfeito.sede,
       valorEfeito: 20,
-    ),
-    ItemCriadouro(
-      id: 'suco_natural',
-      nome: 'Suco Natural',
-      categoria: CategoriaItem.hidratacao,
-      preco: 8,
-      tipoEfeito: TipoEfeito.sede,
-      valorEfeito: 40,
-    ),
-    ItemCriadouro(
-      id: 'bebida_energetica',
-      nome: 'Bebida Energética',
-      categoria: CategoriaItem.hidratacao,
-      preco: 20,
-      tipoEfeito: TipoEfeito.sede,
-      valorEfeito: 80,
+      iconPath: 'assets/criadouro/comidas/mantimento_agua.png',
     ),
 
     // 💊 Medicamentos
     ItemCriadouro(
-      id: 'remedio_basico',
-      nome: 'Remédio Básico',
-      categoria: CategoriaItem.medicamento,
-      preco: 25,
-      tipoEfeito: TipoEfeito.curarDoenca,
-      valorEfeito: 0,
-      descricao: 'Cura qualquer doença',
-    ),
-    ItemCriadouro(
-      id: 'kit_primeiros_socorros',
-      nome: 'Kit Primeiros Socorros',
+      id: 'curandeiro',
+      nome: 'Curandeiro',
       categoria: CategoriaItem.medicamento,
       preco: 50,
-      tipoEfeito: TipoEfeito.curarDoenca,
-      valorEfeito: 0,
-      tipoEfeitoExtra: TipoEfeito.saude,
-      valorEfeitoExtra: 30,
-      descricao: 'Cura doença e restaura saúde',
-    ),
-    ItemCriadouro(
-      id: 'vitaminas',
-      nome: 'Vitaminas',
-      categoria: CategoriaItem.medicamento,
-      preco: 15,
       tipoEfeito: TipoEfeito.saude,
-      valorEfeito: 20,
+      valorEfeito: 100,
+      tipoEfeitoExtra: TipoEfeito.curarDoenca,
+      valorEfeitoExtra: 0,
+      descricao: 'Cura completa do mascote',
+      iconPath: 'assets/criadouro/comidas/npc_curandeiro.png',
     ),
 
     // 🧼 Higiene
@@ -199,36 +167,22 @@ class ItensCriadouro {
 
     // 🎾 Brinquedos
     ItemCriadouro(
-      id: 'bolinha',
-      nome: 'Bolinha',
+      id: 'carinho',
+      nome: 'Carinho',
       categoria: CategoriaItem.brinquedo,
-      preco: 10,
+      preco: 5,
       tipoEfeito: TipoEfeito.alegria,
-      valorEfeito: 15,
+      valorEfeito: 20,
+      iconPath: 'assets/criadouro/comidas/acao_carinho.png',
     ),
     ItemCriadouro(
-      id: 'osso',
-      nome: 'Osso',
+      id: 'brinquedo',
+      nome: 'Brinquedo',
       categoria: CategoriaItem.brinquedo,
-      preco: 12,
-      tipoEfeito: TipoEfeito.alegria,
-      valorEfeito: 15,
-    ),
-    ItemCriadouro(
-      id: 'brinquedo_squeaky',
-      nome: 'Brinquedo Squeaky',
-      categoria: CategoriaItem.brinquedo,
-      preco: 20,
-      tipoEfeito: TipoEfeito.alegria,
-      valorEfeito: 25,
-    ),
-    ItemCriadouro(
-      id: 'brinquedo_premium',
-      nome: 'Brinquedo Premium',
-      categoria: CategoriaItem.brinquedo,
-      preco: 40,
+      preco: 15,
       tipoEfeito: TipoEfeito.alegria,
       valorEfeito: 40,
+      iconPath: 'assets/criadouro/comidas/acao_brinquedo.png',
     ),
   ];
 

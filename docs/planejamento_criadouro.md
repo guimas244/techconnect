@@ -11,8 +11,8 @@
 3. [Sistema de Necessidades](#sistema-de-necessidades)
 4. [Sistema de Doença](#sistema-de-doença)
 5. [Sistema de Morte](#sistema-de-morte)
-6. [Economia - Planis](#economia---planis)
-7. [Loja do Criadouro](#loja-do-criadouro)
+6. [Economia - Teks](#economia---teks)
+7. [Loja do Criador](#loja-do-criador)
 8. [Interações](#interações)
 9. [Interface do Usuário](#interface-do-usuário)
 10. [Notificações](#notificações)
@@ -217,18 +217,18 @@ O mascote morre quando **qualquer barra chega a 0%** e permanece assim por **3 h
 
 ---
 
-## 💰 Economia - Planis
+## 💰 Economia - Teks
 
-### O que são Planis?
+### O que são Teks?
 
-**Planis** é a moeda exclusiva do Criadouro, usada para comprar itens na Loja do Criadouro.
+**Teks** é a moeda exclusiva do Criadouro, usada para comprar itens na Loja do Criador.
 
 ### Como Ganhar
 
 | Fonte | Chance | Quantidade |
 |-------|--------|------------|
-| Batalha (Andares 1-49) | Mesma chance da chave (x2) | 1-3 Planis |
-| Batalha (Andares 50+) | Chance da chave (x3) | 2-5 Planis |
+| Batalha (Andares 1-49) | Mesma chance da chave (x2) | 1-3 Teks |
+| Batalha (Andares 50+) | Chance da chave (x3) | 2-5 Teks |
 
 ### Características
 - **Rara** - não é fácil de conseguir
@@ -237,12 +237,12 @@ O mascote morre quando **qualquer barra chega a 0%** e permanece assim por **3 h
 
 ---
 
-## 🏪 Loja do Criadouro
+## 🏪 Loja do Criador
 
 ### Categorias de Itens
 
 #### 🍖 Alimentação
-| Item | Preço (Planis) | Efeito |
+| Item | Preço (Teks) | Efeito |
 |------|----------------|--------|
 | Ração Básica | 5 | +20% Fome |
 | Ração Premium | 15 | +50% Fome |
@@ -250,28 +250,28 @@ O mascote morre quando **qualquer barra chega a 0%** e permanece assim por **3 h
 | Nutys (todas) | 3 | +10% Fome |
 
 #### 💧 Hidratação
-| Item | Preço (Planis) | Efeito |
+| Item | Preço (Teks) | Efeito |
 |------|----------------|--------|
 | Água | 3 | +20% Sede |
 | Suco Natural | 8 | +40% Sede |
 | Bebida Energética | 20 | +80% Sede |
 
 #### 💊 Medicamentos
-| Item | Preço (Planis) | Efeito |
+| Item | Preço (Teks) | Efeito |
 |------|----------------|--------|
 | Remédio Básico | 25 | Cura doença |
 | Kit Primeiros Socorros | 50 | Cura doença + 30% Saúde |
 | Vitaminas | 15 | +20% Saúde |
 
 #### 🧼 Higiene
-| Item | Preço (Planis) | Efeito |
+| Item | Preço (Teks) | Efeito |
 |------|----------------|--------|
 | Sabonete | 5 | +30% Higiene |
 | Kit Banho Completo | 15 | +70% Higiene |
 | Perfume | 10 | +20% Higiene + 5% Alegria |
 
 #### 🎾 Brinquedos
-| Item | Preço (Planis) | Efeito |
+| Item | Preço (Teks) | Efeito |
 |------|----------------|--------|
 | Bolinha | 10 | +15% Alegria |
 | Osso | 12 | +15% Alegria |
@@ -344,7 +344,7 @@ O mascote morre quando **qualquer barra chega a 0%** e permanece assim por **3 h
 │                                                              │
 │  [🏪 Loja]  [⚙️ Config]  [📜 Memorial]                      │
 │                                                              │
-│                    💰 150 Planis                             │
+│                    💰 150 Teks                               │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -399,8 +399,8 @@ O jogador pode configurar **quando receber notificações** para cada barra:
 
 | Item | Drop | Andares |
 |------|------|---------|
-| Planis | Chance x2 da chave | 1-49 |
-| Planis | Chance x3 da chave | 50+ |
+| Teks | Chance x2 da chave | 1-49 |
+| Teks | Chance x3 da chave | 50+ |
 | Nutys | Drop normal | Todos |
 
 ### Fluxo de Integração
@@ -411,7 +411,7 @@ O jogador pode configurar **quando receber notificações** para cada barra:
 │   AVENTURA                          CRIADOURO               │
 │   ────────                          ─────────               │
 │                                                              │
-│   Batalha ──────► Drop Planis ──────► Loja                  │
+│   Batalha ──────► Drop Teks ──────► Loja                    │
 │      │                                  │                    │
 │      │                                  ▼                    │
 │      └──────► Drop Nutys ──────► Alimentar Mascote          │

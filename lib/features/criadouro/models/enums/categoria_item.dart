@@ -1,4 +1,4 @@
-/// Categorias de itens disponíveis na Loja do Criadouro
+/// Categorias de itens disponíveis na Loja do Criador
 enum CategoriaItem {
   alimentacao('🍖', 'Alimentação'),
   hidratacao('💧', 'Hidratação'),

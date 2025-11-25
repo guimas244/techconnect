@@ -110,7 +110,7 @@ lib/features/criadouro/
   - 🍖 Alimentar, 💧 Dar Água, 💊 Medicar
 - [ ] Implementar navegação
   - 🏪 Loja, ⚙️ Config, 📜 Memorial
-- [ ] Exibir saldo de Planis
+- [ ] Exibir saldo de Teks
 - [ ] Implementar estados visuais especiais
   - Doente: visual diferenciado 🤢
   - Crítico: alertas visuais ☠️
@@ -157,9 +157,9 @@ lib/features/criadouro/
 
 ---
 
-### Task 5: Criar Tela da Loja do Criadouro
+### Task 5: Criar Tela da Loja do Criador
 **Status**: ⬜ Pendente
-**Referência**: [Loja do Criadouro](planejamento_criadouro.md#loja-do-criadouro)
+**Referência**: [Loja do Criador](planejamento_criadouro.md#loja-do-criador)
 
 #### Subtarefas:
 - [ ] Criar `LojaCriadouroScreen`
@@ -173,10 +173,10 @@ lib/features/criadouro/
   - Nome, preço, efeito
   - Botão de compra
 - [ ] Implementar lógica de compra
-  - Verificar saldo de Planis
+  - Verificar saldo de Teks
   - Adicionar item ao inventário
-  - Deduzir Planis
-- [ ] Exibir saldo de Planis no header
+  - Deduzir Teks
+- [ ] Exibir saldo de Teks no header
 - [ ] Implementar feedback de compra (sucesso/erro)
 
 #### Itens da loja (conforme planejamento):
@@ -196,7 +196,7 @@ lib/features/criadouro/
 │   ├── widgets/
 │   │   ├── categoria_tab.dart
 │   │   ├── item_loja_card.dart
-│   │   └── saldo_planis_header.dart
+│   │   └── saldo_teks_header.dart
 ```
 
 ---
@@ -255,27 +255,27 @@ lib/features/criadouro/
 
 ---
 
-### Task 8: Integrar Drop de Planis no Aventura
+### Task 8: Integrar Drop de Teks no Aventura
 **Status**: ⬜ Pendente
-**Referência**: [Economia - Planis](planejamento_criadouro.md#economia---planis), [Integração com Aventura](planejamento_criadouro.md#integração-com-aventura)
+**Referência**: [Economia - Teks](planejamento_criadouro.md#economia---teks), [Integração com Aventura](planejamento_criadouro.md#integração-com-aventura)
 
 #### Subtarefas:
-- [ ] Adicionar `planis` ao modelo de recompensas de batalha
+- [ ] Adicionar `teks` ao modelo de recompensas de batalha
 - [ ] Implementar lógica de drop
   - Andares 1-49: chance = `chave * 2`
   - Andares 50+: chance = `chave * 3`
 - [ ] Implementar quantidade de drop
-  - Andares 1-49: 1-3 Planis
-  - Andares 50+: 2-5 Planis
-- [ ] Exibir Planis ganhos na tela de vitória
+  - Andares 1-49: 1-3 Teks
+  - Andares 50+: 2-5 Teks
+- [ ] Exibir Teks ganhos na tela de vitória
 - [ ] Atualizar saldo no CriadouroProvider
 
 #### Arquivos a modificar:
 ```
 lib/features/aventura/
-├── domain/models/batalha_reward.dart  (adicionar planis)
+├── domain/models/batalha_reward.dart  (adicionar teks)
 ├── application/batalha_provider.dart  (lógica de drop)
-├── presentation/vitoria_screen.dart   (exibir planis)
+├── presentation/vitoria_screen.dart   (exibir teks)
 ```
 
 ---
@@ -309,7 +309,7 @@ lib/features/home/
 - [ ] Criar `CriadouroRepository`
 - [ ] Implementar salvamento local (SharedPreferences ou Hive)
 - [ ] Implementar sincronização com Google Drive
-  - Salvar: mascote atual, memorial, config, inventário, planis
+  - Salvar: mascote atual, memorial, config, inventário, teks
 - [ ] Implementar carregamento ao iniciar app
 - [ ] Implementar cálculo de degradação offline
   - Usar horário da internet (NTP)
@@ -397,7 +397,7 @@ lib/features/criadouro/
 │       ├── mascote_preview.dart
 │       ├── categoria_tab.dart
 │       ├── item_loja_card.dart
-│       ├── saldo_planis_header.dart
+│       ├── saldo_teks_header.dart
 │       ├── mascote_morto_card.dart
 │       └── notificacao_slider.dart
 ```
@@ -421,7 +421,7 @@ lib/features/criadouro/
 │                                                              │
 │  FASE 3 - Features Secundárias                              │
 │  ────────────────────────────                               │
-│  Task 5 (Loja) ──► Task 8 (Planis Aventura)                 │
+│  Task 5 (Loja) ──► Task 8 (Teks Aventura)                   │
 │                                                              │
 │  FASE 4 - Complementos                                      │
 │  ─────────────────────                                      │

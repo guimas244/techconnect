@@ -13,6 +13,8 @@ class LojaCriadouroScreen extends ConsumerStatefulWidget {
 
 class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
     with SingleTickerProviderStateMixin {
+  static const String _moedaPath = 'assets/criadouro/comidas/moeda_criador.png';
+
   late TabController _tabController;
 
   final List<CategoriaItem> _categorias = CategoriaItem.values;
@@ -31,19 +33,13 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
 
   @override
   Widget build(BuildContext context) {
-    final planis = ref.watch(planisProvider);
+    final teks = ref.watch(teksProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('🏪 ', style: TextStyle(fontSize: 24)),
-            Text('Loja do Criadouro'),
-          ],
-        ),
+        title: const Text('Loja do Criador'),
         actions: [
-          // Saldo de Planis
+          // Saldo de Teks
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             margin: const EdgeInsets.only(right: 8),
@@ -54,10 +50,10 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('💰', style: TextStyle(fontSize: 16)),
+                Image.asset(_moedaPath, width: 18, height: 18),
                 const SizedBox(width: 4),
                 Text(
-                  '$planis',
+                  '$teks',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -84,7 +80,7 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
 
   Widget _buildListaItens(CategoriaItem categoria) {
     final itens = ItensCriadouro.porCategoria(categoria);
-    final planis = ref.watch(planisProvider);
+    final teks = ref.watch(teksProvider);
     final inventario = ref.watch(inventarioProvider);
 
     return ListView.builder(
@@ -92,7 +88,7 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
       itemCount: itens.length,
       itemBuilder: (context, index) {
         final item = itens[index];
-        final podeComprar = planis >= item.preco;
+        final podeComprar = teks >= item.preco;
         final quantidade = inventario.quantidadeDeItem(item.id);
 
         return Card(
@@ -105,10 +101,24 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
-                child: Text(
-                  item.emoji,
-                  style: const TextStyle(fontSize: 28),
-                ),
+                child: item.iconPath != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.asset(
+                          item.iconPath!,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Text(
+                            item.emoji,
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        item.emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
               ),
             ),
             title: Row(
@@ -164,7 +174,7 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('💰', style: TextStyle(fontSize: 14)),
+                  Image.asset(_moedaPath, width: 16, height: 16),
                   const SizedBox(width: 4),
                   Text(
                     '${item.preco}',
@@ -187,7 +197,16 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text(item.emoji, style: const TextStyle(fontSize: 24)),
+            if (item.iconPath != null)
+              Image.asset(
+                item.iconPath!,
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 24)),
+              )
+            else
+              Text(item.emoji, style: const TextStyle(fontSize: 24)),
             const SizedBox(width: 8),
             Expanded(child: Text('Comprar ${item.nome}?')),
           ],
@@ -201,9 +220,9 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
             Row(
               children: [
                 const Text('Preço: '),
-                const Text('💰', style: TextStyle(fontSize: 16)),
+                Image.asset(_moedaPath, width: 18, height: 18),
                 Text(
-                  ' ${item.preco} Planis',
+                  ' ${item.preco} Teks',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -230,7 +249,7 @@ class _LojaCriadouroScreenState extends ConsumerState<LojaCriadouroScreen>
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Planis insuficientes! 💰'),
+                    content: Text('Teks insuficientes!'),
                     backgroundColor: Colors.red,
                   ),
                 );

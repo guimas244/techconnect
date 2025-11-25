@@ -1,5 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/criadouro_provider.dart';
 import '../models/criadouro_models.dart';
 import 'widgets/mascote_display_widget.dart';
@@ -18,13 +21,60 @@ class CriadouroScreen extends ConsumerStatefulWidget {
 }
 
 class _CriadouroScreenState extends ConsumerState<CriadouroScreen> {
+  static const String _moedaPath = 'assets/criadouro/comidas/moeda_criador.png';
+
+  late String _monstro1;
+  late String _monstro2;
+
+  static const List<String> _monstrosDisponiveis = [
+    'assets/monstros_aventura/colecao_inicial/inseto.png',
+    'assets/monstros_aventura/colecao_inicial/venenoso.png',
+    'assets/monstros_aventura/colecao_inicial/zumbi.png',
+    'assets/monstros_aventura/colecao_inicial/marinho.png',
+    'assets/monstros_aventura/colecao_inicial/fera.png',
+    'assets/monstros_aventura/colecao_inicial/normal.png',
+    'assets/monstros_aventura/colecao_inicial/planta.png',
+    'assets/monstros_aventura/colecao_inicial/fogo.png',
+    'assets/monstros_aventura/colecao_inicial/voador.png',
+    'assets/monstros_aventura/colecao_inicial/terrestre.png',
+    'assets/monstros_aventura/colecao_inicial/gelo.png',
+    'assets/monstros_aventura/colecao_inicial/agua.png',
+    'assets/monstros_aventura/colecao_inicial/vento.png',
+    'assets/monstros_aventura/colecao_inicial/eletrico.png',
+    'assets/monstros_aventura/colecao_inicial/pedra.png',
+    'assets/monstros_aventura/colecao_inicial/luz.png',
+    'assets/monstros_aventura/colecao_inicial/trevas.png',
+    'assets/monstros_aventura/colecao_inicial/nostalgico.png',
+    'assets/monstros_aventura/colecao_inicial/mistico.png',
+    'assets/monstros_aventura/colecao_inicial/dragao.png',
+    'assets/monstros_aventura/colecao_inicial/alien.png',
+    'assets/monstros_aventura/colecao_inicial/docrates.png',
+    'assets/monstros_aventura/colecao_inicial/psiquico.png',
+    'assets/monstros_aventura/colecao_inicial/magico.png',
+    'assets/monstros_aventura/colecao_inicial/tecnologia.png',
+    'assets/monstros_aventura/colecao_inicial/tempo.png',
+    'assets/monstros_aventura/colecao_inicial/deus.png',
+    'assets/monstros_aventura/colecao_inicial/desconhecido.png',
+    'assets/monstros_aventura/colecao_inicial/subterraneo.png',
+    'assets/monstros_aventura/colecao_inicial/fantasma.png',
+  ];
+
   @override
   void initState() {
     super.initState();
+    _sortearMonstros();
     // Atualiza degradação ao abrir a tela
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(criadouroProvider.notifier).atualizarDegradacao();
     });
+  }
+
+  void _sortearMonstros() {
+    final random = Random();
+    final indices = List.generate(_monstrosDisponiveis.length, (i) => i);
+    indices.shuffle(random);
+    _monstro1 = _monstrosDisponiveis[indices[0]];
+    _monstro2 = _monstrosDisponiveis[indices[1]];
   }
 
   @override
@@ -34,15 +84,25 @@ class _CriadouroScreenState extends ConsumerState<CriadouroScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
+        ),
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('🐣 ', style: TextStyle(fontSize: 24)),
-            Text('Criadouro'),
+            Image.asset(
+              _monstro1,
+              width: 28,
+              height: 28,
+              errorBuilder: (_, __, ___) => const Text('🐾', style: TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 8),
+            const Text('Criadouro'),
           ],
         ),
         actions: [
-          // Saldo de Planis
+          // Saldo de Teks
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             margin: const EdgeInsets.only(right: 8),
@@ -53,10 +113,10 @@ class _CriadouroScreenState extends ConsumerState<CriadouroScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('💰', style: TextStyle(fontSize: 16)),
+                Image.asset(_moedaPath, width: 18, height: 18),
                 const SizedBox(width: 4),
                 Text(
-                  '${state.planis}',
+                  '${state.teks}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -81,7 +141,12 @@ class _CriadouroScreenState extends ConsumerState<CriadouroScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🥚', style: TextStyle(fontSize: 100)),
+            Image.asset(
+              'assets/eventos/halloween/ovo_halloween.png',
+              width: 120,
+              height: 120,
+              errorBuilder: (_, __, ___) => const Text('🥚', style: TextStyle(fontSize: 100)),
+            ),
             const SizedBox(height: 24),
             const Text(
               'Você não tem um mascote',
@@ -110,13 +175,24 @@ class _CriadouroScreenState extends ConsumerState<CriadouroScreen> {
               ),
             ],
             const SizedBox(height: 32),
-            ElevatedButton.icon(
+            ElevatedButton(
               onPressed: _irParaCriarMascote,
-              icon: const Text('🐣', style: TextStyle(fontSize: 20)),
-              label: const Text('Criar Mascote'),
               style: ElevatedButton.styleFrom(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    _monstro2,
+                    width: 24,
+                    height: 24,
+                    errorBuilder: (_, __, ___) => const Text('🐾', style: TextStyle(fontSize: 20)),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Criar Mascote'),
+                ],
               ),
             ),
           ],

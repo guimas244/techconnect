@@ -8,7 +8,7 @@ class CriadouroState {
   final List<MascoteMorto> memorial;
   final ConfigCriadouro config;
   final InventarioCriadouro inventario;
-  final int planis;
+  final int teks;
   final bool carregando;
   final String? erro;
 
@@ -17,7 +17,7 @@ class CriadouroState {
     this.memorial = const [],
     this.config = const ConfigCriadouro(),
     this.inventario = const InventarioCriadouro(),
-    this.planis = 0,
+    this.teks = 0,
     this.carregando = false,
     this.erro,
   });
@@ -27,7 +27,7 @@ class CriadouroState {
     List<MascoteMorto>? memorial,
     ConfigCriadouro? config,
     InventarioCriadouro? inventario,
-    int? planis,
+    int? teks,
     bool? carregando,
     String? erro,
     bool limparMascote = false,
@@ -38,7 +38,7 @@ class CriadouroState {
       memorial: memorial ?? this.memorial,
       config: config ?? this.config,
       inventario: inventario ?? this.inventario,
-      planis: planis ?? this.planis,
+      teks: teks ?? this.teks,
       carregando: carregando ?? this.carregando,
       erro: limparErro ? null : (erro ?? this.erro),
     );
@@ -84,14 +84,14 @@ class CriadouroNotifier extends StateNotifier<CriadouroState> {
     List<MascoteMorto>? memorial,
     ConfigCriadouro? config,
     InventarioCriadouro? inventario,
-    int? planis,
+    int? teks,
   }) {
     state = state.copyWith(
       mascote: mascote,
       memorial: memorial ?? [],
       config: config ?? const ConfigCriadouro(),
       inventario: inventario ?? const InventarioCriadouro(),
-      planis: planis ?? 0,
+      teks: teks ?? 0,
       carregando: false,
     );
 
@@ -425,11 +425,11 @@ class CriadouroNotifier extends StateNotifier<CriadouroState> {
     }
   }
 
-  // ============ ECONOMIA (PLANIS) ============
+  // ============ ECONOMIA (TEKS) ============
 
-  /// Adiciona Planis (drop de batalha)
-  void adicionarPlanis(int quantidade) {
-    state = state.copyWith(planis: state.planis + quantidade);
+  /// Adiciona Teks (drop de batalha)
+  void adicionarTeks(int quantidade) {
+    state = state.copyWith(teks: state.teks + quantidade);
   }
 
   /// Compra um item da loja
@@ -438,10 +438,10 @@ class CriadouroNotifier extends StateNotifier<CriadouroState> {
     if (item == null) return false;
 
     final custoTotal = item.preco * quantidade;
-    if (state.planis < custoTotal) return false;
+    if (state.teks < custoTotal) return false;
 
     state = state.copyWith(
-      planis: state.planis - custoTotal,
+      teks: state.teks - custoTotal,
       inventario: state.inventario.adicionarItem(itemId, quantidade),
     );
 
@@ -478,7 +478,7 @@ class CriadouroNotifier extends StateNotifier<CriadouroState> {
       'memorial': state.memorial.map((m) => m.toJson()).toList(),
       'config': state.config.toJson(),
       'inventario': state.inventario.toJson(),
-      'planis': state.planis,
+      'teks': state.teks,
     };
   }
 
@@ -500,7 +500,7 @@ class CriadouroNotifier extends StateNotifier<CriadouroState> {
           ? InventarioCriadouro.fromJson(
               json['inventario'] as Map<String, dynamic>)
           : const InventarioCriadouro(),
-      planis: json['planis'] as int? ?? 0,
+      teks: json['teks'] as int? ?? 0,
     );
   }
 }
@@ -529,10 +529,10 @@ final mascoteProvider = Provider<Mascote?>((ref) {
   return state.mascote;
 });
 
-/// Provider para o saldo de Planis
-final planisProvider = Provider<int>((ref) {
+/// Provider para o saldo de Teks
+final teksProvider = Provider<int>((ref) {
   final state = ref.watch(criadouroProvider);
-  return state.planis;
+  return state.teks;
 });
 
 /// Provider para o inventário

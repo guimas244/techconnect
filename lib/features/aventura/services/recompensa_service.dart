@@ -32,13 +32,13 @@ class RecompensaService {
   }
 
   /// Gera recompensas baseadas no score do jogador
-  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int, 'moedaChave': int, 'planis': int
+  /// Retorna Map com: 'itens': List<Item>, 'magias': List<MagiaDrop>, 'superDrop': bool, 'moedaEvento': int, 'moedaChave': int, 'teks': int
   Future<Map<String, dynamic>> gerarRecompensasPorScore(int score, int tierAtual) async {
     print('🎁 [RecompensaService] Gerando recompensas para score: $score, tier: $tierAtual');
 
     if (score < 1) {
       print('❌ [RecompensaService] Score insuficiente ($score < 1)');
-      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0, 'moedaChave': 0, 'planis': 0};
+      return {'itens': <Item>[], 'magias': <MagiaDrop>[], 'superDrop': false, 'moedaEvento': 0, 'moedaChave': 0, 'teks': 0};
     }
 
     final itens = <Item>[];
@@ -92,10 +92,10 @@ class RecompensaService {
     // 5. Moeda Chave (chance independente baseada no tier - 10x menos que moeda evento)
     int moedaChave = _calcularDropMoedaChave(tierAtual);
 
-    // 6. Planis - Moeda do Criadouro (chance x2 da chave, x3 após andar 50)
-    int planis = _calcularDropPlanis(tierAtual);
+    // 6. Teks - Moeda do Criadouro (chance x2 da chave, x3 após andar 50)
+    int teks = _calcularDropTeks(tierAtual);
 
-    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave, planis: $planis');
+    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave, teks: $teks');
 
     return {
       'itens': itens,
@@ -103,7 +103,7 @@ class RecompensaService {
       'superDrop': superDrop,
       'moedaEvento': moedaEvento,
       'moedaChave': moedaChave,
-      'planis': planis,
+      'teks': teks,
     };
   }
 
@@ -181,11 +181,11 @@ class RecompensaService {
     return 0;
   }
 
-  /// Calcula drop de Planis (moeda do Criadouro)
+  /// Calcula drop de Teks (moeda do Criadouro)
   /// Chance = moedaChave x2 (andares 1-49)
   /// Chance = moedaChave x3 (andares 50+)
   /// Quantidade: 1-3 (andares 1-49), 2-5 (andares 50+)
-  int _calcularDropPlanis(int tier) {
+  int _calcularDropTeks(int tier) {
     // Calcula o "andar" aproximado baseado no tier (tier * 10 aproximadamente)
     final andarAproximado = tier * 10;
 
@@ -218,12 +218,12 @@ class RecompensaService {
     final roll = _random.nextDouble() * 100;
     final dropou = roll < chanceTotal;
 
-    print('🌱 [RecompensaService] Rolando Planis: Tier $tier (~andar $andarAproximado), Chance base: $chanceBase% x$multiplicador = $chanceTotal%, Roll: ${roll.toStringAsFixed(2)}%, Dropou: $dropou');
+    print('🌱 [RecompensaService] Rolando Teks: Tier $tier (~andar $andarAproximado), Chance base: $chanceBase% x$multiplicador = $chanceTotal%, Roll: ${roll.toStringAsFixed(2)}%, Dropou: $dropou');
 
     if (dropou) {
       // Quantidade aleatória dentro do range
       final quantidade = quantidadeMin + _random.nextInt(quantidadeMax - quantidadeMin + 1);
-      print('🌱 [RecompensaService] PLANIS DROPADO! Quantidade: $quantidade (range: $quantidadeMin-$quantidadeMax)');
+      print('🌱 [RecompensaService] TEKS DROPADO! Quantidade: $quantidade (range: $quantidadeMin-$quantidadeMax)');
       return quantidade;
     }
 

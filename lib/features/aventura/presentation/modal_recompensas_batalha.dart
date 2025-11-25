@@ -27,7 +27,7 @@ class RecompensasBatalha {
 
   final int moedaEvento; // Quantidade de moedas de evento recebidas (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave recebidas
-  final int planis; // Quantidade de Planis (moeda do Criadouro)
+  final int teks; // Quantidade de Teks (moeda do Criadouro)
 
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
@@ -45,7 +45,7 @@ class RecompensasBatalha {
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
-    this.planis = 0,
+    this.teks = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -56,7 +56,7 @@ class RecompensasBatalha {
   bool get temEquipamentoOuMagia => temEquipamento || temMagia;
   bool get temItensConsumiveis => itensConsumiveisRecebidos.isNotEmpty;
   bool get temMoedaEvento => moedaEvento > 0;
-  bool get temPlanis => planis > 0;
+  bool get temTeks => teks > 0;
 }
 
 class ModalRecompensasBatalha extends StatefulWidget {
@@ -72,7 +72,7 @@ class ModalRecompensasBatalha extends StatefulWidget {
     Set<int> slotsParaLiberar,
     int moedaEvento,
     int moedaChave,
-    int planis,
+    int teks,
   ) onGuardarItensNaMochila;
   final Future<void> Function() onConcluir;
 
@@ -363,15 +363,15 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     });
 
     try {
-      // SEMPRE salva se tiver moedas de evento/chave/planis, mesmo que descarte todos os itens
-      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0 || widget.recompensas.planis > 0) {
+      // SEMPRE salva se tiver moedas de evento/chave/teks, mesmo que descarte todos os itens
+      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0 || widget.recompensas.teks > 0) {
         print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
           widget.recompensas.moedaEvento,
           widget.recompensas.moedaChave,
-          widget.recompensas.planis,
+          widget.recompensas.teks,
         );
         print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
       } else {
@@ -2551,9 +2551,9 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             const SizedBox(height: 8),
           ],
 
-          // Planis (sempre coletada, não pode ser descartada)
-          if (widget.recompensas.planis > 0) ...[
-            _buildPlanisCard(),
+          // Teks (sempre coletada, não pode ser descartada)
+          if (widget.recompensas.teks > 0) ...[
+            _buildTeksCard(),
             const SizedBox(height: 8),
           ],
 
@@ -2980,7 +2980,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     );
   }
 
-  Widget _buildPlanisCard() {
+  Widget _buildTeksCard() {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9), // Fundo verde claro
@@ -3001,7 +3001,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Ícone da Planis (emoji de planta/semente)
+          // Ícone da Teks (emoji de planta/semente)
           Container(
             width: 60,
             height: 60,
@@ -3017,7 +3017,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
             ),
           ),
           const SizedBox(width: 12),
-          // Informações da Planis
+          // Informações da Teks
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3034,7 +3034,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                     const SizedBox(width: 4),
                     const Expanded(
                       child: Text(
-                        'Planis',
+                        'Teks',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -3052,7 +3052,7 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'x${widget.recompensas.planis}',
+                        'x${widget.recompensas.teks}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
