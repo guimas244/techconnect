@@ -2,6 +2,7 @@ import 'dart:math';
 import '../../../shared/models/tipo_enum.dart';
 import 'habilidade.dart';
 import 'item.dart';
+import 'passiva.dart';
 
 class MonstroAventura {
   final Tipo tipo;
@@ -17,6 +18,7 @@ class MonstroAventura {
   final List<Habilidade> habilidades;
   final Item? itemEquipado; // Item equipado (opcional)
   final int level; // Level do monstro
+  final Passiva? passiva; // Passiva/Despertar do monstro (opcional)
 
   const MonstroAventura({
     required this.tipo,
@@ -32,6 +34,7 @@ class MonstroAventura {
     required this.habilidades,
     this.itemEquipado, // Item equipado (opcional)
     this.level = 1, // Level inicial é 1
+    this.passiva, // Passiva (opcional)
   }) : vidaAtual = vidaAtual ?? vida,
        energiaAtual = energiaAtual ?? energia;
 
@@ -56,10 +59,13 @@ class MonstroAventura {
       habilidades: (json['habilidades'] as List<dynamic>?)
           ?.map((h) => Habilidade.fromJson(h))
           .toList() ?? [],
-      itemEquipado: json['itemEquipado'] != null 
+      itemEquipado: json['itemEquipado'] != null
           ? Item.fromMap(json['itemEquipado'] as Map<String, dynamic>)
           : null,
       level: json['level'] ?? 1,
+      passiva: json['passiva'] != null
+          ? Passiva.fromJson(json['passiva'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -78,6 +84,7 @@ class MonstroAventura {
       'habilidades': habilidades.map((h) => h.toJson()).toList(),
       'itemEquipado': itemEquipado?.toMap(),
       'level': level,
+      'passiva': passiva?.toJson(),
     };
   }
 
@@ -95,6 +102,8 @@ class MonstroAventura {
     List<Habilidade>? habilidades,
     Item? itemEquipado,
     int? level,
+    Passiva? passiva,
+    bool removerPassiva = false,
   }) {
     return MonstroAventura(
       tipo: tipo ?? this.tipo,
@@ -110,6 +119,7 @@ class MonstroAventura {
       habilidades: habilidades ?? this.habilidades,
       itemEquipado: itemEquipado ?? this.itemEquipado,
       level: level ?? this.level,
+      passiva: removerPassiva ? null : (passiva ?? this.passiva),
     );
   }
 

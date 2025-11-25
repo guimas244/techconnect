@@ -1,7 +1,12 @@
 enum TipoDrop {
   pocaoVidaPequena,
   pocaoVidaGrande,
-  pedraReforco,
+  pedraRecriacao,
+  joiaReforco,
+  frutaNuty,
+  frutaNutyCristalizada,
+  frutaNutyNegra,
+  vidinha,
 }
 
 extension TipoDropExtension on TipoDrop {
@@ -11,8 +16,18 @@ extension TipoDropExtension on TipoDrop {
         return 'Poção de Vida Pequena';
       case TipoDrop.pocaoVidaGrande:
         return 'Poção de Vida Grande';
-      case TipoDrop.pedraReforco:
-        return 'Pedra de Reforço';
+      case TipoDrop.pedraRecriacao:
+        return 'Joia da Recriação';
+      case TipoDrop.joiaReforco:
+        return 'Joia de Reforço';
+      case TipoDrop.frutaNuty:
+        return 'Fruta Nuty';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'Fruta Nuty Cristalizada';
+      case TipoDrop.frutaNutyNegra:
+        return 'Fruta Nuty Negra';
+      case TipoDrop.vidinha:
+        return 'Vidinha';
     }
   }
 
@@ -22,8 +37,18 @@ extension TipoDropExtension on TipoDrop {
         return 'Cura 25% da vida de um monstro à escolha';
       case TipoDrop.pocaoVidaGrande:
         return 'Cura 100% da vida de um monstro à escolha';
-      case TipoDrop.pedraReforco:
-        return 'Sobe 1 level/tier de um equipamento de um monstro à escolha';
+      case TipoDrop.pedraRecriacao:
+        return 'Recria o equipamento mantendo a raridade e sorteando tier alto';
+      case TipoDrop.joiaReforco:
+        return 'Ajusta os atributos do equipamento para o tier atual';
+      case TipoDrop.frutaNuty:
+        return 'Maximiza todos os atributos do monstro (apenas Level 1)';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'Adiciona +10 em um atributo aleatório do monstro';
+      case TipoDrop.frutaNutyNegra:
+        return 'Adiciona +10 kills em um tipo aleatório no dia corrente';
+      case TipoDrop.vidinha:
+        return 'Revive automaticamente seu monstro na primeira morte em batalha';
     }
   }
 
@@ -33,8 +58,18 @@ extension TipoDropExtension on TipoDrop {
         return 'assets/drops/drop_pocao_vida_pequena.png';
       case TipoDrop.pocaoVidaGrande:
         return 'assets/drops/drop_pocao_vida_grande.png';
-      case TipoDrop.pedraReforco:
+      case TipoDrop.pedraRecriacao:
+        return 'assets/drops/drop_pedra_recriacao.png';
+      case TipoDrop.joiaReforco:
         return 'assets/drops/drop_pedra_reforco.png';
+      case TipoDrop.frutaNuty:
+        return 'assets/drops/drop_fruta_nuty.png';
+      case TipoDrop.frutaNutyCristalizada:
+        return 'assets/drops/drop_fruta_nuty_cristalizada.png';
+      case TipoDrop.frutaNutyNegra:
+        return 'assets/drops/drop_fruta_nuty_negra.png';
+      case TipoDrop.vidinha:
+        return 'assets/drops/drop_vidinha.png';
     }
   }
 

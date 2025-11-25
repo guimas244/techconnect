@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/aventura_provider.dart';
 import '../models/historia_jogador.dart';
 import '../models/monstro_aventura.dart';
+import '../models/passiva.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/google_drive_service.dart';
 import 'mapa_aventura_screen.dart';
@@ -17,6 +19,7 @@ import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/config/developer_config.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/version_config.dart';
 import 'dart:math';
 
 class AventuraScreen extends ConsumerStatefulWidget {
@@ -361,6 +364,7 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         tier: 1,
         runId: runId,
         dataCriacao: DateTime.now(), // Data de criação no horário atual do telefone
+        version: VersionConfig.currentVersion, // Versão atual do jogo
       );
 
       print('🎲 [AventuraScreen] Monstros sorteados localmente');
@@ -1212,19 +1216,18 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
   Widget _buildCardMonstroBonito(dynamic monstro) {
     final isMorto = monstro.vidaAtual <= 0;
-    
+
     return GestureDetector(
       onTap: () => _mostrarModalMonstro(monstro),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         elevation: 6,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
-                flex: 3,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: ColorFiltered(
@@ -1248,51 +1251,48 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Expanded(
-                flex: 1,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Image.asset(monstro.tipo.iconAsset, fit: BoxFit.contain),
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Image.asset(monstro.tipoExtra.iconAsset, fit: BoxFit.contain),
-                    ),
-                    const SizedBox(width: 4),
-                    Stack(
-                      children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.amber,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.white, width: 0.5),
-                            ),
-                            child: Text(
-                              '${monstro.level}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Image.asset(monstro.tipo.iconAsset, width: 20, height: 20, fit: BoxFit.contain),
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Image.asset(monstro.tipoExtra.iconAsset, width: 20, height: 20, fit: BoxFit.contain),
+                  ),
+                  const SizedBox(width: 4),
+                  Stack(
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.white, width: 0.5),
+                          ),
+                          child: Text(
+                            '${monstro.level}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -1539,6 +1539,9 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
       final emailJogador = ref.read(validUserEmailProvider);
       final repository = AventuraRepository();
 
+      // Limpa dados do NPC Ganandius ao recomeçar aventura
+      await _limparDadosGanandius(emailJogador);
+
       // Carrega o historico atual para obter o runId
       print('[AventuraScreen] Carregando historico para arquivar...');
       HistoriaJogador? historiaAtual;
@@ -1622,6 +1625,49 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
 
       print('[AventuraScreen] Erro ao remover historico local do HIVE: $e');
       throw e;
+    }
+  }
+
+  /// Limpa todos os dados do NPC Ganandius salvos no SharedPreferences
+  Future<void> _limparDadosGanandius(String emailJogador) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Lista de todos os tiers de loja (11, 21, 31, 41, etc até 200)
+      final tiers = List.generate(20, (index) => 11 + (index * 10));
+
+      int totalRemovidos = 0;
+      for (final tier in tiers) {
+        // Remove flag de gratuito usado
+        final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_$tier';
+        if (prefs.containsKey(chaveGratuito)) {
+          await prefs.remove(chaveGratuito);
+          totalRemovidos++;
+        }
+
+        // Remove passivas sorteadas
+        final chavePassivas = 'ganandius_passivas_sorteadas_tier_$tier';
+        if (prefs.containsKey(chavePassivas)) {
+          await prefs.remove(chavePassivas);
+          totalRemovidos++;
+        }
+      }
+
+      // Remove TODOS os contadores de compras por run
+      // Busca todas as chaves que começam com o padrão de compras
+      final todasChaves = prefs.getKeys();
+      final chavesCompras = todasChaves.where((key) =>
+        key.startsWith('ganandius_compras_${emailJogador}_run_')
+      ).toList();
+
+      for (final chave in chavesCompras) {
+        await prefs.remove(chave);
+        totalRemovidos++;
+      }
+
+      print('🧹 [GANANDIUS RESET] $totalRemovidos chaves removidas para nova aventura');
+    } catch (e) {
+      print('❌ [GANANDIUS RESET] Erro ao limpar dados: $e');
     }
   }
 

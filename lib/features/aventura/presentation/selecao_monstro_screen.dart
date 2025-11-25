@@ -557,15 +557,30 @@ class SelecaoMonstroScreen extends ConsumerWidget {
   }
 
   Future<void> _selecionarMonstro(BuildContext context, MonstroAventura monstro, WidgetRef ref) async {
+    // Carrega história para passar equipe completa (para verificar passivas)
+    HistoriaJogador? historia;
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final repository = ref.read(aventuraRepositoryProvider);
+      historia = await repository.carregarHistoricoJogador(emailJogador);
+    } catch (e) {
+      print('❌ [SelecaoMonstro] Erro ao carregar história: $e');
+    }
+
+    if (!context.mounted) return;
+
     final resultado = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => BatalhaScreen(
           jogador: monstro,
           inimigo: monstroInimigo,
+          equipeCompleta: historia?.monstros ?? [],
         ),
       ),
     );
+
+    if (!context.mounted) return;
 
     if (resultado == true && Navigator.of(context).canPop()) {
       Navigator.of(context).pop(true);

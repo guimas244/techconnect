@@ -10,13 +10,13 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Inicializar Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    
+
     // Inicializar Hive para armazenamento local
     await Hive.initFlutter();
 
@@ -29,7 +29,7 @@ Future<void> main() async {
     // Inicializar AventuraRepository com HIVE
     final aventuraRepository = AventuraRepository();
     await aventuraRepository.init();
-    
+
     runApp(UncontrolledProviderScope(
       container: container,
       child: const TechConnectApp(),

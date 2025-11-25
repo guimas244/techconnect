@@ -74,11 +74,15 @@ class ItemConsumivel {
 enum TipoItemConsumivel {
   pocao,
   joia,
+  fruta,
+  vidinha,
   pergaminho,
   elixir,
   fragmento,
-  moedaEvento, // Moeda de evento (Halloween, etc)
+  moedaEvento, // Moeda de evento (Halloween, etc) - DEPRECATED, use moedaHalloween
+  moedaHalloween, // Moeda de Halloween (válida até 31/10)
   ovoEvento, // Ovo de evento (Halloween, etc)
+  moedaChave, // Moeda Chave (começa a dropar em 01/11)
 }
 
 enum RaridadeConsumivel {
@@ -87,6 +91,7 @@ enum RaridadeConsumivel {
   raro,
   epico,
   lendario,
+  impossivel,
 }
 
 extension RaridadeConsumivelExtension on RaridadeConsumivel {
@@ -102,6 +107,8 @@ extension RaridadeConsumivelExtension on RaridadeConsumivel {
         return 'Épico';
       case RaridadeConsumivel.lendario:
         return 'Lendário';
+      case RaridadeConsumivel.impossivel:
+        return 'Impossível';
     }
   }
 
@@ -117,6 +124,8 @@ extension RaridadeConsumivelExtension on RaridadeConsumivel {
         return const Color(0xFF9C27B0); // Roxo
       case RaridadeConsumivel.lendario:
         return const Color(0xFFFF9800); // Laranja/Dourado
+      case RaridadeConsumivel.impossivel:
+        return const Color(0xFFD32F2F); // Vermelho
     }
   }
 }

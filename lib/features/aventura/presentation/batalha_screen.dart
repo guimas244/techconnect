@@ -12,6 +12,7 @@ import '../models/item.dart';
 import '../models/historia_jogador.dart';
 import '../models/magia_drop.dart';
 import '../models/drop.dart';
+import '../models/passiva.dart';
 import '../services/drops_service.dart';
 import '../models/progresso_diario.dart';
 import '../providers/aventura_provider.dart';
@@ -36,6 +37,7 @@ import '../services/mochila_service.dart';
 import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
 import 'modal_monstro_aventura.dart';
+import 'modal_vidinha_utilizada.dart';
 
 class _ResultadoEvolucao {
   final HistoriaJogador historiaAtualizada;
@@ -52,20 +54,30 @@ class _ResultadoEvolucao {
 }
 
 class _DropResultado {
-  final Item? item;
+  final Item? item; // Mantido para compatibilidade com drops de elites/equipados
   final int? tier;
   final RaridadeItem? raridade;
-  final MagiaDrop? magia;
+  final MagiaDrop? magia; // Mantido para compatibilidade
+  final List<Item> itens; // NOVO: Múltiplos itens do sistema de drops independentes
+  final List<MagiaDrop> magias; // NOVO: Múltiplas magias do sistema de drops independentes
   final List<ItemConsumivel> consumiveis;
-  final int moedaEvento; // Quantidade de moedas de evento
+  final int moedaEvento; // Quantidade de moedas de evento (moedaHalloween)
+  final int moedaChave; // Quantidade de moedas chave
+  final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
+  final bool superDrop; // Se ativou o super drop
 
   const _DropResultado({
     this.item,
     this.tier,
     this.raridade,
     this.magia,
+    this.itens = const [],
+    this.magias = const [],
     this.consumiveis = const [],
     this.moedaEvento = 0,
+    this.moedaChave = 0,
+    this.dropsDoSortudo = const [],
+    this.superDrop = false,
   });
 }
 
@@ -85,11 +97,13 @@ class _PacoteRecompensas {
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
   final MonstroInimigo inimigo;
+  final List<MonstroAventura> equipeCompleta; // Lista completa da equipe para verificar passivas
 
   const BatalhaScreen({
     super.key,
     required this.jogador,
     required this.inimigo,
+    this.equipeCompleta = const [],
   });
 
   @override
@@ -112,6 +126,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool monstroRaroDesbloqueado = false;
   bool scoreAtualizado = false;
   bool podeVoltarParaAventura = false;
+  bool vidinhaUsada = false; // Controla se a vidinha já foi usada nesta batalha
   int turnoAtual = 1;
   bool vezDoJogador = true;
   String? ultimaAcao;
@@ -121,6 +136,9 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   bool mostrandoAcao = false;
   bool aguardandoContinuar = false;
   bool batalhaAutomatica = false; // Controla se está rodando batalha automática
+
+  // Round 0 - Bônus de Progressão
+  Map<String, int> bonusProgressao = {}; // Bônus aplicados do progresso diário
 
   @override
   void initState() {
@@ -139,13 +157,73 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
   }
 
-  void _inicializarBatalha() {
+  // ==================== FUNÇÕES HELPER DE PASSIVAS ====================
+
+  /// Verifica se algum monstro da equipe tem uma passiva específica
+  /// IMPORTANTE: Passivas do JOGADOR são COMPARTILHADAS entre toda equipe
+  /// Se qualquer um dos 3 monstros tem a passiva, todos podem usar!
+  bool _temPassivaNaEquipe(TipoPassiva tipo) {
+    return widget.equipeCompleta.any((monstro) =>
+      monstro.passiva != null && monstro.passiva!.tipo == tipo
+    );
+  }
+
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Crítico
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem criticar
+  bool get _temPassivaCritico => _temPassivaNaEquipe(TipoPassiva.critico);
+
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Esquiva
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem esquivar
+  bool get _temPassivaEsquiva => _temPassivaNaEquipe(TipoPassiva.esquiva);
+
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Cura de Batalha
+  /// COMPARTILHADA: Se um monstro tem, todos os 3 podem curar dobrado
+  bool get _temPassivaCuraDeBatalha => _temPassivaNaEquipe(TipoPassiva.curaDeBatalha);
+
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Mercador
+  /// COMPARTILHADA: Afeta drops (qualquer um ter já vale)
+  bool get _temPassivaMercador => _temPassivaNaEquipe(TipoPassiva.mercador);
+
+  /// Verifica se algum monstro da EQUIPE DO JOGADOR tem passiva de Sortudo
+  /// COMPARTILHADA: Afeta drops (qualquer um ter já vale)
+  bool get _temPassivaSortudo => _temPassivaNaEquipe(TipoPassiva.sortudo);
+
+  // ==================== FIM FUNÇÕES HELPER DE PASSIVAS ====================
+
+  /// ROUND 0: Carrega os bônus de progressão do jogador
+  Future<void> _carregarBonusProgressao() async {
+    try {
+      print('? [ROUND 0] Carregando bônus de progressão...');
+
+      // Busca os bônus do provider
+      final bonusPorTipo = ref.read(progressoBonusStateProvider);
+      final tipoJogador = widget.jogador.tipo;
+
+      // Obtém os bônus para o tipo do monstro do jogador
+      final bonus = bonusPorTipo[tipoJogador] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+      bonusProgressao = bonus;
+
+      print('? [ROUND 0] Bônus para ${tipoJogador.displayName}: HP+${bonus['HP']} ATK+${bonus['ATK']} DEF+${bonus['DEF']} SPD+${bonus['SPD']}');
+    } catch (e) {
+      print('? [ROUND 0] Erro ao carregar bônus: $e');
+      bonusProgressao = {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
+    }
+  }
+
+  Future<void> _inicializarBatalha() async {
     print('??? [BatalhaScreen] Inicializando batalha...');
 
+<<<<<<< HEAD
+=======
+    // ROUND 0: Carregar bônus de progressão
+    await _carregarBonusProgressao();
+    
+>>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
 
+<<<<<<< HEAD
     // Carrega bônus de progressão para o tipo do jogador
     final bonusProgresso = ref.read(progressoBonusStateProvider);
     final bonusTipo = bonusProgresso[widget.jogador.tipo] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
@@ -159,6 +237,20 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
     final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
     final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + (bonusTipo['SPD'] ?? 0);
+=======
+    // ROUND 0: Aplica bônus de progressão + item
+    final bonusHP = bonusProgressao['HP'] ?? 0;
+    final bonusATK = bonusProgressao['ATK'] ?? 0;
+    final bonusDEF = bonusProgressao['DEF'] ?? 0;
+    final bonusSPD = bonusProgressao['SPD'] ?? 0;
+
+    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0) + bonusATK;
+    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0) + bonusDEF;
+    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0) + bonusHP;
+    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + bonusHP;
+    final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
+    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + bonusSPD;
+>>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
 
     // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
@@ -180,15 +272,22 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final energiaInimigoTotal = widget.inimigo.energiaTotal;
     final agilidadeInimigoTotal = widget.inimigo.agilidadeTotal;
     
-    // Determina quem começa baseado na agilidade
+    // IMPORTANTE: A agilidade já inclui os bônus de progressão (bonusSPD)
+    // Determina quem começa baseado na agilidade APÓS bônus
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
 
+<<<<<<< HEAD
     print('?? [Stats] Jogador: ATK=$ataqueComItem (base:${widget.jogador.ataque} item:${item?.ataque ?? 0} prog:${bonusTipo['ATK']}) DEF=$defesaComItem (base:${widget.jogador.defesa} item:${item?.defesa ?? 0} prog:${bonusTipo['DEF']}) HP=$vidaAtualComItem/$vidaComItem (base:${widget.jogador.vida} item:${item?.vida ?? 0} prog:${bonusTipo['HP']}) AGI=$agilidadeComItem (base:${widget.jogador.agilidade} item:${item?.agilidade ?? 0} prog:${bonusTipo['SPD']})');
+=======
+    print('?? [Stats] Jogador (COM BÔNUS): ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
+>>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
     print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
     }
+    print('?? [ROUND 0] Bônus aplicados: HP+$bonusHP ATK+$bonusATK DEF+$bonusDEF SPD+$bonusSPD');
+    print('?? [Ordem] ${jogadorComeca ? "JOGADOR começa (AGI $agilidadeComItem >= $agilidadeInimigoTotal)" : "INIMIGO começa (AGI $agilidadeInimigoTotal > $agilidadeComItem)"}');
 
     estadoAtual = EstadoBatalha(
       jogador: widget.jogador,
@@ -211,6 +310,67 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
     
     print('?? [Batalha] ${jogadorComeca ? "Jogador" : "Inimigo"} começa a rodada');
+
+    // ROUND 0: Cria mensagem única de ativação dos bônus no histórico
+    final mensagensRound0 = <AcaoBatalha>[];
+    if (bonusHP > 0 || bonusATK > 0 || bonusDEF > 0 || bonusSPD > 0) {
+      // Constrói a descrição com múltiplas linhas
+      final linhas = <String>[];
+      linhas.add('⚔️ ROUND 0 - ATIVAÇÃO DE BÔNUS DE PROGRESSÃO ⚔️');
+      linhas.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      if (bonusHP > 0) {
+        linhas.add('💚 Bônus de Vida: +$bonusHP HP (${widget.jogador.vida} → $vidaComItem)');
+      }
+
+      if (bonusATK > 0) {
+        linhas.add('⚔️ Bônus de Ataque: +$bonusATK ATK (${widget.jogador.ataque} → $ataqueComItem)');
+      }
+
+      if (bonusDEF > 0) {
+        linhas.add('🛡️ Bônus de Defesa: +$bonusDEF DEF (${widget.jogador.defesa} → $defesaComItem)');
+      }
+
+      if (bonusSPD > 0) {
+        linhas.add('⚡ Bônus de Agilidade: +$bonusSPD SPD (${widget.jogador.agilidade} → $agilidadeComItem)');
+      }
+
+      linhas.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      // Adiciona uma única entrada no histórico com todas as linhas
+      mensagensRound0.add(AcaoBatalha(
+        atacante: 'Sistema',
+        habilidadeNome: 'ROUND 0',
+        danoBase: 0,
+        danoTotal: bonusHP + bonusATK + bonusDEF + bonusSPD,
+        defesaAlvo: 0,
+        vidaAntes: widget.jogador.vida,
+        vidaDepois: vidaComItem,
+        descricao: linhas.join('\n'),
+      ));
+    }
+
+    setState(() {
+      estadoAtual = EstadoBatalha(
+        jogador: widget.jogador,
+        inimigo: widget.inimigo,
+        vidaAtualJogador: vidaAtualComItem,
+        vidaAtualInimigo: vidaAtualInimigoTotal,
+        vidaMaximaJogador: vidaComItem,
+        vidaMaximaInimigo: vidaInimigoTotal,
+        energiaAtualJogador: energiaComItem,
+        energiaAtualInimigo: energiaInimigoTotal,
+        energiaMaximaJogador: energiaComItem,
+        energiaMaximaInimigo: energiaInimigoTotal,
+        ataqueAtualJogador: ataqueComItem,
+        defesaAtualJogador: defesaComItem,
+        ataqueAtualInimigo: ataqueInimigoTotal,
+        defesaAtualInimigo: defesaInimigoTotal,
+        habilidadesUsadasJogador: [],
+        habilidadesUsadasInimigo: [],
+        historicoAcoes: mensagensRound0,
+      );
+    });
   }
 
   void _executarRodadaCompleta() {
@@ -265,18 +425,30 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         
         // Pequeno delay para não sobrecarregar
         await Future.delayed(const Duration(milliseconds: 100));
-        
+
         // Segundo ataque (inimigo)
         estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
         if (estadoAtualizado.vidaAtualJogador <= 0) {
-          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
-          return;
+          // Tenta usar vidinha antes de finalizar como derrota
+          final vidinhaFoiUsada = await _tentarUsarVidinha();
+          if (!vidinhaFoiUsada) {
+            _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+            return;
+          }
+          // Vidinha foi usada, continua a batalha
+          estadoAtualizado = estadoAtual!;
         }
       } else {
         estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
         if (estadoAtualizado.vidaAtualJogador <= 0) {
-          _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
-          return;
+          // Tenta usar vidinha antes de finalizar como derrota
+          final vidinhaFoiUsada = await _tentarUsarVidinha();
+          if (!vidinhaFoiUsada) {
+            _finalizarBatalhaAutomatica(estadoAtualizado, 'inimigo');
+            return;
+          }
+          // Vidinha foi usada, continua a batalha
+          estadoAtualizado = estadoAtual!;
         }
         
         await Future.delayed(const Duration(milliseconds: 100));
@@ -343,14 +515,26 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await Future.delayed(const Duration(milliseconds: 1000));
       estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
       if (estadoAtualizado.vidaAtualJogador <= 0) {
-        _finalizarRodada(estadoAtualizado, 'inimigo');
-        return;
+        // Tenta usar vidinha antes de finalizar como derrota
+        final vidinhaFoiUsada = await _tentarUsarVidinha();
+        if (!vidinhaFoiUsada) {
+          _finalizarRodada(estadoAtualizado, 'inimigo');
+          return;
+        }
+        // Vidinha foi usada, continua a batalha
+        estadoAtualizado = estadoAtual!;
       }
     } else {
       estadoAtualizado = await _executarAtaqueInimigo(estadoAtualizado);
       if (estadoAtualizado.vidaAtualJogador <= 0) {
-        _finalizarRodada(estadoAtualizado, 'inimigo');
-        return;
+        // Tenta usar vidinha antes de finalizar como derrota
+        final vidinhaFoiUsada = await _tentarUsarVidinha();
+        if (!vidinhaFoiUsada) {
+          _finalizarRodada(estadoAtualizado, 'inimigo');
+          return;
+        }
+        // Vidinha foi usada, continua a batalha
+        estadoAtualizado = estadoAtual!;
       }
       
       // Segundo ataque (jogador)
@@ -508,18 +692,41 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Aplica efeito de suporte
     switch (habilidade.efeito) {
       case EfeitoHabilidade.curarVida:
+        // ===== PASSIVA: CURA DE BATALHA =====
+        // Se jogador ou inimigo tem passiva de Cura de Batalha, dobra a cura
+        int valorCura = habilidade.valorEfetivo;
+        bool curaDobrada = false;
+        // Jogador com passiva Cura de Batalha
+        if (isJogador && _temPassivaCuraDeBatalha) {
+          valorCura = valorCura * 2;
+          curaDobrada = true;
+          print('💚 [PASSIVA CURA DE BATALHA - JOGADOR] Cura dobrada! $valorCura');
+        }
+        // Inimigo com passiva Cura de Batalha
+        else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.curaDeBatalha) {
+          valorCura = valorCura * 2;
+          curaDobrada = true;
+          print('💚 [PASSIVA CURA DE BATALHA - INIMIGO] Cura dobrada! $valorCura');
+        }
+
+        // ===== BÔNUS DE ENERGIA =====
+        // Energia restante é adicionada como bônus na cura (não afeta custo)
+        int bonusEnergia = isJogador ? estado.energiaAtualJogador : estado.energiaAtualInimigo;
+        int valorCuraTotal = valorCura + bonusEnergia;
+        print('⚡ [BÔNUS DE ENERGIA] Cura base: $valorCura + Energia restante: $bonusEnergia = $valorCuraTotal');
+
         if (isJogador) {
           int vidaAntes = estado.vidaAtualJogador;
-          int novaVida = (estado.vidaAtualJogador + habilidade.valorEfetivo).clamp(0, estado.jogador.vida);
+          int novaVida = (estado.vidaAtualJogador + valorCuraTotal).clamp(0, estado.jogador.vida);
           novoEstado = estado.copyWith(vidaAtualJogador: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}] + bônus de energia +$bonusEnergia';
         } else {
           int vidaAntes = estado.vidaAtualInimigo;
-          int novaVida = (estado.vidaAtualInimigo + habilidade.valorEfetivo).clamp(0, estado.inimigo.vida);
+          int novaVida = (estado.vidaAtualInimigo + valorCuraTotal).clamp(0, estado.inimigo.vida);
           novoEstado = estado.copyWith(vidaAtualInimigo: novaVida);
           int curaReal = novaVida - vidaAntes;
-          descricao = '$atacante curou $curaReal de vida (${vidaAntes}?${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}]';
+          descricao = '$atacante curou $curaReal de vida${curaDobrada ? ' 💚 (DOBRADO!)' : ''} (${vidaAntes}→${novaVida}) usando ${habilidade.nome}[${habilidade.tipoElemental.displayName}] + bônus de energia +$bonusEnergia';
         }
         break;
         
@@ -656,24 +863,61 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int danoBase = habilidade.valorEfetivo;
     int danoComAtaque = danoBase + ataqueAtacante;
 
+    print('🧮 [CALCULO INICIAL] Base: $danoBase + Ataque: $ataqueAtacante = $danoComAtaque');
+
+    // ===== PASSIVA: CRÍTICO (APLICADO ANTES DA DEFESA) =====
+    bool foiCritico = false;
+    int danoAntesCritico = danoComAtaque;
+    // Jogador com passiva Crítico
+    if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
+      danoComAtaque = (danoComAtaque * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO - JOGADOR] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+    }
+    // Inimigo com passiva Crítico
+    else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.critico && _random.nextInt(100) < 10) {
+      danoComAtaque = (danoComAtaque * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO - INIMIGO] $danoAntesCritico × 2 = $danoComAtaque (ANTES da defesa)');
+    }
+
     // Calcula efetividade de tipo usando tipo da habilidade
     double efetividade = await _calcularEfetividade(tipoAtaque, tipoDefensor);
 
-    // Aplica efetividade ao dano
+    // Aplica efetividade ao dano (ANTES da defesa)
     int danoComTipo = (danoComAtaque * efetividade).round();
-    
+
     // Verifica imunidade primeiro (efetividade = 0.0)
     if (efetividade == 0.0) {
       danoComTipo = 0;
     }
-    
-    // Define dano mínimo baseado no tipo de habilidade (só se não for imune)
+
+    print('🎯 [EFETIVIDADE] $danoComAtaque × ${efetividade.toStringAsFixed(1)} = $danoComTipo');
+
+    // Aplica defesa DEPOIS do crítico e efetividade
     int danoMinimo = (efetividade == 0.0) ? 0 : (habilidade.tipo == TipoHabilidade.ofensiva) ? 5 : 1;
     int danoFinal = (danoComTipo - defesaAlvo).clamp(danoMinimo, danoComTipo);
+
+    print('🛡️ [DEFESA] $danoComTipo - $defesaAlvo defesa = $danoFinal (mínimo: $danoMinimo)');
 
     // Aplica dano
     int vidaAntes, vidaDepois;
     EstadoBatalha novoEstado;
+    bool esquivou = false;
+
+    // ===== PASSIVA: ESQUIVA =====
+    // Jogador com passiva Esquiva (sendo atacado)
+    if (!isJogador && _temPassivaEsquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoFinal = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA - JOGADOR] Ataque esquivado!');
+    }
+    // Inimigo com passiva Esquiva (sendo atacado)
+    else if (isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.esquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoFinal = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA - INIMIGO] Ataque esquivado!');
+    }
 
     if (isJogador) {
       // Jogador ataca inimigo
@@ -708,12 +952,24 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     }
     
-    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $danoBase (+$ataqueInfo ataque) x${efetividade.toStringAsFixed(1)} $efetividadeTexto - $defesaAlvo defesa = $danoFinal de dano. Vida: $vidaAntes?$vidaDepois';
-    
+    // Monta descrição com crítico mostrando ordem correta
+    String calculoDano;
+    if (esquivou) {
+      calculoDano = 'Ataque esquivado! 🌪️';
+    } else if (foiCritico) {
+      // Mostra: Base + Ataque = X → CRÍTICO X×2 = Y → Efetividade = Z - Defesa = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoAntesCritico → ⚔️CRÍTICO!⚔️ ${danoAntesCritico}×2 = $danoComAtaque → x${efetividade.toStringAsFixed(1)} $efetividadeTexto = $danoComTipo - $defesaAlvo defesa = $danoFinal';
+    } else {
+      // Mostra: Base + Ataque → Efetividade - Defesa = Final
+      calculoDano = '$danoBase (+$ataqueInfo ataque) = $danoComAtaque → x${efetividade.toStringAsFixed(1)} $efetividadeTexto = $danoComTipo - $defesaAlvo defesa = $danoFinal';
+    }
+    String descricao = '$atacante (${tipoAtaque.displayName}) usou ${habilidade.nome}[${habilidade.tipoElemental.displayName}]: $calculoDano. Vida: $vidaAntes→$vidaDepois';
+
     // Adiciona mensagem especial se aplicou dano mínimo mágico ou imunidade
+    // NÃO adiciona se foi esquiva
     if (efetividade == 0.0) {
       descricao += ' (imune - nenhum dano foi causado)';
-    } else if (habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
+    } else if (!esquivou && habilidade.tipo == TipoHabilidade.ofensiva && (danoComTipo - defesaAlvo) < 5) {
       descricao += ' (a habilidade causou 5 de dano penetrante)';
     }
 
@@ -785,19 +1041,25 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Carrega história atual para atualizar score
       final historia = await repository.carregarHistoricoJogador(emailJogador);
       if (historia != null) {
-        // Calcula score ganho baseado no tier
-        final scoreGanho = ScoreConfig.ehPosTransicao(historia.tier)
-            ? ScoreConfig.SCORE_PONTOS_POR_VITORIA_TIER_11_PLUS
-            : historia.tier;
+        // 🔥 HARDCORE MODE: Tier 100+ não ganha mais score
+        final scoreGanho = historia.tier >= 100
+            ? 0 // Sem score no HARDCORE MODE
+            : (ScoreConfig.ehPosTransicao(historia.tier)
+                ? ScoreConfig.SCORE_PONTOS_POR_VITORIA_TIER_11_PLUS
+                : historia.tier);
 
         // Calcula novo score com limite de pontos extras
         // Score acumula ILIMITADO (para uso na loja)
         // O limite de 150 só é aplicado ao salvar no ranking
         int novoScore = historia.score + scoreGanho;
 
-        print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        if (historia.tier >= 100) {
+          print('🔥 [BatalhaScreen] HARDCORE MODE - Sem ganho de score! (tier ${historia.tier})');
+        } else {
+          print('🎯 [BatalhaScreen] Monstro derrotado! Score ganho: $scoreGanho (tier ${historia.tier})');
+        }
         print('📊 [BatalhaScreen] Score anterior: ${historia.score}, novo score: $novoScore');
-        if (ScoreConfig.ehPosTransicao(historia.tier)) {
+        if (ScoreConfig.ehPosTransicao(historia.tier) && historia.tier < 100) {
           print('💰 [BatalhaScreen] Score ILIMITADO no tier 11+ (limite de 150 só no ranking)');
         }
         
@@ -928,6 +1190,91 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
     } catch (e) {
       print('❌ [BatalhaScreen] Erro ao salvar derrota: $e');
+    }
+  }
+
+  /// Verifica se o jogador tem vidinha e a usa automaticamente
+  /// Retorna true se a vidinha foi usada, false caso contrário
+  Future<bool> _tentarUsarVidinha() async {
+    // Se já usou vidinha nesta batalha, não pode usar novamente
+    if (vidinhaUsada) {
+      return false;
+    }
+
+    try {
+      final emailJogador = ref.read(validUserEmailProvider);
+      final mochila = await MochilaService.carregarMochila(context, emailJogador);
+
+      if (mochila == null) {
+        return false;
+      }
+
+      // Procura por vidinha na mochila
+      int indexVidinha = -1;
+      for (int i = 0; i < mochila.itens.length; i++) {
+        final item = mochila.itens[i];
+        if (item != null &&
+            item.tipo == TipoItemConsumivel.vidinha &&
+            item.quantidade > 0) {
+          indexVidinha = i;
+          break;
+        }
+      }
+
+      if (indexVidinha == -1) {
+        // Não tem vidinha
+        return false;
+      }
+
+      // Tem vidinha! Vamos usar
+      final vidinha = mochila.itens[indexVidinha]!;
+
+      // Remove 1 vidinha da mochila
+      final quantidadeRestante = vidinha.quantidade - 1;
+      final mochilaAtualizada = quantidadeRestante > 0
+          ? mochila.atualizarItem(
+              indexVidinha,
+              vidinha.copyWith(quantidade: quantidadeRestante),
+            )
+          : mochila.removerItem(indexVidinha);
+
+      // Salva mochila atualizada
+      await MochilaService.salvarMochila(
+        context,
+        emailJogador,
+        mochilaAtualizada,
+      );
+
+      // Marca que usou vidinha
+      vidinhaUsada = true;
+
+      // Revive o monstro com vida cheia
+      if (estadoAtual != null) {
+        setState(() {
+          estadoAtual = estadoAtual!.copyWith(
+            vidaAtualJogador: estadoAtual!.vidaMaximaJogador,
+          );
+        });
+      }
+
+      // Mostra modal de vidinha utilizada
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => ModalVidinhaUtilizada(
+            monstro: widget.jogador,
+            onContinuar: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        );
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ [BatalhaScreen] Erro ao tentar usar vidinha: $e');
+      return false;
     }
   }
 
@@ -1083,13 +1430,14 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           onDescartarMagia: (magia) async {
             print('[BatalhaScreen] Magia descartada: ${magia.nome}');
           },
-          onGuardarItensNaMochila: (novosItens, slots, moedaEvento) =>
+          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave) =>
               _guardarItensNaMochila(
                 pacote.emailJogador,
                 pacote.mochila,
                 novosItens,
                 slots,
                 moedaEvento: moedaEvento,
+                moedaChave: moedaChave,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
         ),
@@ -1138,8 +1486,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       tierItem: drop.tier,
       raridadeItem: drop.raridade,
       magiaRecebida: drop.magia,
+      itensRecebidos: drop.itens, // NOVO: Lista de itens do sistema independente
+      magiasRecebidas: drop.magias, // NOVO: Lista de magias do sistema independente
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
+      moedaChave: drop.moedaChave,
+      dropsDoSortudo: drop.dropsDoSortudo,
+      superDrop: drop.superDrop,
     );
 
     return _PacoteRecompensas(
@@ -1338,76 +1691,152 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
     itemGerado = true;
 
-    // DROPS: Sorteia os drops (poções/pedras) que irão para os slots especiais
+    // DROPS: Sorteia MÚLTIPLOS drops (máximo 3) com chances independentes
     // NÃO adiciona ainda - apenas sorteia e exibe no modal
     // Só será salvo quando o jogador confirmar no modal de recompensas
     final consumiveis = <ItemConsumivel>[];
+    final dropsDoSortudo = <TipoDrop>[];
     try {
-      final dropConsumivel = await DropsService.sortearDrop();
-      if (dropConsumivel != null) {
-        // Verifica se há espaço disponível antes de mostrar no modal
-        final slotsLivres = await DropsService.slotsDisponiveis();
-        if (slotsLivres > 0) {
-          consumiveis.add(_converterDropConsumivel(dropConsumivel));
-          print('[BatalhaScreen] Drop consumivel sorteado: ${dropConsumivel.tipo.nome} - Slots disponíveis: $slotsLivres');
+      // Verifica se há espaço disponível antes de sortear
+      final slotsLivres = await DropsService.slotsDisponiveis();
+
+      if (slotsLivres > 0) {
+        // Sorteia múltiplos drops (cada item tem chance independente)
+        final resultado = await DropsService.sortearMultiplosDrops(temPassivaSortudo: _temPassivaSortudo);
+        final dropsObtidos = resultado['drops'] as List<Drop>;
+        dropsDoSortudo.addAll(resultado['dropsDoSortudo'] as List<TipoDrop>);
+
+        // Limita aos slots disponíveis
+        final dropsParaMostrar = dropsObtidos.take(slotsLivres).toList();
+
+        if (dropsParaMostrar.isNotEmpty) {
+          print('[BatalhaScreen] 🎁 ${dropsParaMostrar.length} drops obtidos (slots disponíveis: $slotsLivres):');
+          for (final drop in dropsParaMostrar) {
+            consumiveis.add(_converterDropConsumivel(drop));
+            final ehDoSortudo = dropsDoSortudo.contains(drop.tipo);
+            print('[BatalhaScreen]   - ${drop.tipo.nome}${ehDoSortudo ? " 🍀 (SORTUDO)" : ""}');
+          }
+
+          if (dropsObtidos.length > slotsLivres) {
+            print('[BatalhaScreen] ⚠️ ${dropsObtidos.length - slotsLivres} drops ignorados (mochila cheia)');
+          }
         } else {
-          print('[BatalhaScreen] Drop consumivel ${dropConsumivel.tipo.nome} sorteado mas sem slots (mochila cheia)');
+          print('[BatalhaScreen] ❌ Nenhum drop consumível sorteado desta vez');
         }
       } else {
-        print('[BatalhaScreen] Nenhum drop consumivel sorteado desta vez');
+        print('[BatalhaScreen] ⚠️ Mochila cheia! Nenhum drop será sorteado');
       }
     } catch (e) {
-      print('[BatalhaScreen] Erro ao sortear drop consumivel: $e');
+      print('[BatalhaScreen] ❌ Erro ao sortear drops consumíveis: $e');
     }
 
     final tierAtual = historia.tier;
     final itemService = ItemService();
 
-    // Calcula drop de moeda de evento (independente de outros drops)
-    final recompensaService = RecompensaService();
-    final resultadoRecompensas = recompensaService.gerarRecompensasPorScore(1, tierAtual);
-    final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+    // Carrega o filtro de raridades e valor mínimo de magia do SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final filtroRaridades = <RaridadeItem, bool>{};
+    for (final raridade in RaridadeItem.values) {
+      filtroRaridades[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
+    }
+    final valorMinimoMagia = prefs.getInt('filtro_drop_valor_minimo_magia') ?? 0;
 
-    // ELITE: Sempre dropa item épico (nunca magia)
+    final raridadesFiltradas = filtroRaridades.entries.where((e) => !e.value).map((e) => e.key.nome).join(", ");
+    print('[BatalhaScreen] 🔧 Filtro de drops carregado: ${raridadesFiltradas.isEmpty ? "Nenhuma raridade filtrada" : raridadesFiltradas}');
+    print('[BatalhaScreen] 🔧 Valor mínimo de magia: $valorMinimoMagia (0 = sem filtro)');
+
+    // ELITE: Dropa o item que ele tem equipado (mínimo Épico) + usa sistema novo para magias/moedas
     if (widget.inimigo.isElite) {
-      final item = itemService.gerarItemComRaridade(
-        RaridadeItem.epico,
-        tierAtual: tierAtual,
-      );
-      print('[BatalhaScreen] 🏆 Drop ÉPICO garantido por inimigo ELITE: ${item.nome}');
+      final item = widget.inimigo.itemEquipado;
+
+      // Gera magias e moedas usando o novo sistema
+      final recompensaService = RecompensaService();
+      final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
+      final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+      final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+      final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final superDrop = resultadoRecompensas['superDrop'] as bool;
+
+      if (item != null) {
+        print('[BatalhaScreen] 👑 Elite dropou o item equipado: ${item.nome} (${item.raridade.nome})');
+        return _DropResultado(
+          item: item,
+          tier: item.tier,
+          raridade: item.raridade,
+          magias: magias,
+          consumiveis: consumiveis,
+          moedaEvento: moedaEvento,
+          moedaChave: moedaChave,
+          dropsDoSortudo: dropsDoSortudo,
+          superDrop: superDrop,
+        );
+      } else {
+        // Fallback caso elite não tenha item (não deveria acontecer)
+        print('[BatalhaScreen] ⚠️ Elite sem item equipado! Gerando Épico como fallback');
+        final itemFallback = itemService.gerarItemComRaridade(
+          RaridadeItem.epico,
+          tierAtual: tierAtual,
+        );
+        return _DropResultado(
+          item: itemFallback,
+          tier: itemFallback.tier,
+          raridade: itemFallback.raridade,
+          magias: magias,
+          consumiveis: consumiveis,
+          moedaEvento: moedaEvento,
+          moedaChave: moedaChave,
+          dropsDoSortudo: dropsDoSortudo,
+          superDrop: superDrop,
+        );
+      }
+    }
+
+    // NÃO-ELITE com item equipado: Dropa o item equipado + usa sistema novo para magias/moedas
+    final itemEquipado = widget.inimigo.itemEquipado;
+    if (itemEquipado != null) {
+      // Gera magias e moedas usando o novo sistema
+      final recompensaService = RecompensaService();
+      final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
+      final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+      final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+      final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final superDrop = resultadoRecompensas['superDrop'] as bool;
+
+      print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
       return _DropResultado(
-        item: item,
-        tier: item.tier,
-        raridade: item.raridade,
+        item: itemEquipado,
+        tier: itemEquipado.tier,
+        raridade: itemEquipado.raridade,
+        magias: magias,
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
+        moedaChave: moedaChave,
+        dropsDoSortudo: dropsDoSortudo,
+        superDrop: superDrop,
       );
     }
 
-    // NÃO-ELITE: 30% magia, 70% item
-    final chanceDrop = _random.nextInt(100);
+    // NOVO SISTEMA: Drops INDEPENDENTES de itens e magias
+    print('[BatalhaScreen] 🎲 Usando sistema de drops independentes');
+    final recompensaService = RecompensaService();
+    final resultadoRecompensas = await recompensaService.gerarRecompensasPorScore(1, tierAtual);
 
-    if (chanceDrop < 30) {
-      final magiaService = MagiaService();
-      final magia = magiaService.gerarMagiaAleatoria(tierAtual: tierAtual);
-      print('[BatalhaScreen] ✨ Magia gerada: ${magia.nome} (tier $tierAtual)');
-      return _DropResultado(
-        magia: magia,
-        consumiveis: consumiveis,
-        moedaEvento: moedaEvento,
-      );
-    }
+    final itens = resultadoRecompensas['itens'] as List<Item>;
+    final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
+    final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
+    final moedaChave = resultadoRecompensas['moedaChave'] as int;
+    final superDrop = resultadoRecompensas['superDrop'] as bool;
 
-    // Item comum/raro/épico/lendário aleatório
-    final item = itemService.gerarItemAleatorio(tierAtual: tierAtual);
-    print('[BatalhaScreen] 🎒 Item gerado: ${item.nome} (${item.raridade.nome}) - tier ${item.tier}');
+    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop');
 
     return _DropResultado(
-      item: item,
-      tier: item.tier,
-      raridade: item.raridade,
+      itens: itens,
+      magias: magias,
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
+      moedaChave: moedaChave,
+      dropsDoSortudo: dropsDoSortudo,
+      superDrop: superDrop,
     );
   }
 
@@ -1428,8 +1857,28 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     RaridadeConsumivel raridade;
 
     switch (drop.tipo) {
-      case TipoDrop.pedraReforco:
+      case TipoDrop.pedraRecriacao:
         tipoConsumivel = TipoItemConsumivel.joia;
+        raridade = RaridadeConsumivel.lendario;
+        break;
+      case TipoDrop.joiaReforco:
+        tipoConsumivel = TipoItemConsumivel.joia;
+        raridade = RaridadeConsumivel.epico;
+        break;
+      case TipoDrop.frutaNuty:
+        tipoConsumivel = TipoItemConsumivel.fruta;
+        raridade = RaridadeConsumivel.lendario;
+        break;
+      case TipoDrop.frutaNutyCristalizada:
+        tipoConsumivel = TipoItemConsumivel.fruta;
+        raridade = RaridadeConsumivel.epico;
+        break;
+      case TipoDrop.frutaNutyNegra:
+        tipoConsumivel = TipoItemConsumivel.fruta;
+        raridade = RaridadeConsumivel.epico;
+        break;
+      case TipoDrop.vidinha:
+        tipoConsumivel = TipoItemConsumivel.vidinha;
         raridade = RaridadeConsumivel.lendario;
         break;
       case TipoDrop.pocaoVidaGrande:
@@ -1462,10 +1911,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     List<ItemConsumivel> novosItens,
     Set<int> slotsParaLiberar, {
     int moedaEvento = 0,
+    int moedaChave = 0,
   }) async {
-    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas para guardar');
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave');
 
-    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0) {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0) {
       print('[BatalhaScreen] Nenhum drop para salvar');
       return;
     }
@@ -1473,11 +1923,11 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     // Inicia com a mochila base
     Mochila mochila = mochilaBase;
 
-    // Adiciona moeda de evento primeiro (slot fixo 3)
-    if (moedaEvento > 0) {
-      print('[BatalhaScreen] 🪙 Adicionando $moedaEvento moeda(s) de evento à mochila');
-      mochila = mochila.adicionarMoedaEvento(moedaEvento);
-      print('[BatalhaScreen] ✅ Moeda de evento adicionada! Total: ${mochila.quantidadeMoedaEvento}');
+    // Adiciona moeda chave (slot 27 - 4º da linha 5)
+    if (moedaChave > 0) {
+      print('[BatalhaScreen] 🔑 Adicionando $moedaChave moeda(s) chave à mochila');
+      mochila = mochila.adicionarMoedaChave(moedaChave);
+      print('[BatalhaScreen] ✅ Moeda chave adicionada! Total: ${mochila.quantidadeMoedaChave}');
     }
 
     // Primeiro, libera os slots selecionados
@@ -1567,9 +2017,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Habilidade habilidadeSubstituida,
   ) async {
     try {
+      // Escolhe o tipo elemental (50% cada tipo do monstro)
+      final tipos = [monstro.tipo, monstro.tipoExtra];
+      final tipoElemental = tipos[Random().nextInt(tipos.length)];
+
       final descricaoAtualizada = magia.descricao.replaceAll(
         'TIPO_ELEMENTAL',
-        monstro.tipo.name.toUpperCase(),
+        tipoElemental.name.toUpperCase(),
       );
 
       final novaHabilidade = Habilidade(
@@ -1577,7 +2031,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         descricao: descricaoAtualizada,
         tipo: magia.tipo,
         efeito: magia.efeito,
-        tipoElemental: monstro.tipo,
+        tipoElemental: tipoElemental, // Sorteia entre os tipos do monstro (50% cada)
         valor: magia.valor,
         custoEnergia: magia.custoEnergia,
         level: magia.level,
@@ -1778,22 +2232,67 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     int vidaMaximaDefensor = isJogador ? estado.inimigo.vida : estado.jogador.vida;
     String atacanteNome = isJogador ? estado.jogador.tipo.monsterName : estado.inimigo.tipo.monsterName;
 
-    final danoCalculado = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
+    // Verifica crítico ANTES da defesa
+    bool foiCritico = false;
+    int ataqueAntesCritico = ataqueAtual;
+    // Jogador com passiva Crítico
+    if (isJogador && _temPassivaCritico && _random.nextInt(100) < 10) {
+      ataqueAtual = (ataqueAtual * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO BÁSICO - JOGADOR] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
+    }
+    // Inimigo com passiva Crítico
+    else if (!isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.critico && _random.nextInt(100) < 10) {
+      ataqueAtual = (ataqueAtual * 2);
+      foiCritico = true;
+      print('💥 [PASSIVA CRÍTICO BÁSICO - INIMIGO] $ataqueAntesCritico × 2 = $ataqueAtual (ANTES da defesa)');
+    }
+
+    // ===== PASSIVA: ESQUIVA =====
+    bool esquivou = false;
+    int danoCalculadoTemp = (ataqueAtual - defesaAlvo).clamp(1, ataqueAtual);
+
+    // Jogador com passiva Esquiva (sendo atacado pelo inimigo)
+    if (!isJogador && _temPassivaEsquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoCalculadoTemp = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA BÁSICO - JOGADOR] Ataque esquivado!');
+    }
+    // Inimigo com passiva Esquiva (sendo atacado pelo jogador)
+    else if (isJogador && widget.inimigo.passiva?.tipo == TipoPassiva.esquiva && _random.nextInt(100) < 10) {
+      esquivou = true;
+      danoCalculadoTemp = 0; // Anula o dano
+      print('🌪️ [PASSIVA ESQUIVA BÁSICO - INIMIGO] Ataque esquivado!');
+    }
+
+    final danoCalculado = danoCalculadoTemp;
     final vidaDepois = vidaAntes - danoCalculado; // Permite vida negativa
 
     // Cria ação no histórico
     final energiaRestaurada = isJogador
         ? (estado.jogador.energia * 0.1).round()
         : (estado.inimigo.energia * 0.1).round();
+
+    // Monta descrição com crítico e esquiva
+    String descricao;
+    if (esquivou) {
+      String defensorNome = isJogador ? estado.inimigo.tipo.monsterName : estado.jogador.tipo.monsterName;
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! 🌪️ $defensorNome ESQUIVOU! 🌪️ 0 de dano e restaurou $energiaRestaurada de energia.';
+    } else if (foiCritico) {
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAntesCritico → ⚔️CRÍTICO!⚔️ $ataqueAntesCritico×2 = $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
+    } else {
+      descricao = '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! $ataqueAtual - $defesaAlvo defesa = $danoCalculado de dano e restaurou $energiaRestaurada de energia.';
+    }
+
     final acao = AcaoBatalha(
       atacante: atacanteNome,
       habilidadeNome: 'Ataque Básico',
-      danoBase: ataqueAtual,
+      danoBase: ataqueAntesCritico,
       danoTotal: danoCalculado,
       defesaAlvo: defesaAlvo,
       vidaAntes: vidaAntes,
       vidaDepois: vidaDepois,
-      descricao: '$atacanteNome usou Ataque Básico[${isJogador ? widget.jogador.tipo.displayName : widget.inimigo.tipo.displayName}] por falta de energia! Causou $danoCalculado de dano e restaurou $energiaRestaurada de energia.',
+      descricao: descricao,
     );
 
     // Restaura 10% da energia máxima do atacante (com item durante batalha)
@@ -2477,13 +2976,47 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Widget _buildAcaoItem(int turno, AcaoBatalha acao, bool isJogadorAcao) {
+    // Detecta se foi crítico, esquiva ou cura dobrada pela descrição
+    final bool foiCritico = acao.descricao.contains('⚔️CRÍTICO!⚔️') || acao.descricao.contains('💥 CRÍTICO');
+    final bool foiEsquiva = acao.descricao.contains('Ataque esquivado!') || acao.descricao.contains('🌪️ ESQUIVOU!');
+    final bool foiCuraDobrada = acao.descricao.contains('💚 (DOBRADO!)');
+
+    // ROUND 0 sempre mostra imagem do jogador (bônus de progressão)
+    final bool isRound0 = acao.atacante == 'Sistema' && acao.habilidadeNome == 'ROUND 0';
+
+    // Define cores baseado no tipo de ação especial
+    Color corFundo;
+    Color corBorda;
+    double larguraBorda;
+
+    if (foiCritico) {
+      corFundo = Colors.red.shade50.withOpacity(0.8);
+      corBorda = Colors.red.shade300;
+      larguraBorda = 2;
+    } else if (foiEsquiva) {
+      corFundo = Colors.green.shade50.withOpacity(0.8);
+      corBorda = Colors.green.shade300;
+      larguraBorda = 2;
+    } else if (foiCuraDobrada) {
+      corFundo = Colors.lightGreen.shade50.withOpacity(0.8);
+      corBorda = Colors.lightGreen.shade300;
+      larguraBorda = 2;
+    } else {
+      corFundo = Colors.grey.shade50;
+      corBorda = Colors.grey.shade200;
+      larguraBorda = 1;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: corFundo,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: corBorda,
+          width: larguraBorda,
+        ),
       ),
       child: Row(
         children: [
@@ -2497,7 +3030,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 image: AssetImage(
                   acao.atacante == 'Coleção Nostálgica'
                       ? 'assets/icons_gerais/magia_cura.png'
-                      : (isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem),
+                      : (isRound0 || isJogadorAcao ? widget.jogador.imagem : widget.inimigo.imagem),
                 ),
                 fit: BoxFit.cover,
               ),

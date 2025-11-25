@@ -65,7 +65,9 @@
       "Bash(git add:*)",
       "Bash(flutter devices:*)",
       "Bash(flutter emulators:*)",
-      "Bash(gradlew signingReport:*)"
+      "Bash(gradlew signingReport:*)",
+      "Bash(node convert_images.js:*)",
+      "Bash(images_base64.txt)"
     ],
     "deny": [],
     "ask": []

@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../constants/app_constants.dart';
-import '../../features/splash/splash_screen.dart';
-import '../../features/auth/presentation/login_screen.dart';
-import '../../features/home/presentation/home_screen.dart';
+
 import '../../features/admin/presentation/admin_screen.dart';
-import '../../features/admin/presentation/regras_screen.dart';
 import '../../features/admin/presentation/config_aventura_screen.dart';
+import '../../features/admin/presentation/regras_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
 import '../../features/aventura/presentation/admin_drops_screen.dart';
-import '../../features/tipagem/presentation/tipagem_screen.dart';
-import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
-import '../../features/monstros/monstros_menu_screen.dart';
-import '../../features/aventura/presentation/aventura_screen.dart';
-import '../../features/aventura/presentation/ranking_screen.dart';
 import '../../features/aventura/presentation/mapa_aventura_screen.dart';
-import '../../features/aventura/models/historia_jogador.dart';
-import '../../features/jogador/presentation/jogador_screen.dart';
+import '../../features/aventura/presentation/ranking_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
 import '../../features/jogador/presentation/colecao_screen.dart';
+import '../../features/jogador/presentation/jogador_screen.dart';
 import '../../features/jogador/presentation/vantagens_screen.dart';
+import '../../features/monstros/monstros_menu_screen.dart';
+import '../../features/splash/splash_screen.dart';
+import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
+import '../../features/tipagem/presentation/tipagem_screen.dart';
 import '../../shared/models/tipo_enum.dart';
+import '../constants/app_constants.dart';
 
 class AppRouter {
   static GoRouter get router => GoRouter(

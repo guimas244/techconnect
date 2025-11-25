@@ -6,8 +6,12 @@ class Mochila {
 
   static const int totalSlots = 30;
   static const int slotsIniciaisDesbloqueados = 3;
-  static const int slotMoedaEvento = 3; // Posição 4 (índice 3) é reservada para moeda de evento
-  static const int slotOvoEvento = 4; // Posição 5 (índice 4) é reservada para ovo de evento
+  // SLOTS DE EVENTO - LINHA 5 (ÚLTIMA LINHA) - Índices 24-29
+  static const int slotOvoEvento = 24; // 1º slot da linha 5 (índice 24) - Ovo de Halloween
+  static const int slotMoedaChave = 27; // 4º slot da linha 5 (índice 27) - Moeda Chave
+  // Slots antigos mantidos para compatibilidade de migração
+  static const int slotMoedaEventoAntigo = 3; // Slot antigo da moeda de Halloween (será convertido em ovo)
+  static const int slotOvoEventoAntigo = 4; // Slot antigo do ovo de Halloween
 
   Mochila({
     List<ItemConsumivel?>? itens,
@@ -64,70 +68,6 @@ class Mochila {
       if (itens[i] != null) count++;
     }
     return count;
-  }
-
-  // Obtém quantidade de moeda de evento
-  int get quantidadeMoedaEvento {
-    final moeda = itens[slotMoedaEvento];
-    if (moeda != null && moeda.tipo == TipoItemConsumivel.moedaEvento) {
-      return moeda.quantidade;
-    }
-    return 0;
-  }
-
-  // Adiciona moedas de evento
-  Mochila adicionarMoedaEvento(int quantidade) {
-    final novosItens = List<ItemConsumivel?>.from(itens);
-    final moedaAtual = novosItens[slotMoedaEvento];
-
-    if (moedaAtual != null && moedaAtual.tipo == TipoItemConsumivel.moedaEvento) {
-      // Atualiza quantidade existente
-      novosItens[slotMoedaEvento] = moedaAtual.copyWith(
-        quantidade: moedaAtual.quantidade + quantidade,
-      );
-    } else {
-      // Cria nova moeda de evento
-      novosItens[slotMoedaEvento] = ItemConsumivel(
-        id: 'moeda_evento',
-        nome: 'Moeda de Evento',
-        descricao: 'Moeda especial de evento',
-        tipo: TipoItemConsumivel.moedaEvento,
-        iconPath: 'assets/eventos/halloween/moeda_halloween.png',
-        quantidade: quantidade,
-        raridade: RaridadeConsumivel.lendario,
-      );
-    }
-
-    return copyWith(itens: novosItens);
-  }
-
-  // Remove moedas de evento (retorna null se não tiver moedas suficientes)
-  Mochila? removerMoedaEvento(int quantidade) {
-    final moedaAtual = itens[slotMoedaEvento];
-
-    if (moedaAtual == null || moedaAtual.tipo != TipoItemConsumivel.moedaEvento) {
-      return null; // Não tem moeda
-    }
-
-    if (moedaAtual.quantidade < quantidade) {
-      return null; // Não tem moedas suficientes
-    }
-
-    final novosItens = List<ItemConsumivel?>.from(itens);
-    final novaQuantidade = moedaAtual.quantidade - quantidade;
-
-    // Mantém a moeda mesmo com 0 quantidade
-    novosItens[slotMoedaEvento] = moedaAtual.copyWith(quantidade: novaQuantidade);
-
-    return copyWith(itens: novosItens);
-  }
-
-  // Inicializa moeda de evento com 0 se não existir
-  Mochila inicializarMoedaEvento() {
-    if (itens[slotMoedaEvento] == null) {
-      return adicionarMoedaEvento(0);
-    }
-    return this;
   }
 
   // Obtém quantidade de ovo de evento
@@ -192,6 +132,168 @@ class Mochila {
       return adicionarOvoEvento(0);
     }
     return this;
+  }
+
+  // Obtém quantidade de moeda chave
+  int get quantidadeMoedaChave {
+    final moeda = itens[slotMoedaChave];
+    if (moeda != null && moeda.tipo == TipoItemConsumivel.moedaChave) {
+      return moeda.quantidade;
+    }
+    return 0;
+  }
+
+  // Adiciona moedas chave
+  Mochila adicionarMoedaChave(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final moedaAtual = novosItens[slotMoedaChave];
+
+    if (moedaAtual != null && moedaAtual.tipo == TipoItemConsumivel.moedaChave) {
+      // Atualiza quantidade existente
+      novosItens[slotMoedaChave] = moedaAtual.copyWith(
+        quantidade: moedaAtual.quantidade + quantidade,
+      );
+    } else {
+      // Cria nova moeda chave
+      novosItens[slotMoedaChave] = ItemConsumivel(
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
+        quantidade: quantidade,
+        raridade: RaridadeConsumivel.lendario,
+      );
+    }
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Remove moedas chave (retorna null se não tiver moedas suficientes)
+  Mochila? removerMoedaChave(int quantidade) {
+    final moedaAtual = itens[slotMoedaChave];
+
+    if (moedaAtual == null || moedaAtual.tipo != TipoItemConsumivel.moedaChave) {
+      return null; // Não tem moeda
+    }
+
+    if (moedaAtual.quantidade < quantidade) {
+      return null; // Não tem moedas suficientes
+    }
+
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final novaQuantidade = moedaAtual.quantidade - quantidade;
+
+    // Mantém a moeda mesmo com 0 quantidade
+    novosItens[slotMoedaChave] = moedaAtual.copyWith(quantidade: novaQuantidade);
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Inicializa moeda chave com 0 se não existir
+  Mochila inicializarMoedaChave() {
+    if (itens[slotMoedaChave] == null) {
+      return adicionarMoedaChave(0);
+    }
+    return this;
+  }
+
+  /// Migra itens de evento dos slots antigos (3, 4, 5) para os novos slots (24, 27)
+  /// Converte moedas de Halloween em ovos (somando as quantidades)
+  Mochila migrarItensEventoParaLinha5() {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+
+    print('🔄 [Mochila] Iniciando migração de itens de evento para linha 5...');
+
+    // 1. Pega quantidades dos slots antigos
+    int quantidadeMoedasHalloween = 0;
+    int quantidadeOvos = 0;
+    int quantidadeMoedaChave = 0;
+
+    // Slot 3: Moeda de Halloween antiga
+    final moedaAntiga = novosItens[slotMoedaEventoAntigo];
+    if (moedaAntiga != null && (moedaAntiga.tipo == TipoItemConsumivel.moedaEvento ||
+        moedaAntiga.tipo == TipoItemConsumivel.moedaHalloween)) {
+      quantidadeMoedasHalloween = moedaAntiga.quantidade;
+      print('🪙 [Mochila] Encontradas $quantidadeMoedasHalloween moedas de Halloween no slot 3');
+      novosItens[slotMoedaEventoAntigo] = null; // Limpa slot antigo
+    }
+
+    // Slot 4: Ovo antigo
+    final ovoAntigo = novosItens[slotOvoEventoAntigo];
+    if (ovoAntigo != null && ovoAntigo.tipo == TipoItemConsumivel.ovoEvento) {
+      quantidadeOvos = ovoAntigo.quantidade;
+      print('🥚 [Mochila] Encontrados $quantidadeOvos ovos no slot 4');
+      novosItens[slotOvoEventoAntigo] = null; // Limpa slot antigo
+    }
+
+    // Slot 5: Moeda chave antiga (se existir)
+    if (novosItens.length > 5) {
+      final moedaChaveAntiga = novosItens[5];
+      if (moedaChaveAntiga != null && moedaChaveAntiga.tipo == TipoItemConsumivel.moedaChave) {
+        quantidadeMoedaChave = moedaChaveAntiga.quantidade;
+        print('🔑 [Mochila] Encontradas $quantidadeMoedaChave moedas chave no slot 5');
+        novosItens[5] = null; // Limpa slot antigo
+      }
+    }
+
+    // 2. Converte moedas de Halloween em ovos
+    final totalOvos = quantidadeOvos + quantidadeMoedasHalloween;
+    print('✨ [Mochila] Convertendo $quantidadeMoedasHalloween moedas em ovos. Total de ovos: $totalOvos');
+
+    // 3. Coloca ovos no novo slot 24 (1º da linha 5)
+    if (totalOvos > 0) {
+      novosItens[slotOvoEvento] = ItemConsumivel(
+        id: 'ovo_evento',
+        nome: 'Ovo do Evento',
+        descricao: 'Ovo especial de evento que pode ser usado para surpresas!',
+        tipo: TipoItemConsumivel.ovoEvento,
+        iconPath: 'assets/eventos/halloween/ovo_halloween.png',
+        quantidade: totalOvos,
+        raridade: RaridadeConsumivel.lendario,
+      );
+      print('🥚 [Mochila] Ovos colocados no slot 24 (linha 5, posição 1)');
+    } else {
+      // Inicializa com 0 para reservar o espaço
+      novosItens[slotOvoEvento] = ItemConsumivel(
+        id: 'ovo_evento',
+        nome: 'Ovo do Evento',
+        descricao: 'Ovo especial de evento que pode ser usado para surpresas!',
+        tipo: TipoItemConsumivel.ovoEvento,
+        iconPath: 'assets/eventos/halloween/ovo_halloween.png',
+        quantidade: 0,
+        raridade: RaridadeConsumivel.lendario,
+      );
+    }
+
+    // 4. Coloca moeda chave no novo slot 27 (4º da linha 5)
+    if (quantidadeMoedaChave > 0) {
+      novosItens[slotMoedaChave] = ItemConsumivel(
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave. Muito rara!',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
+        quantidade: quantidadeMoedaChave,
+        raridade: RaridadeConsumivel.lendario,
+      );
+      print('🔑 [Mochila] Moeda chave colocada no slot 27 (linha 5, posição 4)');
+    } else {
+      // Inicializa com 0 para reservar o espaço
+      novosItens[slotMoedaChave] = ItemConsumivel(
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave. Muito rara!',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
+        quantidade: 0,
+        raridade: RaridadeConsumivel.lendario,
+      );
+    }
+
+    print('✅ [Mochila] Migração concluída! Ovos: $totalOvos (slot 24), Moeda chave: $quantidadeMoedaChave (slot 27)');
+
+    return copyWith(itens: novosItens);
   }
 
   Map<String, dynamic> toJson() {

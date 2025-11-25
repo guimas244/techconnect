@@ -33,6 +33,34 @@ class ItemService {
     );
   }
 
+  /// Gera um item aleatório para LOJA (2x mais chance de itens melhores)
+  Item gerarItemAleatorioLoja({int tierAtual = 1}) {
+    print('🛒 [ItemService - LOJA] Gerando item para tier $tierAtual (drop rate melhorado!)');
+
+    // Usa probabilidades melhoradas da loja
+    int quantidadeAtributos = _determinarQuantidadeAtributosLoja();
+
+    // Determina a raridade baseada na quantidade de atributos
+    RaridadeItem raridade = _determinarRaridade(quantidadeAtributos);
+
+    // Gera o nome do item baseado na raridade
+    String nome = GeradorNomesItens.gerarNomeItem();
+
+    // Gera os atributos do item (com multiplicação por tier)
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+
+    print('✅ [ItemService - LOJA] Item gerado: $nome (${raridade.nome}) | Tier: $tierAtual | Total atributos: ${atributos.values.fold(0, (sum, value) => sum + value)}');
+
+    return Item(
+      id: _gerarId(),
+      nome: nome,
+      raridade: raridade,
+      atributos: atributos,
+      dataObtencao: DateTime.now(),
+      tier: tierAtual,
+    );
+  }
+
   /// Gera um item aleatório respeitando restrições de dificuldade por tier
   Item gerarItemComRestricoesTier({int tierAtual = 1}) {
     print('🔒 [ItemService] Gerando item com restrições para tier $tierAtual');
@@ -66,33 +94,76 @@ class ItemService {
 
   /// Determina a quantidade de atributos baseado nas probabilidades
   int _determinarQuantidadeAtributos() {
-    int chance = _random.nextInt(100) + 1; // 1-100
-    
-    print('🎲 [ItemService] Sorteio quantidade atributos: $chance/100');
-    
-    if (chance <= 2) {
+    // Usa 1-1000 para poder ter 0,5% (5 em 1000)
+    int chance = _random.nextInt(1000) + 1; // 1-1000
+
+    print('🎲 [ItemService] Sorteio quantidade atributos: $chance/1000');
+
+    if (chance <= 5) {
+      print('🎯 [ItemService] = 5 atributos MÁXIMOS (0.5% chance - Impossível)');
+      return -1; // Flag especial para indicar item impossível
+    }
+    if (chance <= 25) {
       print('🎯 [ItemService] = 5 atributos (2% chance - Lendário)');
       return 5; // 2%
     }
-    if (chance <= 5) {
+    if (chance <= 55) {
       print('🎯 [ItemService] = 4 atributos (3% chance - Épico)');
       return 4; // 3%
     }
-    if (chance <= 15) {
+    if (chance <= 155) {
       print('🎯 [ItemService] = 3 atributos (10% chance - Raro)');
       return 3; // 10%
     }
-    if (chance <= 35) {
+    if (chance <= 355) {
       print('🎯 [ItemService] = 2 atributos (20% chance - Normal)');
       return 2; // 20%
     }
-    print('🎯 [ItemService] = 1 atributo (65% chance - Inferior)');
-    return 1; // 65%
+    print('🎯 [ItemService] = 1 atributo (64.5% chance - Inferior)');
+    return 1; // 64.5%
+  }
+
+  /// Determina a quantidade de atributos para LOJA (2x mais chance de itens melhores)
+  /// Impossible: 0.5% → 1%
+  /// Legendary: 2% → 4%
+  /// Epic: 3% → 6%
+  /// Rare: 10% → 20%
+  /// Normal: 20% → 40%
+  /// Inferior: 64.5% → 29%
+  int _determinarQuantidadeAtributosLoja() {
+    int chance = _random.nextInt(1000) + 1; // 1-1000
+
+    print('🛒 [ItemService - LOJA] Sorteio quantidade atributos: $chance/1000');
+
+    if (chance <= 10) {
+      print('🎯 [ItemService - LOJA] = 5 atributos MÁXIMOS (1% chance - Impossível)');
+      return -1; // Flag especial para indicar item impossível
+    }
+    if (chance <= 50) {
+      print('🎯 [ItemService - LOJA] = 5 atributos (4% chance - Lendário)');
+      return 5; // 4%
+    }
+    if (chance <= 110) {
+      print('🎯 [ItemService - LOJA] = 4 atributos (6% chance - Épico)');
+      return 4; // 6%
+    }
+    if (chance <= 310) {
+      print('🎯 [ItemService - LOJA] = 3 atributos (20% chance - Raro)');
+      return 3; // 20%
+    }
+    if (chance <= 710) {
+      print('🎯 [ItemService - LOJA] = 2 atributos (40% chance - Normal)');
+      return 2; // 40%
+    }
+    print('🎯 [ItemService - LOJA] = 1 atributo (29% chance - Inferior)');
+    return 1; // 29%
   }
 
   /// Determina a raridade baseada na quantidade de atributos
   RaridadeItem _determinarRaridade(int quantidadeAtributos) {
     switch (quantidadeAtributos) {
+      case -1:
+        return RaridadeItem.impossivel;
       case 5:
         return RaridadeItem.lendario;
       case 4:
@@ -110,18 +181,29 @@ class ItemService {
   Map<String, int> _gerarAtributos(int quantidade, int tier) {
     List<String> atributosDisponiveis = ['vida', 'energia', 'ataque', 'defesa', 'agilidade'];
     atributosDisponiveis.shuffle(_random);
-    
+
     Map<String, int> atributos = {};
-    
+
+    // Se é item impossível (quantidade = -1), todos os 5 atributos no máximo
+    if (quantidade == -1) {
+      print('⭐ [ItemService] ITEM IMPOSSÍVEL: Todos os 5 atributos no MÁXIMO!');
+      for (String atributo in ['vida', 'energia', 'ataque', 'defesa', 'agilidade']) {
+        int valorMaximo = 10 * tier; // Valor máximo possível
+        atributos[atributo] = valorMaximo;
+        print('🎯 [ItemService] Atributo: $atributo | MÁXIMO | Tier: $tier | Final: $valorMaximo');
+      }
+      return atributos;
+    }
+
     for (int i = 0; i < quantidade; i++) {
       String atributo = atributosDisponiveis[i];
       int valorBase = _random.nextInt(10) + 1; // 1-10 pontos base por atributo
       int valorFinal = valorBase * tier; // Multiplica pelo tier
       atributos[atributo] = valorFinal;
-      
+
       print('🎯 [ItemService] Atributo: $atributo | Base: $valorBase | Tier: $tier | Final: $valorFinal');
     }
-    
+
     return atributos;
   }
 
@@ -172,6 +254,8 @@ class ItemService {
   /// Retorna quantidade de atributos baseada na raridade
   int _quantidadeAtributosPorRaridade(RaridadeItem raridade) {
     switch (raridade) {
+      case RaridadeItem.impossivel:
+        return -1; // Flag para item impossível
       case RaridadeItem.lendario:
         return 5;
       case RaridadeItem.epico:
@@ -208,14 +292,65 @@ class ItemService {
   }
 
   /// Gera um item elite respeitando restrições de dificuldade por tier
+  /// Tier < 50: mínimo ÉPICO
+  /// Tier 50+: mínimo LENDÁRIO com 10% chance de IMPOSSÍVEL
   Item gerarItemEliteComRestricoes({int tierAtual = 1}) {
-    print('👑🔒 [ItemService] Gerando item ELITE com drop FIXO ÉPICO para tier $tierAtual');
+    print('👑 [ItemService] Gerando item ELITE para tier $tierAtual');
 
-    // Para monstros elite, SEMPRE força item épico (sem aleatoriedade)
-    // Ignora completamente as restrições de tier para garantir drop épico
-    print('👑🔒 [ItemService] Drop FIXO: ÉPICO (100% garantido para monstro elite)');
+    RaridadeItem raridade;
+    int quantidadeAtributos;
 
-    return gerarItemComRaridade(RaridadeItem.epico, tierAtual: tierAtual);
+    // ===== TIER 50+: LENDÁRIO GARANTIDO + 10% CHANCE DE IMPOSSÍVEL =====
+    if (tierAtual >= 50) {
+      print('👑 [ItemService] Tier 50+: Lendário garantido + 10% chance de Impossível');
+
+      // 10% de chance de item IMPOSSÍVEL
+      final chanceImpossivel = _random.nextInt(100);
+      if (chanceImpossivel < 10) {
+        print('👑 [ItemService] 🌟 SORTEOU IMPOSSÍVEL! (${chanceImpossivel}/100 < 10)');
+        raridade = RaridadeItem.impossivel;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.impossivel);
+      } else {
+        print('👑 [ItemService] Não sorteou impossível (${chanceImpossivel}/100 >= 10), será LENDÁRIO');
+        raridade = RaridadeItem.lendario;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.lendario);
+      }
+    } else {
+      // ===== TIER < 50: ÉPICO GARANTIDO (comportamento original) =====
+      print('👑 [ItemService] Tier < 50: mínimo ÉPICO');
+
+      // Sorteia item normalmente (pode vir Lendário!)
+      quantidadeAtributos = _determinarQuantidadeAtributos();
+      raridade = _determinarRaridade(quantidadeAtributos);
+
+      print('👑 [ItemService] Item sorteado: ${raridade.nome}');
+
+      // Se vier abaixo de Épico, força para Épico (mínimo garantido)
+      if (raridade.nivel < RaridadeItem.epico.nivel) {
+        print('👑 [ItemService] Forçando para ÉPICO (era ${raridade.nome})');
+        raridade = RaridadeItem.epico;
+        quantidadeAtributos = _quantidadeAtributosPorRaridade(RaridadeItem.epico);
+      } else {
+        print('👑 [ItemService] Mantendo raridade sorteada: ${raridade.nome}');
+      }
+    }
+
+    // Gera o nome do item
+    String nome = GeradorNomesItens.gerarNomeItem();
+
+    // Gera os atributos do item
+    Map<String, int> atributos = _gerarAtributos(quantidadeAtributos, tierAtual);
+
+    print('✅ [ItemService] Item ELITE gerado: $nome (${raridade.nome}) | Tier: $tierAtual');
+
+    return Item(
+      id: _gerarId(),
+      nome: nome,
+      raridade: raridade,
+      atributos: atributos,
+      dataObtencao: DateTime.now(),
+      tier: tierAtual,
+    );
   }
 
   /// Obtém as raridades permitidas baseado no tier (restrições de dificuldade)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import '../models/monstro_inimigo.dart';
+import '../models/passiva.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../services/colecao_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -347,6 +348,40 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
                               ),
                             ),
                           ],
+                          // Ícone de Passiva
+                          if (widget.monstro.passiva != null) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                _mostrarDetalhePassiva(context);
+                              },
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.shade100,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.deepPurple,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.deepPurple.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    widget.monstro.passiva!.tipo.icone,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -673,6 +708,78 @@ class _ModalMonstroInimigoState extends State<ModalMonstroInimigo> {
         context: context,
         builder: (ctx) => ModalDetalheItemEquipado(
           item: widget.monstro.itemEquipado!,
+        ),
+      );
+    }
+  }
+
+  void _mostrarDetalhePassiva(BuildContext context) {
+    if (widget.monstro.passiva != null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.amber.withOpacity(0.3),
+                  Colors.deepPurple.withOpacity(0.2),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      icon: const Icon(Icons.close),
+                      color: Colors.deepPurple,
+                    ),
+                  ],
+                ),
+                Text(
+                  widget.monstro.passiva!.tipo.icone,
+                  style: const TextStyle(fontSize: 48),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.monstro.passiva!.tipo.nome,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber, width: 2),
+                  ),
+                  child: Text(
+                    widget.monstro.passiva!.tipo.descricao,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

@@ -266,6 +266,9 @@ class _ModalItemObtidoState extends State<ModalItemObtido> {
       case 'lendária':
       case 'lendaria':
         return 'assets/armaduras/armadura_lendaria.png';
+      case 'impossível':
+      case 'impossivel':
+        return 'assets/armaduras/armadura_impossivel.png';
       default:
         return 'assets/armaduras/armadura_normal.png';
     }

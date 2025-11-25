@@ -7,12 +7,14 @@ import '../models/mochila.dart';
 import '../services/item_service.dart';
 import '../services/magia_service.dart';
 import '../services/mochila_service.dart';
+import '../config/evento_config.dart';
 import 'models/resultado_loja.dart';
 import 'roleta_halloween_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../models/habilidade.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../models/passiva.dart';
 
 /// Casa do Vigarista - Nova implementação seguindo REESTRUTURACAO_LOJA.md
 /// Retorna ResultadoLoja via Navigator.pop() ou callback se inline
@@ -37,10 +39,38 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   bool _comprando = false;
   Mochila? _mochila;
 
-  // Custos dinâmicos baseados no tier
-  int get custoAposta => 2 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
-  int get custoCura => 1 * (_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier);
-  int get custoFeirao => ((_historiaAtual.tier >= 11 ? 2 : _historiaAtual.tier) * 1.5).ceil();
+  // ===== PASSIVA: MERCADOR =====
+  bool get _temPassivaMercador {
+    bool temMercador = _historiaAtual.monstros.any((monstro) =>
+      monstro.passiva != null && monstro.passiva!.tipo == TipoPassiva.mercador
+    );
+    print('💰 [MERCADOR] Tem passiva? $temMercador');
+    return temMercador;
+  }
+
+  // Custos dinâmicos baseados no tier COM desconto Mercador
+  int get custoItem {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoMagia {
+    int custoBase = _historiaAtual.tier >= 11 ? 4 : 4;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoCura {
+    int custoBase = _historiaAtual.tier >= 11 ? 2 : 2;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  int get custoFeirao {
+    int custoBase = _historiaAtual.tier >= 11 ? 3 : 3;
+    return _temPassivaMercador ? (custoBase / 2).ceil() : custoBase;
+  }
+
+  // Mantém compatibilidade
+  int get custoAposta => custoItem;
   int get custoRoleta => 1; // Roleta custa 1 moeda de evento
 
   @override
@@ -148,7 +178,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
               child: _buildOptionCard(
                 title: 'Comprar Item',
                 iconAsset: 'assets/icons_gerais/bau.png',
-                cost: custoAposta,
+                cost: custoItem,
                 color: const Color(0xFF9d4edd),
                 onTap: _apostarItem,
               ),
@@ -161,6 +191,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 cost: custoCura,
                 color: const Color(0xFFe63946),
                 onTap: _apostarCura,
+                forceDisabled: _historiaAtual.tier >= 100, // 🔥 HARDCORE: Desabilita cura no tier 100+
               ),
             ),
             const SizedBox(width: 8),
@@ -168,7 +199,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
               child: _buildOptionCard(
                 title: 'Comprar Magia',
                 iconAsset: 'assets/icons_gerais/magia.png',
-                cost: custoAposta,
+                cost: custoMagia,
                 color: const Color(0xFF457b9d),
                 onTap: _apostarMagia,
               ),
@@ -225,22 +256,26 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
     required VoidCallback onTap,
     String? badge,
     String? customCostIcon, // Ícone customizado para o custo
+    bool forceDisabled = false, // 🔥 HARDCORE: Permite desabilitar forçadamente (tier 100+)
   }) {
-    // Se tem ícone customizado, verifica moeda de evento. Caso contrário, verifica score.
+    // Se tem ícone customizado, verifica se evento está ativo. Caso contrário, verifica score.
     final canAfford = customCostIcon != null
-        ? (_mochila?.quantidadeMoedaEvento ?? 0) >= cost
+        ? EventoConfig.eventoHalloweenAtivo // Evento de Halloween desativado
         : _historiaAtual.score >= cost;
 
+    // 🔥 HARDCORE: Se forceDisabled = true, o botão fica desabilitado independente de score
+    final isEnabled = !forceDisabled && canAfford;
+
     return GestureDetector(
-      onTap: canAfford && !_comprando ? onTap : null,
+      onTap: isEnabled && !_comprando ? onTap : null,
       child: AspectRatio(
         aspectRatio: 0.7, // Cards verticais (mais altos que largos)
         child: Container(
           decoration: BoxDecoration(
-            color: (canAfford ? color : Colors.grey.shade800).withValues(alpha: 0.2),
+            color: (isEnabled ? color : Colors.grey.shade800).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: canAfford ? color : Colors.grey.shade700,
+              color: isEnabled ? color : Colors.grey.shade700,
               width: 2,
             ),
           ),
@@ -256,7 +291,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                     style: GoogleFonts.cinzel(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: canAfford ? Colors.white : Colors.grey.shade500,
+                      color: isEnabled ? Colors.white : Colors.grey.shade500,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 2,
@@ -276,7 +311,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                           width: 80,
                           height: 80,
                           fit: BoxFit.contain,
-                          color: canAfford ? null : Colors.grey.shade600,
+                          color: isEnabled ? null : Colors.grey.shade600,
                         ),
                       ),
                     ),
@@ -288,10 +323,10 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (canAfford ? color : Colors.grey.shade900).withValues(alpha: 0.7),
+                            color: (isEnabled ? color : Colors.grey.shade900).withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: canAfford ? Colors.white.withValues(alpha: 0.3) : Colors.grey.shade700,
+                              color: isEnabled ? Colors.white.withValues(alpha: 0.3) : Colors.grey.shade700,
                               width: 1,
                             ),
                           ),
@@ -299,7 +334,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                             badge,
                             style: TextStyle(
                               fontSize: 12,
-                              color: canAfford ? Colors.white : Colors.grey.shade600,
+                              color: isEnabled ? Colors.white : Colors.grey.shade600,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -319,11 +354,11 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                         customCostIcon,
                         width: 20,
                         height: 20,
-                        color: canAfford ? null : Colors.grey.shade600,
+                        color: isEnabled ? null : Colors.grey.shade600,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             Icons.monetization_on,
-                            color: canAfford ? Colors.amber : Colors.grey.shade600,
+                            color: isEnabled ? Colors.amber : Colors.grey.shade600,
                             size: 18,
                           );
                         },
@@ -331,7 +366,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                     else
                       Icon(
                         Icons.monetization_on,
-                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                        color: isEnabled ? Colors.amber : Colors.grey.shade600,
                         size: 18,
                       ),
                     const SizedBox(width: 4),
@@ -339,7 +374,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                       '$cost',
                       style: GoogleFonts.pressStart2p(
                         fontSize: 16,
-                        color: canAfford ? Colors.amber : Colors.grey.shade600,
+                        color: isEnabled ? Colors.amber : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -418,7 +453,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   // ==================== MÉTODOS DE COMPRA ====================
 
   void _apostarItem() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoItem) return;
 
     // 1. Mostra modal de confirmação
     final confirmacao = await showDialog<bool>(
@@ -446,7 +481,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Custo: $custoAposta',
+                  'Custo: $custoItem',
                   style: const TextStyle(
                     color: Colors.amber,
                     fontSize: 18,
@@ -493,12 +528,12 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       // 2. Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoItem,
       );
 
-      // 3. Gera item (simula processamento)
+      // 3. Gera item com probabilidades melhoradas da loja (2x chance de itens melhores)
       await Future.delayed(const Duration(milliseconds: 800));
-      final item = _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier);
+      final item = _itemService.gerarItemAleatorioLoja(tierAtual: _historiaAtual.tier);
 
       print('✅ [Loja] Item gerado: ${item.nome}');
 
@@ -540,7 +575,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
   }
 
   void _apostarMagia() async {
-    if (_comprando || _historiaAtual.score < custoAposta) return;
+    if (_comprando || _historiaAtual.score < custoMagia) return;
 
     // 1. Mostra modal de confirmação
     final confirmacao = await showDialog<bool>(
@@ -568,7 +603,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
                 const Icon(Icons.monetization_on, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Custo: $custoAposta',
+                  'Custo: $custoMagia',
                   style: const TextStyle(
                     color: Colors.amber,
                     fontSize: 18,
@@ -615,7 +650,7 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
       // Debita score
       final historiaAtualizada = _historiaAtual.copyWith(
-        score: _historiaAtual.score - custoAposta,
+        score: _historiaAtual.score - custoMagia,
       );
 
       // Gera magia (simula processamento)
@@ -859,9 +894,10 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
       // Aguarda um frame para garantir que o loading apareça
       await Future.delayed(const Duration(milliseconds: 100));
 
+      // Gera 3 itens com probabilidades melhoradas da loja (2x chance de itens melhores)
       final itens = List.generate(
         3,
-        (_) => _itemService.gerarItemAleatorio(tierAtual: _historiaAtual.tier),
+        (_) => _itemService.gerarItemAleatorioLoja(tierAtual: _historiaAtual.tier),
       );
 
       final historiaAtualizada = _historiaAtual.copyWith(
@@ -1020,15 +1056,15 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
 
   /// Abre a roleta de Halloween com cartas
   Future<void> _abrirRoleta() async {
-    print('🎰 [Roleta] Iniciando roleta de sorteio...');
+    print('🎰 [Roleta] Tentativa de abrir roleta...');
 
-    // Verifica se tem moeda de evento
-    final temMoedas = (_mochila?.quantidadeMoedaEvento ?? 0) >= custoRoleta;
-    if (!temMoedas) {
+    // Verifica se o evento está ativo
+    if (!EventoConfig.eventoHalloweenAtivo) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Você não tem moedas de evento suficientes!'),
-          backgroundColor: Colors.red,
+          content: Text('🎃 Evento de Halloween encerrado! A roleta não está mais disponível.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -1126,21 +1162,9 @@ class _CasaVigaristaScreenState extends ConsumerState<CasaVigaristaScreen> {
         return;
       }
 
-      final mochilaAtualizada = _mochila!.removerMoedaEvento(custoRoleta);
-      if (mochilaAtualizada == null) {
-        print('❌ [Roleta] Erro: não foi possível remover moeda de evento');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao processar pagamento!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => _comprando = false);
-        return;
-      }
-
-      // Salva mochila atualizada
-      await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
+      // Evento encerrado - não remove moedas mais
+      // Mochila permanece a mesma
+      final mochilaAtualizada = _mochila!;
       setState(() {
         _mochila = mochilaAtualizada;
       });

@@ -1,5 +1,9 @@
+import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/item_consumivel.dart';
 import '../models/mochila.dart';
 import '../models/historia_jogador.dart';
@@ -10,6 +14,12 @@ import 'modal_item_consumivel.dart';
 import 'modal_selecao_monstro_reforco.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/item_service.dart';
+import '../models/monstro_aventura.dart';
+import '../models/item.dart';
+import '../models/progresso_diario.dart';
+import '../../../shared/models/tipo_enum.dart';
+import 'modal_nuty_negra_utilizada.dart';
+import '../providers/progresso_bonus_provider.dart';
 
 class MochilaScreen extends ConsumerStatefulWidget {
   final HistoriaJogador? historiaInicial;
@@ -143,21 +153,50 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     final item = mochila!.itens[index];
     if (item == null) return;
 
+    print('🔍 [MochilaScreen] Usando item: ${item.nome} (ID: ${item.id}, Tipo: ${item.tipo.name}, Raridade: ${item.raridade.name})');
+
     if (item.tipo == TipoItemConsumivel.pocao) {
       await _usarPocao(index, item);
       return;
     }
 
     if (item.tipo == TipoItemConsumivel.joia) {
-      await _usarPedraReforco(index, item);
+      // Distingue entre Joia da Recriação (lendária) e Joia de Reforço (épica)
+      if (item.raridade == RaridadeConsumivel.lendario) {
+        await _usarJoiaRecriacao(index, item);
+      } else {
+        await _usarJoiaReforco(index, item);
+      }
+      return;
+    }
+
+    if (item.tipo == TipoItemConsumivel.fruta) {
+      print('🍇 [MochilaScreen] Item é FRUTA, raridade: ${item.raridade.name}, ID: ${item.id}');
+      // Distingue entre Fruta Nuty (lendária), Fruta Nuty Cristalizada (épica) e Fruta Nuty Negra (épica)
+      if (item.raridade == RaridadeConsumivel.lendario) {
+        print('🥥 [MochilaScreen] Chamando _usarFrutaNuty (lendário)');
+        await _usarFrutaNuty(index, item);
+      } else {
+        print('🍇 [MochilaScreen] Fruta épica detectada, verificando ID...');
+        // Distingue entre Nuty Cristalizada e Nuty Negra pelo ID
+        if (item.id == 'frutaNutyNegra') {
+          print('🖤 [MochilaScreen] ID é frutaNutyNegra - Chamando _usarFrutaNutyNegra');
+          await _usarFrutaNutyNegra(index, item);
+        } else {
+          print('💎 [MochilaScreen] ID é ${item.id} - Chamando _usarFrutaNutyCristalizada');
+          await _usarFrutaNutyCristalizada(index, item);
+        }
+      }
       return;
     }
 
     if (item.tipo == TipoItemConsumivel.ovoEvento) {
+      print('🥚 [MochilaScreen] Item é OVO EVENTO');
       await _usarOvoEvento();
       return;
     }
 
+    print('❓ [MochilaScreen] Item não reconhecido, usando _consumirItem genérico');
     await _consumirItem(index, item, mensagem: '${item.nome} usado!');
   }
 
@@ -245,7 +284,7 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     );
   }
 
-  Future<void> _usarPedraReforco(int index, ItemConsumivel item) async {
+  Future<void> _usarJoiaRecriacao(int index, ItemConsumivel item) async {
     final carregado = await _garantirHistoriaCarregada();
     if (!carregado || historiaAtual == null) {
       _mostrarSnack('Não foi possível carregar o time para usar a pedra.', erro: true);
@@ -257,11 +296,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       return;
     }
 
-    // Filtra apenas monstros que têm item equipado
-    final monstrosComItem = historiaAtual!.monstros.where((m) => m.itemEquipado != null).toList();
+    // Filtra apenas monstros que têm item equipado e que NÃO sejam impossíveis
+    final monstrosComItem = historiaAtual!.monstros
+        .where((m) => m.itemEquipado != null && m.itemEquipado!.raridade != RaridadeItem.impossivel)
+        .toList();
 
     if (monstrosComItem.isEmpty) {
-      _mostrarSnack('Nenhum monstro tem equipamento para reforçar!', erro: true);
+      _mostrarSnack('Nenhum monstro tem equipamento válido! (Itens Impossíveis são imutáveis)', erro: true);
       return;
     }
 
@@ -275,13 +316,90 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
           final itemAtual = monstro.itemEquipado!;
           final itemService = ItemService();
 
-          // Gera novo item com o tier atual mantendo a raridade
-          final itemReforcado = itemService.gerarItemComRaridade(
+          // Gera novo item mantendo a raridade mas com o tier atual do andar
+          final itemRecriado = itemService.gerarItemComRaridade(
             itemAtual.raridade,
             tierAtual: historiaAtual!.tier,
           );
 
-          // Atualiza o monstro com o item reforcado
+          // Atualiza o monstro com o item recriado
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return m.copyWith(itemEquipado: itemRecriado);
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome}: ${itemAtual.nome} (Tier ${itemAtual.tier}) -> ${itemRecriado.nome} (Tier ${itemRecriado.tier})!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarJoiaReforco(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a joia.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Filtra apenas monstros que têm item equipado e que NÃO sejam impossíveis
+    final monstrosComItem = historiaAtual!.monstros
+        .where((m) => m.itemEquipado != null && m.itemEquipado!.raridade != RaridadeItem.impossivel)
+        .toList();
+
+    if (monstrosComItem.isEmpty) {
+      _mostrarSnack('Nenhum monstro tem equipamento válido! (Itens Impossíveis são imutáveis)', erro: true);
+      return;
+    }
+
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: monstrosComItem,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          final itemAtual = monstro.itemEquipado!;
+
+          // Calcula o valor base (tier 1) dividindo os atributos pelo tier atual
+          final atributosBase = <String, int>{};
+          itemAtual.atributos.forEach((atributo, valor) {
+            atributosBase[atributo] = (valor / itemAtual.tier).round();
+          });
+
+          // Multiplica pelo tier do andar atual para obter os novos atributos
+          final novosAtributos = <String, int>{};
+          atributosBase.forEach((atributo, valorBase) {
+            novosAtributos[atributo] = valorBase * historiaAtual!.tier;
+          });
+
+          // Cria um novo item com os atributos ajustados
+          final itemReforcado = itemAtual.copyWith(
+            atributos: novosAtributos,
+            tier: historiaAtual!.tier,
+          );
+
+          // Atualiza o monstro com o item reforçado
           final monstrosAtualizados = historiaAtual!.monstros.map((m) {
             if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
               return m.copyWith(itemEquipado: itemReforcado);
@@ -302,10 +420,238 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
           await _consumirItem(
             index,
             item,
-            mensagem: '${monstro.nome}: ${itemAtual.nome} (Tier ${itemAtual.tier}) -> ${itemReforcado.nome} (Tier ${itemReforcado.tier})!',
+            mensagem: '${monstro.nome}: ${itemAtual.nome} reforçado de Tier ${itemAtual.tier} para Tier ${itemReforcado.tier}!',
           );
         },
       ),
+    );
+  }
+
+  Future<void> _usarFrutaNuty(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a fruta.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Filtra apenas monstros de level 1
+    final monstrosLevel1 = historiaAtual!.monstros.where((m) => m.level == 1).toList();
+
+    if (monstrosLevel1.isEmpty) {
+      _mostrarSnack('A Fruta Nuty só pode ser usada em monstros Level 1!', erro: true);
+      return;
+    }
+
+    // Mostra modal para selecionar o monstro
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: monstrosLevel1,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          // Maximiza todos os atributos do monstro
+          final monstroMaximizado = monstro.copyWith(
+            vida: 150,  // Máximo de vida
+            vidaAtual: 150,  // Cura para o máximo também
+            energia: 40,  // Máximo de energia
+            agilidade: 20,  // Máximo de agilidade
+            ataque: 20,  // Máximo de ataque
+            defesa: 60,  // Máximo de defesa
+          );
+
+          // Atualiza o monstro na lista
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return monstroMaximizado;
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome} teve todos seus atributos maximizados!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarFrutaNutyCristalizada(int index, ItemConsumivel item) async {
+    final carregado = await _garantirHistoriaCarregada();
+    if (!carregado || historiaAtual == null) {
+      _mostrarSnack('Não foi possível carregar o time para usar a fruta.', erro: true);
+      return;
+    }
+
+    if (historiaAtual!.monstros.isEmpty) {
+      _mostrarSnack('Nenhum monstro disponível no time.', erro: true);
+      return;
+    }
+
+    // Pode ser usado em qualquer monstro (sem restrição de level)
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalSelecaoMonstroReforco(
+        monstrosDisponiveis: historiaAtual!.monstros,
+        tierAtual: historiaAtual!.tier,
+        onReforcarItem: (monstro) async {
+          // Sorteia um atributo aleatório para ganhar +10
+          final random = Random();
+          final atributos = ['vida', 'energia', 'agilidade', 'ataque', 'defesa'];
+          final atributoSorteado = atributos[random.nextInt(atributos.length)];
+
+          // Cria o monstro com o atributo sorteado aumentado
+          late final MonstroAventura monstroAprimorado;
+          late final String nomeAtributo;
+
+          switch (atributoSorteado) {
+            case 'vida':
+              monstroAprimorado = monstro.copyWith(
+                vida: monstro.vida + 10,
+                vidaAtual: monstro.vidaAtual + 10, // Aumenta vida atual também
+              );
+              nomeAtributo = 'Vida';
+              break;
+            case 'energia':
+              monstroAprimorado = monstro.copyWith(energia: monstro.energia + 10);
+              nomeAtributo = 'Energia';
+              break;
+            case 'agilidade':
+              monstroAprimorado = monstro.copyWith(agilidade: monstro.agilidade + 10);
+              nomeAtributo = 'Agilidade';
+              break;
+            case 'ataque':
+              monstroAprimorado = monstro.copyWith(ataque: monstro.ataque + 10);
+              nomeAtributo = 'Ataque';
+              break;
+            case 'defesa':
+              monstroAprimorado = monstro.copyWith(defesa: monstro.defesa + 10);
+              nomeAtributo = 'Defesa';
+              break;
+          }
+
+          // Atualiza o monstro na lista
+          final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+            if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+              return monstroAprimorado;
+            }
+            return m;
+          }).toList();
+
+          final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+
+          await _salvarHistoria(historiaAtualizada);
+
+          if (!mounted) return;
+
+          setState(() {
+            historiaAtual = historiaAtualizada;
+          });
+
+          await _consumirItem(
+            index,
+            item,
+            mensagem: '${monstro.nome} ganhou +10 de $nomeAtributo!',
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _usarFrutaNutyNegra(int index, ItemConsumivel item) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) {
+      _mostrarSnack('Erro ao obter informações do jogador.', erro: true);
+      return;
+    }
+
+    // Sorteia um tipo aleatório
+    final random = Random();
+    final tipos = Tipo.values.where((t) => t != Tipo.normal).toList();
+    final tipoSorteado = tipos[random.nextInt(tipos.length)];
+
+    print('🖤 [FrutaNutyNegra] Tipo sorteado: ${tipoSorteado.displayName} (${tipoSorteado.name})');
+
+    // Carrega o progresso diário
+    final prefs = await SharedPreferences.getInstance();
+    final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final progressoJson = prefs.getString('progresso_diario');
+
+    ProgressoDiario progresso;
+    if (progressoJson != null) {
+      progresso = ProgressoDiario.fromJson(
+        Map<String, dynamic>.from(json.decode(progressoJson) as Map)
+      );
+
+      print('🖤 [FrutaNutyNegra] Progresso carregado - Kills antes: ${progresso.killsPorTipo}');
+
+      // Verifica se precisa mudar o dia
+      if (progresso.data != hoje) {
+        print('🖤 [FrutaNutyNegra] Finalizando dia anterior (${progresso.data}) e iniciando novo dia ($hoje)');
+        progresso = progresso.finalizarDia(hoje);
+      }
+    } else {
+      print('🖤 [FrutaNutyNegra] Criando novo progresso diário');
+      progresso = ProgressoDiario(data: hoje);
+    }
+
+    print('🖤 [FrutaNutyNegra] Kills do tipo ${tipoSorteado.name} ANTES: ${progresso.killsPorTipo[tipoSorteado.name] ?? 0}');
+
+    // Adiciona 10 kills do tipo sorteado
+    for (int i = 0; i < 10; i++) {
+      progresso = progresso.adicionarKill(tipoSorteado);
+    }
+
+    print('🖤 [FrutaNutyNegra] Kills do tipo ${tipoSorteado.name} DEPOIS: ${progresso.killsPorTipo[tipoSorteado.name] ?? 0}');
+    print('🖤 [FrutaNutyNegra] Total de kills no dia: ${progresso.totalKills}');
+    print('🖤 [FrutaNutyNegra] Todos os kills: ${progresso.killsPorTipo}');
+
+    // Salva o progresso atualizado
+    await prefs.setString(
+      'progresso_diario',
+      json.encode(progresso.toJson()),
+    );
+
+    print('🖤 [FrutaNutyNegra] Progresso salvo com sucesso!');
+
+    // Recarrega os bônus para refletir os novos kills
+    await ref.read(progressoBonusStateProvider.notifier).reload();
+
+    // Mostra modal informando qual tipo ganhou os kills
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ModalNutyNegraUtilizada(
+        tipoSorteado: tipoSorteado,
+        onContinuar: () => Navigator.of(context).pop(),
+      ),
+    );
+
+    // Consome o item
+    await _consumirItem(
+      index,
+      item,
+      mensagem: '+10 kills de ${tipoSorteado.displayName} adicionados!',
     );
   }
 
@@ -613,6 +959,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
                 _buildLegendaRaridade(RaridadeConsumivel.epico),
                 const SizedBox(width: 12),
                 _buildLegendaRaridade(RaridadeConsumivel.lendario),
+                const SizedBox(width: 12),
+                _buildLegendaRaridade(RaridadeConsumivel.impossivel),
               ],
             ),
           ),
@@ -751,18 +1099,18 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       );
     }
 
-    // Slot de moeda de evento (index 3) - sempre visível, clicável para detalhes
-    if (index == Mochila.slotMoedaEvento) {
+    // Slot de moeda chave (index 27 - 4º da linha 5) - sempre visível, clicável para detalhes
+    if (index == Mochila.slotMoedaChave) {
       final moeda = item;
       final quantidade = moeda?.quantidade ?? 0;
 
       // Cria item temporário se não existir (para permitir clique mesmo com quantidade 0)
       final moedaParaMostrar = moeda ?? ItemConsumivel(
-        id: 'moeda_evento',
-        nome: 'Moeda de Evento',
-        descricao: 'Moeda especial de evento usada na roleta de sorteio!',
-        tipo: TipoItemConsumivel.moedaEvento,
-        iconPath: 'assets/eventos/halloween/moeda_halloween.png',
+        id: 'moeda_chave',
+        nome: 'Moeda Chave',
+        descricao: 'Moeda especial em formato de chave. Muito rara!',
+        tipo: TipoItemConsumivel.moedaChave,
+        iconPath: 'assets/eventos/halloween/moeda_chave.png',
         quantidade: 0,
         raridade: RaridadeConsumivel.lendario,
       );
@@ -777,105 +1125,105 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
               color: Colors.black.withOpacity(0.5),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: const Color(0xFFFF9800), // Laranja lendário
+                color: const Color(0xFFFFD700), // Dourado para a chave
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF9800).withOpacity(0.3),
+                  color: const Color(0xFFFFD700).withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
               ],
             ),
             child: Stack(
-          children: [
-            // Imagem da moeda
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/eventos/halloween/moeda_halloween.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.stars,
-                      size: 30,
-                      color: Color(0xFFFF9800),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // Badge de quantidade estilo estrela de level
-            Positioned(
-              right: 2,
-              bottom: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFFF9800),
-                      const Color(0xFFFFB74D),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: const Color(0xFFFFE0B2),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 4,
-                      offset: const Offset(1, 1),
+              children: [
+                // Imagem da moeda chave
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/eventos/halloween/moeda_chave.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.key,
+                          size: 30,
+                          color: Color(0xFFFFD700),
+                        );
+                      },
                     ),
-                  ],
-                ),
-                child: Text(
-                  '$quantidade',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
                   ),
                 ),
-              ),
-            ),
 
-            // Ícone de permanente (canto superior esquerdo)
-            Positioned(
-              left: 4,
-              top: 4,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  shape: BoxShape.circle,
+                // Badge de quantidade estilo estrela de level
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFFD700),
+                          const Color(0xFFFFE55C),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: const Color(0xFFFFF9C4),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 4,
+                          offset: const Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '$quantidade',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black,
+                            offset: Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.lock,
-                  size: 12,
-                  color: Color(0xFFFF9800),
+
+                // Ícone de permanente (canto superior esquerdo)
+                Positioned(
+                  left: 4,
+                  top: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock,
+                      size: 12,
+                      color: Color(0xFFFFD700),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
           ),
         ),
       );
@@ -1054,6 +1402,10 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         return Icons.local_drink;
       case TipoItemConsumivel.joia:
         return Icons.diamond;
+      case TipoItemConsumivel.fruta:
+        return Icons.apple;
+      case TipoItemConsumivel.vidinha:
+        return Icons.favorite;
       case TipoItemConsumivel.pergaminho:
         return Icons.article;
       case TipoItemConsumivel.elixir:
@@ -1061,7 +1413,10 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       case TipoItemConsumivel.fragmento:
         return Icons.broken_image;
       case TipoItemConsumivel.moedaEvento:
+      case TipoItemConsumivel.moedaHalloween:
         return Icons.stars;
+      case TipoItemConsumivel.moedaChave:
+        return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
     }

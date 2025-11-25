@@ -5,7 +5,8 @@ enum RaridadeItem {
   normal(2, 'Normal', Color(0xFF424242)), // Cinza escuro (ao invés de branco)
   raro(3, 'Raro', Color(0xFF388E3C)), // Verde mais escuro
   epico(4, 'Épico', Color(0xFF7B1FA2)), // Roxo mais escuro
-  lendario(5, 'Lendário', Color(0xFFF57C00)); // Laranja dourado (mais contrastado)
+  lendario(5, 'Lendário', Color(0xFFF57C00)), // Laranja dourado (mais contrastado)
+  impossivel(6, 'Impossível', Color(0xFFD32F2F)); // Vermelho
 
   const RaridadeItem(this.nivel, this.nome, this.cor);
   

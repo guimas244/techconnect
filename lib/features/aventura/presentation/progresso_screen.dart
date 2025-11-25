@@ -264,7 +264,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
   }
 
   Widget _buildHistoricoView() {
-    final historicoValido = progressoAtual?.historicoValido ?? [];
+    final historicoCompleto = progressoAtual?.historicoCompleto ?? [];
     final hoje = progressoAtual?.data ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
     final killsHoje = progressoAtual?.killsPorTipo ?? {};
     final totalKillsHoje = progressoAtual?.totalKills ?? 0;
@@ -309,22 +309,24 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
               totalKills: totalKillsHoje,
               killsPorTipo: killsHoje,
               isHoje: true,
+              estaValido: true,
             ),
           ],
 
-          // Lista de entradas do histórico
-          ...historicoValido.reversed.map((entrada) {
+          // Lista de entradas do histórico (incluindo expiradas)
+          ...historicoCompleto.reversed.map((entrada) {
             return _buildEntradaCard(
               dataEntrada: entrada.dataEntrada,
               dataValidade: entrada.dataValidade,
               totalKills: entrada.totalKills,
               killsPorTipo: entrada.killsPorTipo,
               isHoje: false,
+              estaValido: entrada.estaValido,
             );
-          }).toList(),
+          }),
 
           // Mensagem se não tem nada
-          if (historicoValido.isEmpty && totalKillsHoje == 0) ...[
+          if (historicoCompleto.isEmpty && totalKillsHoje == 0) ...[
             const SizedBox(height: 40),
             Icon(Icons.history, size: 80, color: Colors.white24),
             const SizedBox(height: 16),
@@ -356,6 +358,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
     required int totalKills,
     required Map<String, int> killsPorTipo,
     required bool isHoje,
+    required bool estaValido,
   }) {
     final dataEntradaFormatada = DateFormat('dd/MM/yyyy').format(
       DateFormat('yyyy-MM-dd').parse(dataEntrada),
@@ -364,17 +367,36 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
       DateFormat('yyyy-MM-dd').parse(dataValidade),
     );
 
+    // Define cores baseadas no status da entrada
+    Color corBorda;
+    Color corFundo;
+    double larguraBorda;
+
+    if (isHoje) {
+      corBorda = Colors.green.shade400;
+      corFundo = Colors.indigo.shade900.withOpacity(0.5);
+      larguraBorda = 3;
+    } else if (!estaValido) {
+      // Entrada expirada
+      corBorda = Colors.grey.shade700;
+      corFundo = Colors.black.withOpacity(0.2);
+      larguraBorda = 2;
+    } else {
+      // Entrada válida
+      corBorda = Colors.amber.shade700;
+      corFundo = Colors.black.withOpacity(0.3);
+      larguraBorda = 2;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isHoje
-            ? Colors.indigo.shade900.withOpacity(0.5)
-            : Colors.black.withOpacity(0.3),
+        color: corFundo,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isHoje ? Colors.green.shade400 : Colors.amber.shade700,
-          width: isHoje ? 3 : 2,
+          color: corBorda,
+          width: larguraBorda,
         ),
       ),
       child: Column(
@@ -383,8 +405,12 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
           Row(
             children: [
               Icon(
-                isHoje ? Icons.today : Icons.calendar_today,
-                color: isHoje ? Colors.green.shade400 : Colors.amber,
+                isHoje
+                    ? Icons.today
+                    : (estaValido ? Icons.calendar_today : Icons.event_busy),
+                color: isHoje
+                    ? Colors.green.shade400
+                    : (estaValido ? Colors.amber : Colors.grey),
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -396,10 +422,10 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                       children: [
                         Text(
                           'Entrada: $dataEntradaFormatada',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: estaValido ? Colors.white : Colors.grey.shade400,
                           ),
                         ),
                         if (isHoje) ...[
@@ -422,6 +448,26 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                               ),
                             ),
                           ),
+                        ] else if (!estaValido) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade700,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'EXPIRADO',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -431,7 +477,7 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                         fontSize: 12,
                         color: isHoje
                             ? Colors.green.shade300
-                            : Colors.amber.shade300,
+                            : (estaValido ? Colors.amber.shade300 : Colors.grey.shade500),
                       ),
                     ),
                   ],
@@ -443,15 +489,17 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: isHoje ? Colors.green.shade400 : Colors.amber.shade700,
+                  color: isHoje
+                      ? Colors.green.shade400
+                      : (estaValido ? Colors.amber.shade700 : Colors.grey.shade700),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$totalKills kills',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: estaValido ? Colors.black : Colors.white70,
                   ),
                 ),
               ),

@@ -7,7 +7,7 @@ import '../models/item_consumivel.dart';
 class MochilaService {
   static const String _boxName = 'mochila_box';
   static const String _migrationBoxName = 'app_migration';
-  static const String _currentVersion = '2.1.1';
+  static const String _currentVersion = '2.3.2';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
@@ -22,7 +22,7 @@ class MochilaService {
 
       if (conteudo == null) {
         print('📭 [MochilaService] Mochila não encontrada, criando nova');
-        final mochilaNova = Mochila().inicializarMoedaEvento().inicializarOvoEvento();
+        final mochilaNova = Mochila().inicializarOvoEvento().inicializarMoedaChave();
         // Salva a mochila vazia
         await _salvarNoHive(emailLimpo, mochilaNova);
         return mochilaNova;
@@ -34,24 +34,24 @@ class MochilaService {
       if (conteudo is String) {
         final json = jsonDecode(conteudo) as Map<String, dynamic>;
         print('✅ [MochilaService] Mochila carregada do Hive (JSON)');
-        mochila = Mochila.fromJson(json).inicializarMoedaEvento().inicializarOvoEvento();
+        mochila = Mochila.fromJson(json);
       }
       // Se for Map, usa direto
       else if (conteudo is Map) {
         print('✅ [MochilaService] Mochila carregada do Hive (Map)');
-        mochila = Mochila.fromJson(Map<String, dynamic>.from(conteudo)).inicializarMoedaEvento().inicializarOvoEvento();
+        mochila = Mochila.fromJson(Map<String, dynamic>.from(conteudo));
       } else {
         print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
-        return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
+        return Mochila().inicializarOvoEvento().inicializarMoedaChave();
       }
 
-      // Aplica migração se necessário (2.0.0 -> 2.1.1)
+      // Aplica migrações se necessário
       final mochilaLimpa = await _aplicarMigracaoSeNecessario(emailLimpo, mochila);
       return mochilaLimpa;
     } catch (e, stack) {
       print('❌ [MochilaService] Erro ao carregar mochila: $e');
       print(stack);
-      return Mochila().inicializarMoedaEvento().inicializarOvoEvento();
+      return Mochila().inicializarOvoEvento().inicializarMoedaChave();
     }
   }
 
@@ -125,6 +125,19 @@ class MochilaService {
   /// Aplica migração 2.0.0 -> 2.1.1 se necessário
   /// Remove poções e pedras de reforço da mochila
   static Future<Mochila> _aplicarMigracaoSeNecessario(String emailLimpo, Mochila mochila) async {
+    Mochila mochilaAtual = mochila;
+
+    // Migração 2.1.0: Remove poções e pedras de reforço
+    mochilaAtual = await _aplicarMigracao2_1_0(emailLimpo, mochilaAtual);
+
+    // Migração 2.3.2: Move itens de evento para linha 5 e converte moedas em ovos
+    mochilaAtual = await _aplicarMigracao2_3_1(emailLimpo, mochilaAtual);
+
+    return mochilaAtual;
+  }
+
+  /// Migração 2.1.0: Remove poções e pedras de reforço
+  static Future<Mochila> _aplicarMigracao2_1_0(String emailLimpo, Mochila mochila) async {
     try {
       final migrationBox = await Hive.openBox(_migrationBoxName);
       final chave = 'migrated_2_1_0_$emailLimpo';
@@ -133,18 +146,20 @@ class MochilaService {
       final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
 
       if (jaMigrado) {
-        print('✅ [MochilaService] Migração 2.1.1 já foi aplicada anteriormente');
+        print('✅ [MochilaService] Migração 2.1.0 já foi aplicada anteriormente');
         return mochila;
       }
 
-      print('🔄 [MochilaService] Aplicando migração 2.0.0 -> 2.1.1: Limpando poções e pedras de reforço');
+      print('🔄 [MochilaService] Aplicando migração 2.1.0: Limpando poções e pedras de reforço');
 
       // Remove todos os itens que são poções ou joias (pedra de reforço)
       final itensLimpos = mochila.itens.map((item) {
         if (item == null) return null;
 
-        // Mantém moeda de evento e ovo de evento (slots fixos)
+        // Mantém moedas de evento e ovo de evento (slots fixos)
         if (item.tipo == TipoItemConsumivel.moedaEvento ||
+            item.tipo == TipoItemConsumivel.moedaHalloween ||
+            item.tipo == TipoItemConsumivel.moedaChave ||
             item.tipo == TipoItemConsumivel.ovoEvento) {
           return item;
         }
@@ -168,11 +183,47 @@ class MochilaService {
       // Marca como migrado
       await migrationBox.put(chave, true);
 
-      print('✅ [MochilaService] Migração 2.1.1 concluída com sucesso');
+      print('✅ [MochilaService] Migração 2.1.0 concluída com sucesso');
       return mochilaLimpa;
 
     } catch (e, stack) {
-      print('❌ [MochilaService] Erro na migração 2.1.1: $e');
+      print('❌ [MochilaService] Erro na migração 2.1.0: $e');
+      print(stack);
+      // Em caso de erro, retorna a mochila original
+      return mochila;
+    }
+  }
+
+  /// Migração 2.3.2: Move itens de evento para linha 5 e converte moedas de Halloween em ovos
+  static Future<Mochila> _aplicarMigracao2_3_1(String emailLimpo, Mochila mochila) async {
+    try {
+      final migrationBox = await Hive.openBox(_migrationBoxName);
+      final chave = 'migrated_2_3_1_$emailLimpo';
+
+      // Verifica se já foi migrado
+      final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
+
+      if (jaMigrado) {
+        print('✅ [MochilaService] Migração 2.3.2 já foi aplicada anteriormente');
+        return mochila;
+      }
+
+      print('🔄 [MochilaService] Aplicando migração 2.3.2: Movendo itens de evento para linha 5');
+
+      // Chama o método de migração da mochila
+      final mochilaMigrada = mochila.migrarItensEventoParaLinha5();
+
+      // Salva a mochila migrada
+      await _salvarNoHive(emailLimpo, mochilaMigrada);
+
+      // Marca como migrado
+      await migrationBox.put(chave, true);
+
+      print('✅ [MochilaService] Migração 2.3.2 concluída com sucesso');
+      return mochilaMigrada;
+
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro na migração 2.3.2: $e');
       print(stack);
       // Em caso de erro, retorna a mochila original
       return mochila;

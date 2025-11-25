@@ -38,7 +38,8 @@ class EntradaDiaria {
     final hoje = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final dataValidadeDate = DateFormat('yyyy-MM-dd').parse(dataValidade);
     final hojeDate = DateFormat('yyyy-MM-dd').parse(hoje);
-    return hojeDate.isBefore(dataValidadeDate) || hojeDate.isAtSameMomentAs(dataValidadeDate);
+    // Válido se hoje for ANTES da data de validade (não no mesmo dia)
+    return hojeDate.isBefore(dataValidadeDate);
   }
 }
 
@@ -76,18 +77,19 @@ class ProgressoDiario {
     );
   }
 
-  // Finaliza o dia e move para o histórico (validade de 3 dias)
+  // Finaliza o dia e move para o histórico (validade de 3 dias completos)
   ProgressoDiario finalizarDia(String novaData) {
-    // Se não tem kills, não adiciona no histórico
+    // Se não tem kills, não adiciona no histórico mas mantém o histórico existente
     if (totalKills == 0) {
       return ProgressoDiario(
         data: novaData,
         distribuicaoAtributos: distribuicaoAtributos,
-        historico: _limparHistoricoExpirado(),
+        historico: historico, // Mantém histórico sem remover entradas expiradas
       );
     }
 
-    // Calcula validade: entrada dia X expira no início do dia X+3
+    // Calcula validade: entrada dia X, válido por 3 dias completos (X, X+1, X+2), expira no início do dia X+3
+    // Exemplo: entrada dia 26, válido nos dias 26, 27, 28, expira no dia 29
     final dataEntradaDate = DateFormat('yyyy-MM-dd').parse(data);
     final dataValidadeDate = dataEntradaDate.add(const Duration(days: 3));
     final dataValidade = DateFormat('yyyy-MM-dd').format(dataValidadeDate);
@@ -104,18 +106,18 @@ class ProgressoDiario {
     return ProgressoDiario(
       data: novaData,
       distribuicaoAtributos: distribuicaoAtributos,
-      historico: novoHistorico,
+      historico: novoHistorico, // Mantém histórico sem remover entradas expiradas
     );
   }
 
-  // Remove entradas expiradas do histórico
-  List<EntradaDiaria> _limparHistoricoExpirado() {
+  // Obtém histórico válido (não expirado) - usado para cálculos de bônus
+  List<EntradaDiaria> get historicoValido {
     return historico.where((entrada) => entrada.estaValido).toList();
   }
 
-  // Obtém histórico válido (não expirado)
-  List<EntradaDiaria> get historicoValido {
-    return _limparHistoricoExpirado();
+  // Obtém todo o histórico (incluindo expirados) - usado para exibição
+  List<EntradaDiaria> get historicoCompleto {
+    return historico;
   }
 
   // Calcula total de kills considerando histórico válido + dia atual

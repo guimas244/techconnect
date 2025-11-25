@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import 'modal_detalhe_item_equipado.dart';
 import '../models/monstro_aventura.dart';
+import '../models/passiva.dart';
 import '../providers/progresso_bonus_provider.dart';
 import 'package:remixicon/remixicon.dart';
 // Garante que RemixIcon está disponível
@@ -149,6 +150,7 @@ class ModalMonstroAventura extends ConsumerWidget {
                             // Calcula quantos ícones teremos
                             int iconCount = 3; // tipo, tipoExtra, level (sempre presentes)
                             iconCount += monstro.itemEquipado != null ? 1 : 0; // mochila
+                            iconCount += monstro.passiva != null ? 1 : 0; // passiva
                             iconCount += monstro.vidaAtual <= 0 ? 1 : 0; // skull
                             
                             // Define tamanhos baseados na largura disponível
@@ -260,6 +262,90 @@ class ModalMonstroAventura extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
+                                if (monstro.passiva != null) ...[
+                                  SizedBox(width: spacing),
+                                  Flexible(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => Dialog(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(24),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(20),
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    Colors.amber.withOpacity(0.3),
+                                                    Colors.deepPurple.withOpacity(0.2),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.end,
+                                                    children: [
+                                                      IconButton(
+                                                        onPressed: () => Navigator.of(ctx).pop(),
+                                                        icon: const Icon(Icons.close),
+                                                        color: Colors.deepPurple,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Text(
+                                                    monstro.passiva!.tipo.icone,
+                                                    style: const TextStyle(fontSize: 48),
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    monstro.passiva!.tipo.nome,
+                                                    style: const TextStyle(
+                                                      fontSize: 24,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.deepPurple,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Container(
+                                                    padding: const EdgeInsets.all(16),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white.withOpacity(0.8),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(color: Colors.amber, width: 2),
+                                                    ),
+                                                    child: Text(
+                                                      monstro.passiva!.tipo.descricao,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          const Text(
+                                            '✨',
+                                            style: TextStyle(fontSize: 32),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 if (monstro.vidaAtual <= 0) ...[
                                   SizedBox(width: spacing),
                                   Flexible(

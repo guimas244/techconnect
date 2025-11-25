@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import '../models/monstro_inimigo.dart';
 import '../models/historia_jogador.dart';
@@ -17,6 +18,7 @@ import '../presentation/modal_magia_obtida.dart';
 import '../presentation/modal_cura_obtida.dart';
 import '../presentation/modal_feirao.dart';
 import '../presentation/modal_biblioteca.dart';
+import '../presentation/modal_loja_ganandius.dart';
 import '../models/magia_drop.dart';
 import '../models/habilidade.dart';
 import '../presentation/mochila_screen.dart';
@@ -24,6 +26,7 @@ import '../presentation/aventura_screen.dart';
 import '../presentation/progresso_screen.dart';
 import '../presentation/modal_tier11_transicao.dart';
 import '../../../core/config/score_config.dart';
+import '../../../core/config/version_config.dart';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -46,6 +49,20 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   bool isAdvancingTier = false;
   int _abaAtual = 0; // 0 = Equipe, 1 = Mapa, 2 = Mochila, 3 = Loja, 4 = Progresso
 
+  // Filtro de drops - todas as raridades marcadas por padrão
+  Map<RaridadeItem, bool> _filtroDrops = {
+    RaridadeItem.inferior: true,
+    RaridadeItem.normal: true,
+    RaridadeItem.raro: true,
+    RaridadeItem.epico: true,
+    RaridadeItem.lendario: true,
+    RaridadeItem.impossivel: true,
+  };
+
+  // Valor mínimo para magias (0 = sem filtro)
+  int _valorMinimoMagia = 0;
+  late TextEditingController _valorMinimoMagiaController;
+
   final List<String> mapasDisponiveis = [
     'assets/mapas_aventura/cidade_abandonada.jpg',
     'assets/mapas_aventura/deserto.jpg',
@@ -65,7 +82,15 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   @override
   void initState() {
     super.initState();
+    _valorMinimoMagiaController = TextEditingController(text: _valorMinimoMagia.toString());
+    _carregarFiltroDrops();
     _verificarAventuraIniciada();
+  }
+
+  @override
+  void dispose() {
+    _valorMinimoMagiaController.dispose();
+    super.dispose();
   }
 
   @override
@@ -240,6 +265,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
         ),
         actions: [
+          // Ícone de configuração de filtro de drops
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Filtrar Drops',
+            onPressed: _mostrarFiltroDrops,
+          ),
           // Ícone de refresh - só aparece na aba MAPA
           if (_abaAtual == 1 && historiaAtual?.aventuraIniciada == true && _podeRefreshAndar())
             Padding(
@@ -715,6 +746,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       pontos.add(_buildMonstroColecao(monstrosColecao[i], posX, 0.50)); // 0.25 + ~0.10 = 3cm abaixo
     }
 
+    // Adiciona NPC Ganandius no andar 11, depois 21, 31, 41, etc. (a cada 10 andares após o 11)
+    final tierAtual = historiaAtual?.tier ?? 1;
+    if (tierAtual >= 11 && (tierAtual - 11) % 10 == 0) {
+      pontos.add(_buildNpcGanandius(0.5, 0.35)); // Centro do mapa
+    }
+
     return pontos;
   }
 
@@ -1053,13 +1090,17 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   .where((h) => h != habilidadeSubstituida)
                   .toList();
 
+              // Escolhe o tipo elemental (50% cada tipo do monstro)
+              final tipos = [m.tipo, m.tipoExtra];
+              final tipoElemental = tipos[math.Random().nextInt(tipos.length)];
+
               // Cria a nova habilidade com a tipagem do monstro
               final novaHabilidade = Habilidade(
                 nome: magiaObtida.nome,
                 descricao: magiaObtida.descricao,
                 tipo: magiaObtida.tipo,
                 efeito: magiaObtida.efeito,
-                tipoElemental: m.tipo, // Usa o tipo do monstro
+                tipoElemental: tipoElemental, // Sorteia entre os tipos do monstro (50% cada)
                 valor: magiaObtida.valor,
                 custoEnergia: magiaObtida.custoEnergia,
                 level: magiaObtida.level,
@@ -1311,6 +1352,109 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
+  Widget _buildNpcGanandius(double left, double top) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final calcTop = math.min(screenHeight * top, screenHeight - 100);
+
+    return Positioned(
+      left: MediaQuery.of(context).size.width * left - 30, // Centraliza o ícone (60/2)
+      top: calcTop,
+      child: GestureDetector(
+        onTap: () => _mostrarLojaGanandius(),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.9),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.amber,
+              width: 4
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.deepPurple.withOpacity(0.6),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/npc/icon_negociante_ganandius.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Colors.amber,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarLojaGanandius() async {
+    if (historiaAtual == null) return;
+
+    try {
+      // Carrega se já pegou o despertar gratuito neste tier
+      final prefs = await SharedPreferences.getInstance();
+      final emailJogador = ref.read(validUserEmailProvider);
+      final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_${historiaAtual!.tier}';
+      final jaPegouGratuito = prefs.getBool(chaveGratuito) ?? false;
+
+      // Carrega o contador de compras PARA ESTE RUN (não por tier)
+      final runId = historiaAtual!.runId;
+      final chaveCompras = 'ganandius_compras_${emailJogador}_run_$runId';
+      final comprasRealizadas = prefs.getInt(chaveCompras) ?? 0;
+
+      print('🔍 [MapaAventura] Carregando compras do run $runId: $comprasRealizadas compras realizadas');
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => ModalLojaGanandius(
+          historia: historiaAtual!,
+          onHistoriaAtualizada: (historiaAtualizada) async {
+            // Atualiza a história localmente
+            setState(() {
+              historiaAtual = historiaAtualizada;
+            });
+
+            // Salva no repositório
+            try {
+              final repository = ref.read(aventuraRepositoryProvider);
+              await repository.salvarHistoricoJogador(historiaAtualizada);
+              print('✅ [MapaAventura] História atualizada após despertar');
+            } catch (e) {
+              print('❌ [MapaAventura] Erro ao salvar história: $e');
+            }
+          },
+          jaPegouGratuito: jaPegouGratuito,
+          onPegouGratuito: () async {
+            // Marca que já pegou o gratuito neste tier
+            await prefs.setBool(chaveGratuito, true);
+            print('✅ [MapaAventura] Despertar gratuito marcado para tier ${historiaAtual!.tier}');
+          },
+          comprasRealizadas: comprasRealizadas,
+          onCompraRealizada: () async {
+            // Incrementa o contador de compras PARA ESTE RUN
+            final novoContador = comprasRealizadas + 1;
+            await prefs.setInt(chaveCompras, novoContador);
+            print('✅ [MapaAventura] Compra #$novoContador registrada para run $runId (tier ${historiaAtual!.tier})');
+          },
+        ),
+      );
+    } catch (e) {
+      print('❌ [MapaAventura] Erro ao abrir loja Ganandius: $e');
+    }
+  }
+
   void _mostrarModalMonstroInimigo(MonstroInimigo monstro) async {
     // ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ PRINT DOS DADOS DE DEFESA DO MONSTRO INIMIGO
     print('ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â° [MONSTRO INIMIGO CLICADO] Tipo: ${monstro.tipo.displayName} (${monstro.tipo.name})');
@@ -1402,7 +1546,45 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         print('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] historiaAtual ÃƒÆ’Ã‚Â© null, retornando');
         return;
       }
-      print('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ [DEBUG] historiaAtual não ÃƒÆ’Ã‚Â© null, continuando...');
+
+      // Verifica compatibilidade de versão
+      print('🔍 [DEBUG] Verificando versão - Aventura: ${historiaAtual!.version}, Jogo: ${VersionConfig.currentVersion}');
+
+      final versionComparison = VersionConfig.compareVersions(
+        historiaAtual!.version,
+        VersionConfig.currentVersion,
+      );
+
+      print('🔍 [DEBUG] Comparação de versões retornou: $versionComparison');
+
+      if (versionComparison < 0) {
+        // Versão da aventura é menor que a versão atual do jogo
+        print('⚠️ [MapaAventura] Versão incompatível: aventura v${historiaAtual!.version} < jogo v${VersionConfig.currentVersion}');
+
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('⚠️ Versão Incompatível'),
+              content: const Text(
+                'Por favor, crie uma nova aventura para prosseguir.\n\n'
+                'Sua aventura atual foi criada em uma versão anterior do jogo '
+                'e não é compatível com a versão atual.'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
 
       // Gera novos monstros para o próximo tier
       final novosMonstros = await _gerarNovosMonstrosParaTier(historiaAtual!.tier + 1);
@@ -1437,6 +1619,11 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         monstrosInimigos: novosMonstros,
         score: novoScore,
       );
+
+      // Se chegou no tier 11, limpa dados do NPC Ganandius para permitir novo despertar gratuito
+      if (historiaAtualizada.tier == 11) {
+        await _limparDadosGanandiusTier11();
+      }
 
       // Salva no repositório
       await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
@@ -1488,6 +1675,33 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     return novosMonstros;
   }
 
+  /// Limpa dados do NPC Ganandius ao chegar no tier 11
+  Future<void> _limparDadosGanandiusTier11() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final emailJogador = ref.read(validUserEmailProvider);
+
+      // Remove apenas os dados do tier 11
+      final tier = 11;
+
+      // Remove flag de gratuito usado
+      final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_$tier';
+      await prefs.remove(chaveGratuito);
+
+      // Remove contador de compras
+      final chaveCompras = 'ganandius_compras_${emailJogador}_tier_$tier';
+      await prefs.remove(chaveCompras);
+
+      // Remove passivas sorteadas
+      final chavePassivas = 'ganandius_passivas_sorteadas_tier_$tier';
+      await prefs.remove(chavePassivas);
+
+      print('🧹 [GANANDIUS] Dados do tier 11 limpos - despertar gratuito disponível novamente!');
+    } catch (e) {
+      print('❌ [GANANDIUS] Erro ao limpar dados do tier 11: $e');
+    }
+  }
+
   String _getMensagemDificuldadeTitulo(int tier) {
     switch (tier) {
       case 19:
@@ -1524,6 +1738,8 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       builder: (BuildContext context) {
         // Verificar se é o andar 10
         bool isAndar10 = historiaAtual?.tier == 10;
+        // Verificar se é o andar 99 (entrada no HARDCORE MODE)
+        bool isAndar99 = historiaAtual?.tier == 99;
 
         // Verificar se é um dos tiers de aumento de dificuldade
         bool isTierDificuldade = podeAvancar && [19, 29, 39, 49].contains(historiaAtual?.tier);
@@ -1535,18 +1751,18 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           title: Row(
             children: [
               Icon(
-                podeAvancar ? (isAndar10 ? Icons.warning : (isTierDificuldade ? Icons.trending_up : Icons.arrow_upward)) : Icons.block,
-                color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
+                podeAvancar ? (isAndar99 ? Icons.warning_amber_rounded : (isAndar10 ? Icons.warning : (isTierDificuldade ? Icons.trending_up : Icons.arrow_upward))) : Icons.block,
+                color: podeAvancar ? (isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green))) : Colors.red,
                 size: 28,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   podeAvancar
-                    ? (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier'))
+                    ? (isAndar99 ? '🔥 HARDCORE MODE - Andar 99' : (isAndar10 ? 'AVISO ESPECIAL - Andar 10' : (isTierDificuldade ? 'AUMENTO DE DIFICULDADE' : 'Avançar Tier')))
                     : 'Requisitos não atendidos',
                   style: TextStyle(
-                    color: podeAvancar ? (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green)) : Colors.red,
+                    color: podeAvancar ? (isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : (isTierDificuldade ? Colors.deepOrange : Colors.green))) : Colors.red,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1591,6 +1807,82 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                         Text(
                           _getMensagemDificuldadeDescricao(historiaAtual!.tier),
                           style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else if (isAndar99) ...[
+                  // ⚠️ AVISO ESPECIAL PARA O ANDAR 99 → 100 (HARDCORE MODE)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red, width: 2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '🔥 BEM-VINDO AO HARDCORE! 🔥',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Você está prestes a entrar no modo mais difícil do jogo!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '⚔️ MUDANÇAS NO TIER 100+:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('• ❌ Não ganha mais SCORE dos monstros'),
+                        const Text('• 💀 TODOS os inimigos têm passivas de batalha'),
+                        const Text('• 🌟 20% de chance de monstros terem item IMPOSSÍVEL'),
+                        const Text('• 👑 Elites SEMPRE dropam item IMPOSSÍVEL'),
+                        const Text('• 🚫 Loja: Cura desabilitada'),
+                        const Text('• ✨ 20% de chance de encontrar Nostálgicos'),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '💀 Boa sorte, você vai precisar!',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1712,7 +2004,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             if (podeAvancar)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isAndar10 ? Colors.orange : Colors.green,
+                  backgroundColor: isAndar99 ? Colors.red : (isAndar10 ? Colors.orange : Colors.green),
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
@@ -1722,14 +2014,295 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                   _avancarTier();
                 },
                 child: Text(
-                  isAndar10
-                    ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
-                    : 'Confirmar'
+                  isAndar99
+                    ? '🔥 ENTRAR NO HARDCORE'
+                    : (isAndar10
+                        ? ((historiaAtual?.score ?? 0) > 50 ? 'Avançar e Resetar' : 'Avançar (Score Mantido)')
+                        : 'Confirmar')
                 ),
               ),
           ],
         );
       },
+    );
+  }
+
+  /// Carrega filtro de drops do SharedPreferences
+  Future<void> _carregarFiltroDrops() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      for (final raridade in RaridadeItem.values) {
+        _filtroDrops[raridade] = prefs.getBool('filtro_drop_${raridade.name}') ?? true;
+      }
+      _valorMinimoMagia = prefs.getInt('filtro_drop_valor_minimo_magia') ?? 0;
+      _valorMinimoMagiaController.text = _valorMinimoMagia.toString();
+    });
+  }
+
+  /// Salva filtro de drops no SharedPreferences
+  Future<void> _salvarFiltroDrops() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final entry in _filtroDrops.entries) {
+      await prefs.setBool('filtro_drop_${entry.key.name}', entry.value);
+    }
+    await prefs.setInt('filtro_drop_valor_minimo_magia', _valorMinimoMagia);
+  }
+
+  /// Mostra modal de filtro de drops
+  void _mostrarFiltroDrops() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: const Color(0xFF1A1A2E),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Título
+                Row(
+                  children: [
+                    const Icon(Icons.tune, color: Colors.amber, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'FILTRAR DROPS',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Informação
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade900.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue, width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Desmarque as raridades que você NÃO quer que apareçam nas recompensas de batalha',
+                          style: TextStyle(
+                            color: Colors.blue.shade100,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Lista de checkboxes
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        ...RaridadeItem.values.map((raridade) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey.shade700,
+                                width: 2,
+                              ),
+                            ),
+                            child: CheckboxListTile(
+                              title: Text(
+                                raridade.nome,
+                                style: TextStyle(
+                                  color: _filtroDrops[raridade]! ? raridade.cor : Colors.grey,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                _filtroDrops[raridade]! ? 'Aparecerá nas recompensas' : 'Não aparecerá nas recompensas',
+                                style: TextStyle(
+                                  color: _filtroDrops[raridade]! ? Colors.white70 : Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              value: _filtroDrops[raridade],
+                              activeColor: raridade.cor,
+                              checkColor: Colors.white,
+                              onChanged: (valor) {
+                                setModalState(() {
+                                  setState(() {
+                                    _filtroDrops[raridade] = valor ?? true;
+                                  });
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
+                          );
+                        }).toList(),
+
+                        // Divisor
+                        const SizedBox(height: 16),
+                        const Divider(color: Colors.white24, thickness: 1),
+                        const SizedBox(height: 16),
+
+                        // Valor mínimo para magias
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade900.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.purple, width: 2),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.auto_fix_high, color: Colors.purple, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'VALOR MÍNIMO DE MAGIA',
+                                    style: TextStyle(
+                                      color: Colors.purple,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Magias com valor FINAL (base × level) abaixo deste número serão descartadas',
+                                style: TextStyle(
+                                  color: Colors.purple.shade100,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ex: Magia base 10 level 5 = valor final 50 (0 = sem filtro)',
+                                style: TextStyle(
+                                  color: Colors.purple.shade200,
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _valorMinimoMagiaController,
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(color: Colors.white, fontSize: 18),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.black.withOpacity(0.3),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 2),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 2),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(color: Colors.purple, width: 3),
+                                  ),
+                                  hintText: '0',
+                                  hintStyle: TextStyle(color: Colors.purple.shade300),
+                                  prefixIcon: const Icon(Icons.filter_alt, color: Colors.purple),
+                                ),
+                                onChanged: (valor) {
+                                  // Filtra apenas números
+                                  final valorFiltrado = valor.replaceAll(RegExp(r'[^0-9]'), '');
+                                  final valorInt = int.tryParse(valorFiltrado) ?? 0;
+
+                                  // Atualiza o estado
+                                  setModalState(() {
+                                    setState(() {
+                                      _valorMinimoMagia = valorInt;
+                                    });
+                                  });
+
+                                  // Atualiza o controller apenas se o texto filtrado for diferente
+                                  if (valorFiltrado != valor) {
+                                    _valorMinimoMagiaController.value = _valorMinimoMagiaController.value.copyWith(
+                                      text: valorFiltrado,
+                                      selection: TextSelection.collapsed(offset: valorFiltrado.length),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Botão Salvar
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _salvarFiltroDrops();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Filtro de drops salvo!'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.save),
+                    label: const Text(
+                      'SALVAR FILTRO',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

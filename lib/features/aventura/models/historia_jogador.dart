@@ -16,6 +16,7 @@ class HistoriaJogador {
   final int refreshsRestantes; // Quantidade de refreshs restantes (máximo 5 por run)
   final bool mensagemLimite50Mostrada; // Flag para controlar se mensagem de limite foi exibida (tier 1-10)
   final bool mensagemLimite100Mostrada; // Flag para controlar se mensagem de limite tier 11+ foi exibida
+  final String version; // Versão do jogo quando a aventura foi criada
 
   HistoriaJogador({
     required this.email,
@@ -31,8 +32,10 @@ class HistoriaJogador {
     this.refreshsRestantes = 5, // Inicia com 5 refreshs
     this.mensagemLimite50Mostrada = false, // Inicia como false
     this.mensagemLimite100Mostrada = false, // Inicia como false
+    String? version,
   }) : runId = runId ?? '',
-       dataCriacao = dataCriacao ?? DateTime.utc(2000); // Default para aventuras antigas
+       dataCriacao = dataCriacao ?? DateTime.utc(2000), // Default para aventuras antigas
+       version = version ?? '1.0.0'; // Default para aventuras antigas sem versão
 
   factory HistoriaJogador.fromJson(Map<String, dynamic> json) {
     return HistoriaJogador(
@@ -57,6 +60,7 @@ class HistoriaJogador {
       refreshsRestantes: json['refreshsRestantes'] ?? 5, // Default 5 para aventuras antigas
       mensagemLimite50Mostrada: json['mensagemLimite50Mostrada'] ?? false,
       mensagemLimite100Mostrada: json['mensagemLimite100Mostrada'] ?? false,
+      version: json['version'] ?? '1.0.0', // Default para aventuras antigas sem versão
     );
   }
 
@@ -75,6 +79,7 @@ class HistoriaJogador {
       'refreshsRestantes': refreshsRestantes,
       'mensagemLimite50Mostrada': mensagemLimite50Mostrada,
       'mensagemLimite100Mostrada': mensagemLimite100Mostrada,
+      'version': version,
     };
   }
 
@@ -92,6 +97,7 @@ class HistoriaJogador {
     int? refreshsRestantes,
     bool? mensagemLimite50Mostrada,
     bool? mensagemLimite100Mostrada,
+    String? version,
   }) {
     return HistoriaJogador(
       email: email ?? this.email,
@@ -107,6 +113,7 @@ class HistoriaJogador {
       refreshsRestantes: refreshsRestantes ?? this.refreshsRestantes,
       mensagemLimite50Mostrada: mensagemLimite50Mostrada ?? this.mensagemLimite50Mostrada,
       mensagemLimite100Mostrada: mensagemLimite100Mostrada ?? this.mensagemLimite100Mostrada,
+      version: version ?? this.version,
     );
   }
 
