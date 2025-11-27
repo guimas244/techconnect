@@ -14,10 +14,22 @@ class ConfigCriadouroScreen extends ConsumerStatefulWidget {
 class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
   late ConfigCriadouro _config;
 
+  // Valores temporários para sliders (evita rebuilds excessivos)
+  late double _tempFome;
+  late double _tempSede;
+  late double _tempHigiene;
+  late double _tempAlegria;
+  late double _tempSaude;
+
   @override
   void initState() {
     super.initState();
     _config = ref.read(criadouroProvider).config;
+    _tempFome = _config.limiteFome.toDouble();
+    _tempSede = _config.limiteSede.toDouble();
+    _tempHigiene = _config.limiteHigiene.toDouble();
+    _tempAlegria = _config.limiteAlegria.toDouble();
+    _tempSaude = _config.limiteSaude.toDouble();
   }
 
   @override
@@ -79,8 +91,9 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               _buildSliderCard(
                 emoji: '🍖',
                 label: 'Fome',
-                valor: _config.limiteFome,
-                onChanged: (value) {
+                valor: _tempFome,
+                onChanged: (value) => setState(() => _tempFome = value),
+                onChangeEnd: (value) {
                   setState(() {
                     _config = _config.copyWith(limiteFome: value.toInt());
                   });
@@ -89,8 +102,9 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               _buildSliderCard(
                 emoji: '💧',
                 label: 'Sede',
-                valor: _config.limiteSede,
-                onChanged: (value) {
+                valor: _tempSede,
+                onChanged: (value) => setState(() => _tempSede = value),
+                onChangeEnd: (value) {
                   setState(() {
                     _config = _config.copyWith(limiteSede: value.toInt());
                   });
@@ -99,8 +113,9 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               _buildSliderCard(
                 emoji: '🧼',
                 label: 'Higiene',
-                valor: _config.limiteHigiene,
-                onChanged: (value) {
+                valor: _tempHigiene,
+                onChanged: (value) => setState(() => _tempHigiene = value),
+                onChangeEnd: (value) {
                   setState(() {
                     _config = _config.copyWith(limiteHigiene: value.toInt());
                   });
@@ -109,8 +124,9 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               _buildSliderCard(
                 emoji: '😄',
                 label: 'Alegria',
-                valor: _config.limiteAlegria,
-                onChanged: (value) {
+                valor: _tempAlegria,
+                onChanged: (value) => setState(() => _tempAlegria = value),
+                onChangeEnd: (value) {
                   setState(() {
                     _config = _config.copyWith(limiteAlegria: value.toInt());
                   });
@@ -119,8 +135,9 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               _buildSliderCard(
                 emoji: '❤️',
                 label: 'Saúde',
-                valor: _config.limiteSaude,
-                onChanged: (value) {
+                valor: _tempSaude,
+                onChanged: (value) => setState(() => _tempSaude = value),
+                onChangeEnd: (value) {
                   setState(() {
                     _config = _config.copyWith(limiteSaude: value.toInt());
                   });
@@ -170,9 +187,11 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
   Widget _buildSliderCard({
     required String emoji,
     required String label,
-    required int valor,
+    required double valor,
     required ValueChanged<double> onChanged,
+    required ValueChanged<double> onChangeEnd,
   }) {
+    final valorInt = valor.toInt();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -195,11 +214,11 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getCorPorValor(valor),
+                    color: _getCorPorValor(valorInt),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '< $valor%',
+                    '< $valorInt%',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -209,12 +228,13 @@ class _ConfigCriadouroScreenState extends ConsumerState<ConfigCriadouroScreen> {
               ],
             ),
             Slider(
-              value: valor.toDouble(),
+              value: valor,
               min: 10,
               max: 80,
               divisions: 14,
-              label: '$valor%',
+              label: '$valorInt%',
               onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
             ),
           ],
         ),

@@ -68,7 +68,8 @@
       "Bash(gradlew signingReport:*)",
       "Bash(node convert_images.js:*)",
       "Bash(images_base64.txt)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(del \"d:\\workspace\\techterra\\techterra\\lib\\features\\criadouro\\services\\notification_test_service.dart\")"
     ],
     "deny": [],
     "ask": []

@@ -769,31 +769,61 @@ class _CriarMascoteScreenState extends ConsumerState<CriarMascoteScreen> {
   }
 
   bool _podeCriar() {
-    return _nomeController.text.trim().length >= 2 && _petSelecionado != null;
+    if (_nomeController.text.trim().length < 2) return false;
+    if (_petSelecionado == null) return false;
+    if (_tipoSelecionado == null) return false;
+
+    // Verifica se já existe mascote desse tipo
+    final jaTem = ref.read(temMascoteTipoProvider(_tipoSelecionado!.name));
+    return !jaTem;
   }
 
-  void _criarMascote() {
+  Future<void> _criarMascote() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_petSelecionado == null) {
+    if (_petSelecionado == null || _tipoSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecione um monstro de estimação!')),
       );
       return;
     }
 
-    ref.read(criadouroProvider.notifier).criarMascote(
-          nome: _nomeController.text.trim(),
+    // Verifica se já existe mascote desse tipo
+    final jaTem = ref.read(temMascoteTipoProvider(_tipoSelecionado!.name));
+    if (jaTem) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Você já tem um mascote do tipo ${_tipoSelecionado!.displayName}!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final nome = _nomeController.text.trim();
+    final sucesso = await ref.read(criadouroProvider.notifier).criarMascote(
+          tipo: _tipoSelecionado!.name,
+          nome: nome,
           monstroId: _petSelecionado!.imagePath,
         );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${_nomeController.text.trim()} nasceu! 🎉'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    if (!mounted) return;
 
-    Navigator.pop(context);
+    if (sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$nome nasceu! 🎉'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro ao criar mascote!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

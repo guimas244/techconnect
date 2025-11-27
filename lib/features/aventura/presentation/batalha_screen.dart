@@ -2098,6 +2098,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       // Carrega progresso atual
       final progressoJson = prefs.getString('progresso_diario');
       ProgressoDiario progresso;
+      bool diaNovo = false;
 
       if (progressoJson != null) {
         final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
@@ -2106,12 +2107,17 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         // Se é de outro dia, cria novo
         if (progressoSalvo.data != hoje) {
           progresso = ProgressoDiario(data: hoje);
+          diaNovo = true;
         } else {
           progresso = progressoSalvo;
         }
       } else {
         progresso = ProgressoDiario(data: hoje);
+        diaNovo = true;
       }
+
+      // Guarda kills ANTES de adicionar novo
+      final killsAntes = progresso.totalKills;
 
       // Registra kill do tipo principal do inimigo
       final tipoInimigo = widget.inimigo.tipo;
@@ -2125,8 +2131,98 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       await ref.read(progressoBonusStateProvider.notifier).reload();
 
       print('✅ [Progresso] Kill registrado para tipo ${tipoInimigo.name} (total: ${progresso.killsPorTipo[tipoInimigo.name]})');
+
+      // ============ INTEGRAÇÃO XP DO CRIADOURO ============
+      await _verificarEAdicionarXpCriadouro(prefs, hoje, diaNovo, killsAntes, progresso.totalKills);
+
     } catch (e) {
       print('❌ [Progresso] Erro ao registrar kill: $e');
+    }
+  }
+
+  /// Verifica e adiciona XP do Criadouro baseado em vitórias
+  /// - +1 XP por andar concluído (ilimitado)
+  /// - +10 XP ao atingir 25 kills (50 pontos) - uma vez por dia
+  /// - +30 XP ao atingir 75 kills (150 pontos) - uma vez por dia
+  Future<void> _verificarEAdicionarXpCriadouro(
+    SharedPreferences prefs,
+    String hoje,
+    bool diaNovo,
+    int killsAntes,
+    int killsDepois,
+  ) async {
+    try {
+      // Verifica se tem mascote ativo no Criadouro
+      final mascote = ref.read(mascoteProvider);
+      if (mascote == null) {
+        print('🏠 [XP Criadouro] Sem mascote ativo - XP não adicionado');
+        return;
+      }
+
+      final tipoMascote = mascote.tipo;
+      final mensagensXp = <String>[];
+      int xpTotal = 0;
+
+      // 1. +1 XP por andar concluído (sempre)
+      final resultadoAndar = await ref.read(criadouroProvider.notifier).adicionarXpTipo(tipoMascote, 1);
+      if (resultadoAndar != null) {
+        xpTotal += 1;
+        print('🏠 [XP Criadouro] +1 XP por andar (tipo: $tipoMascote)');
+        if (resultadoAndar.subiuNivel) {
+          mensagensXp.add('🎉 ${mascote.nome} subiu para Lv${resultadoAndar.levelAtual}!');
+        }
+      }
+
+      // Limpa flags de bônus se é um novo dia
+      if (diaNovo) {
+        await prefs.setBool('xp_bonus_25kills_$hoje', false);
+        await prefs.setBool('xp_bonus_75kills_$hoje', false);
+      }
+
+      // 2. +10 XP ao atingir 25 kills (50 pontos com 2 pts/kill) - uma vez por dia
+      final jaGanhou25 = prefs.getBool('xp_bonus_25kills_$hoje') ?? false;
+      if (!jaGanhou25 && killsAntes < 25 && killsDepois >= 25) {
+        final resultadoBonus25 = await ref.read(criadouroProvider.notifier).adicionarXpTipo(tipoMascote, 10);
+        if (resultadoBonus25 != null) {
+          xpTotal += 10;
+          await prefs.setBool('xp_bonus_25kills_$hoje', true);
+          print('🏠 [XP Criadouro] +10 XP (25 kills = 50 pontos diários)');
+          mensagensXp.add('+10 XP bônus (50 pontos diários)');
+          if (resultadoBonus25.subiuNivel) {
+            mensagensXp.add('🎉 ${mascote.nome} subiu para Lv${resultadoBonus25.levelAtual}!');
+          }
+        }
+      }
+
+      // 3. +30 XP ao atingir 75 kills (150 pontos com 2 pts/kill) - uma vez por dia
+      final jaGanhou75 = prefs.getBool('xp_bonus_75kills_$hoje') ?? false;
+      if (!jaGanhou75 && killsAntes < 75 && killsDepois >= 75) {
+        final resultadoBonus75 = await ref.read(criadouroProvider.notifier).adicionarXpTipo(tipoMascote, 30);
+        if (resultadoBonus75 != null) {
+          xpTotal += 30;
+          await prefs.setBool('xp_bonus_75kills_$hoje', true);
+          print('🏠 [XP Criadouro] +30 XP (75 kills = 150 pontos diários)');
+          mensagensXp.add('+30 XP bônus (150 pontos diários)');
+          if (resultadoBonus75.subiuNivel) {
+            mensagensXp.add('🎉 ${mascote.nome} subiu para Lv${resultadoBonus75.levelAtual}!');
+          }
+        }
+      }
+
+      // Mostra mensagem informativa se ganhou XP extra
+      if (xpTotal > 1 && mounted && mensagensXp.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🏠 ${mascote.nome}: ${mensagensXp.join(" | ")}'),
+            backgroundColor: Colors.purple,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+    } catch (e) {
+      print('❌ [XP Criadouro] Erro ao adicionar XP: $e');
     }
   }
 

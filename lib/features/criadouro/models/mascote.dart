@@ -26,8 +26,9 @@ class TaxasDegradacao {
 /// Modelo principal do mascote no Criadouro
 class Mascote {
   final String id;
+  final String tipo; // Tipo do monstro (chave única - 1 por tipo)
   final String nome;
-  final String monstroId; // ID/imagem do monstro do catálogo
+  final String monstroId; // ID/imagem do monstro do catálogo (skin decorativa)
   final DateTime dataCriacao;
   final DateTime ultimoAcesso;
 
@@ -53,6 +54,7 @@ class Mascote {
 
   const Mascote({
     required this.id,
+    required this.tipo,
     required this.nome,
     required this.monstroId,
     required this.dataCriacao,
@@ -73,12 +75,14 @@ class Mascote {
 
   /// Cria um novo mascote com valores iniciais
   factory Mascote.criar({
+    required String tipo,
     required String nome,
     required String monstroId,
   }) {
     final agora = DateTime.now();
     return Mascote(
       id: '${agora.millisecondsSinceEpoch}',
+      tipo: tipo,
       nome: nome,
       monstroId: monstroId,
       dataCriacao: agora,
@@ -96,6 +100,7 @@ class Mascote {
   factory Mascote.fromJson(Map<String, dynamic> json) {
     return Mascote(
       id: json['id'] as String,
+      tipo: json['tipo'] as String,
       nome: json['nome'] as String,
       monstroId: json['monstroId'] as String,
       dataCriacao: DateTime.parse(json['dataCriacao'] as String),
@@ -124,6 +129,7 @@ class Mascote {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'tipo': tipo,
       'nome': nome,
       'monstroId': monstroId,
       'dataCriacao': dataCriacao.toIso8601String(),
@@ -147,6 +153,7 @@ class Mascote {
 
   Mascote copyWith({
     String? id,
+    String? tipo,
     String? nome,
     String? monstroId,
     DateTime? dataCriacao,
@@ -169,6 +176,7 @@ class Mascote {
   }) {
     return Mascote(
       id: id ?? this.id,
+      tipo: tipo ?? this.tipo,
       nome: nome ?? this.nome,
       monstroId: monstroId ?? this.monstroId,
       dataCriacao: dataCriacao ?? this.dataCriacao,
