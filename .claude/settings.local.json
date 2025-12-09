@@ -69,7 +69,9 @@
       "Bash(node convert_images.js:*)",
       "Bash(images_base64.txt)",
       "Bash(git commit:*)",
-      "Bash(del \"d:\\workspace\\techterra\\techterra\\lib\\features\\criadouro\\services\\notification_test_service.dart\")"
+      "Bash(del \"d:\\workspace\\techterra\\techterra\\lib\\features\\criadouro\\services\\notification_test_service.dart\")",
+      "Bash(if exist nul del /f nul)",
+      "Bash(cmd.exe /c:*)"
     ],
     "deny": [],
     "ask": []

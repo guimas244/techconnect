@@ -1,0 +1,2766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Techterra - Calculadora de Status de Monstros</title>
+<style>
+  :root{
+    --bg1:#0a0a0f; --bg2:#12121a; --card:#1a1a24; --border:#2a2a3a; --ink:#e8e8f0;
+    --muted:#8888a0; --brand:#6366f1; --ok:#10b981; --warn:#ef4444;
+    --gold:#fbbf24; --silver:#94a3b8; --bronze:#d97706;
+    --hp:#ef4444; --mp:#3b82f6; --atk:#f97316; --def:#22c55e; --spd:#a855f7;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{background:var(--bg1);color:var(--ink);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+  /* Header */
+  .header{background:linear-gradient(135deg,#1e1e2e,#2a2a3f);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+  .header h1{font-size:24px;background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+  .header .subtitle{color:var(--muted);font-size:12px;margin-top:4px}
+
+  /* Layout principal */
+  .main-container{display:grid;grid-template-columns:300px 1fr;gap:12px;padding:12px;max-width:1800px;margin:0 auto}
+  @media(max-width:1024px){.main-container{grid-template-columns:1fr}}
+
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .card-header{background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.1));padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .card-header h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .card-body{padding:12px}
+
+  /* Botões */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.2s}
+  .btn:hover{background:#2a2a3f;border-color:var(--brand)}
+  .btn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:transparent;color:#fff}
+  .btn.primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+
+  /* Inputs */
+  .input-group{margin-bottom:12px}
+  .input-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+  .input,.select{width:100%;padding:10px 12px;background:#0f0f14;border:1px solid var(--border);border-radius:10px;color:var(--ink);font-size:14px}
+  .input:focus,.select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,0.2)}
+  .select{cursor:pointer}
+
+  /* Perfil do monstro - Layout compacto */
+  .monster-profile{display:grid;grid-template-columns:76px 1fr;gap:10px;align-items:stretch}
+  .monster-avatar{width:76px;border-radius:10px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0f0f14;cursor:pointer;flex-shrink:0;transition:all 0.2s}
+  .monster-avatar img{width:100%;height:100%;object-fit:cover}
+  .monster-avatar:hover{border-color:var(--brand);background:#1a1a24}
+  .monster-avatar:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(99,102,241,0.3)}
+  .monster-avatar.drag-over{border-color:var(--ok);background:rgba(16,185,129,0.1)}
+  .monster-info{flex:1;display:grid;gap:8px}
+
+  /* Layout compacto para inputs */
+  .input-group.compact{margin-bottom:0}
+  .input-group.compact label{margin-bottom:4px;font-size:10px}
+  .input-group.compact .input,.input-group.compact .select{padding:8px 10px;font-size:13px}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+
+  /* Seção compacta */
+  .section-compact{background:#0f0f14;border-radius:10px;padding:12px;margin-top:12px}
+  .section-compact .section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .section-compact .section-title::before{content:'';display:block;width:3px;height:12px;background:var(--brand);border-radius:2px}
+
+  /* Tabela de raridades */
+  .rarity-table{width:100%;border-collapse:collapse;font-size:12px}
+  .rarity-table th,.rarity-table td{padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+  .rarity-table th{color:var(--muted);font-weight:500;text-transform:uppercase}
+  .rarity-table tr:hover{background:rgba(99,102,241,0.05)}
+
+  /* Status Grid */
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+
+  /* Status Card */
+  .status-card{background:#0f0f14;border:1px solid var(--border);border-radius:12px;padding:14px;transition:all 0.2s}
+  .status-card:hover{border-color:var(--brand);transform:translateY(-2px)}
+  .status-card.defense{border-left:3px solid var(--def)}
+  .status-card.attack{border-left:3px solid var(--atk)}
+  .status-card.speed{border-left:3px solid var(--spd)}
+  .status-card.vital{border-left:3px solid var(--hp)}
+
+  .status-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .status-name{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+  .status-total{font-size:20px;font-weight:700;color:var(--brand)}
+
+  .status-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .status-row.triple{grid-template-columns:1fr 1fr 1fr}
+  .status-row.quad{grid-template-columns:1fr 1fr 1fr 1fr}
+
+  .mini-input{padding:8px;font-size:13px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);width:100%}
+  .mini-input:focus{outline:none;border-color:var(--brand)}
+  .mini-select{padding:8px;font-size:12px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);width:100%;cursor:pointer}
+
+  .mini-label{font-size:10px;color:var(--muted);margin-bottom:4px;display:block;text-transform:uppercase}
+
+  .calc-display{background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.1));padding:10px;border-radius:8px;text-align:center;margin-top:8px}
+  .calc-label{font-size:10px;color:var(--muted);margin-bottom:2px}
+  .calc-value{font-size:18px;font-weight:700;color:var(--brand)}
+
+  /* Vida/Despertar especial */
+  .vital-slider-container{margin:12px 0}
+  .vital-slider{width:100%;height:20px;-webkit-appearance:none;background:linear-gradient(90deg,var(--hp) 0%,var(--hp) var(--vida-pct),var(--mp) var(--vida-pct),var(--mp) 100%);border-radius:10px;cursor:pointer}
+  .vital-slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;background:#fff;border-radius:50%;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+
+  .vital-distribution{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .vital-box{padding:10px;border-radius:10px;text-align:center}
+  .vital-box.vida{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3)}
+  .vital-box.despertar{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3)}
+  .vital-box .pct{font-size:22px;font-weight:700}
+  .vital-box.vida .pct{color:var(--hp)}
+  .vital-box.despertar .pct{color:var(--mp)}
+  .vital-box .label{font-size:10px;color:var(--muted)}
+  .vital-box .max-value{font-size:14px;font-weight:600}
+  .vital-box .current-label{font-size:9px;color:var(--muted)}
+  .vital-box .current-value{font-size:13px;font-weight:600;color:var(--ink)}
+
+  /* Resultado final */
+  .result-section{background:linear-gradient(135deg,#1a1a24,#1e1e2e);border:1px solid var(--border);border-radius:16px;padding:20px;margin-top:16px}
+  .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:768px){.result-grid{grid-template-columns:repeat(2,1fr)}}
+  .result-item{background:#0f0f14;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .result-item .name{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase}
+  .result-item .value{font-size:20px;font-weight:700;color:var(--brand)}
+
+  /* Print mode */
+  .print-btn-container{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* Toast */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--ok);color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;opacity:0;transform:translateY(20px);transition:all 0.3s;z-index:1000}
+  .toast.show{opacity:1;transform:translateY(0)}
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-track{background:var(--bg1)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+  /* Badges de raridade */
+  .rarity-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase}
+  .rarity-inativo{background:#333;color:#666}
+  .rarity-inferior{background:#4a4a4a;color:#aaa}
+  .rarity-normal{background:#3d5a3d;color:#8fbc8f}
+  .rarity-raro{background:#3d3d5a;color:#8f8fbc}
+  .rarity-raiz{background:#5a3d5a;color:#bc8fbc}
+  .rarity-unico-inf{background:#5a4a3d;color:#bcab8f}
+  .rarity-unico-sup{background:#5a3d3d;color:#bc8f8f}
+  .rarity-pilar{background:#4a3d5a;color:#ab8fbc}
+  .rarity-perfeito{background:#3d5a5a;color:#8fbcbc}
+  .rarity-deus{background:#5a5a3d;color:#bcbc8f}
+  .rarity-lendario{background:linear-gradient(135deg,#fbbf24,#f97316);color:#000}
+
+  /* Compactar inputs do select */
+  .input-group.compact .select{padding:8px 10px;font-size:12px}
+
+  /* Modal dialog */
+  dialog::backdrop{background:rgba(0,0,0,0.7)}
+  dialog[open]{animation:fadeIn 0.2s ease-out}
+  @keyframes fadeIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.95)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+  /* Habilidades */
+  .ability-item{background:#0f0f14;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;transition:all 0.2s}
+  .ability-item:hover{border-color:var(--brand)}
+  .ability-header{display:flex;align-items:center;justify-content:space-between;padding:12px;cursor:pointer;user-select:none}
+  .ability-header:hover{background:rgba(99,102,241,0.05)}
+  .ability-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+  .ability-tier-badge{background:var(--brand);color:#fff;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .ability-actions{display:flex;gap:4px}
+  .ability-toggle{color:var(--muted);font-size:16px;transition:transform 0.2s}
+  .ability-item.open .ability-toggle{transform:rotate(180deg)}
+  .ability-content{max-height:0;overflow:hidden;transition:max-height 0.3s ease-out}
+  .ability-item.open .ability-content{max-height:400px}
+  .ability-body{padding:0 12px 12px;display:grid;gap:10px}
+  .ability-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ability-row.triple{grid-template-columns:1fr 1fr 1fr}
+  .ability-btn-remove{background:transparent;border:1px solid var(--warn);color:var(--warn);padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;transition:all 0.2s}
+  .ability-btn-remove:hover{background:var(--warn);color:#fff}
+  .ability-empty{text-align:center;color:var(--muted);padding:20px}
+
+  /* Campos editados manualmente */
+  .manually-edited{color:var(--ok) !important;border-color:var(--ok) !important}
+  .manually-edited option{color:var(--ink)}
+
+  /* Botões de adicionar/remover aprimoramento */
+  .aprim-btn{
+    width:22px;height:22px;border-radius:50%;
+    background:transparent;font-size:14px;font-weight:700;
+    cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .aprim-add-btn{border:1px solid var(--ok);color:var(--ok)}
+  .aprim-add-btn:hover{background:var(--ok);color:#fff}
+  .aprim-remove-btn{border:1px solid var(--warn);color:var(--warn)}
+  .aprim-remove-btn:hover{background:var(--warn);color:#fff}
+  .aprim-btn:disabled{opacity:0.3;cursor:not-allowed;border-color:var(--muted);color:var(--muted)}
+  .aprim-btn:disabled:hover{background:transparent;color:var(--muted)}
+
+  /* Display de aprimoramentos ganhos */
+  .aprim-display{
+    font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;
+  }
+  .aprim-display .total{color:var(--ok);font-weight:700;font-size:13px}
+  .aprim-display .detail{color:var(--muted);font-size:11px}
+  .aprim-display .gained{color:var(--ok)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Calculadora de Status - TECHTERRA</h1>
+    <div class="subtitle">Sistema Oficial de Cálculo de Atributos de Monstros</div>
+  </div>
+  <div class="print-btn-container">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase">Modo</span>
+      <select id="modoSorteio" class="select" style="width:auto;padding:8px 12px;font-size:12px;background:#1a1a24">
+        <option value="sorte">🍀 Sorte (Real)</option>
+        <option value="fraco">😰 Fraco (3x-)</option>
+        <option value="medio" selected>⚖️ Médio (Normal)</option>
+        <option value="forte">💪 Forte (5x+)</option>
+        <option value="evento">🎯 Evento</option>
+        <option value="deus">⚡ Deus (50x+)</option>
+        <option value="entidade">👁️ Entidade (9-10)</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase">Tier</span>
+      <div id="tierControl" style="display:flex;gap:4px;align-items:center">
+        <select id="tierMin" style="width:55px;padding:8px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);font-size:12px;cursor:pointer">
+          <option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+        </select>
+        <span style="color:var(--muted);font-size:12px">a</span>
+        <select id="tierMax" style="width:55px;padding:8px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);font-size:12px;cursor:pointer">
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10" selected>10</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase">Genética</span>
+      <select id="filtroGenetica" style="width:auto;padding:8px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);font-size:12px;cursor:pointer">
+      <option value="sorte" selected>🧬 Sorte</option>
+      <option value="1">1-5 (1/10)</option>
+      <option value="2">6-10 (1/5)</option>
+      <option value="3">11-15 (1/4)</option>
+      <option value="4">16-20 (1/3)</option>
+      <option value="5">21-25 (1/6)</option>
+      <option value="6">26-30 (1/10)</option>
+      <option value="7">31-35 (1/20)</option>
+      <option value="8">36-40 (1/40)</option>
+      <option value="9">41-45 (1/80)</option>
+      <option value="10">46-50 (1/160)</option>
+      <option value="11">51-55 (1/500)</option>
+      <option value="12">56-60 (1/5k)</option>
+      <option value="13">61-65 (1/50k)</option>
+      <option value="14">66-70 (1/500k)</option>
+      <option value="15">71-75 (1/2M)</option>
+      <option value="16">76-80 (1/10M)</option>
+      <option value="17">81-85 (1/50M)</option>
+      <option value="18">86-90 (1/200M)</option>
+      <option value="19">91-95 (1/500M)</option>
+      <option value="20">96-100 (1/1B)</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase">Prioridade</span>
+      <select id="filtroPrioridade" style="width:auto;padding:8px;background:#1a1a24;border:1px solid var(--border);border-radius:8px;color:var(--ink);font-size:12px;cursor:pointer">
+        <option value="sorte" selected>🍀 Sorte</option>
+        <option value="guerreiro">⚔️ Guerreiro</option>
+        <option value="mago">🔮 Mago</option>
+        <option value="velocista">💨 Velocista</option>
+        <option value="tank">🛡️ Tank</option>
+        <option value="hibrido">⚖️ Híbrido</option>
+      </select>
+    </div>
+    <button class="btn" onclick="sortearMonstro()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border-color:transparent;color:#000">🎲 Sortear</button>
+    <button class="btn" onclick="openRarityTable()">Tabela</button>
+    <button class="btn" onclick="resetAll()">Resetar</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">Importar</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn primary" onclick="exportData()">Exportar</button>
+  </div>
+</div>
+
+<div class="main-container">
+  <!-- Painel Esquerdo - Perfil e Genética -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Perfil do Monstro</h2>
+      </div>
+      <div class="card-body">
+        <!-- Linha principal: Avatar + Nome/Espécie -->
+        <div class="monster-profile">
+          <label class="monster-avatar" id="monsterAvatar" tabindex="0" title="Clique ou Ctrl+V para adicionar imagem">
+            <input type="file" id="monsterImg" accept="image/*" style="display:none">
+            <img id="monsterPreview" src="" alt="" style="display:none">
+            <div id="monsterPlaceholder" style="display:flex;flex-direction:column;align-items:center;gap:2px">
+              <span style="font-size:32px">🐲</span>
+              <span style="color:var(--muted);font-size:8px">Clique ou Ctrl+V</span>
+            </div>
+          </label>
+          <div class="monster-info">
+            <div class="input-group compact">
+              <label>Nome</label>
+              <input type="text" class="input" id="monsterName" placeholder="Nome do monstro">
+            </div>
+            <div class="input-group compact">
+              <label>Espécie</label>
+              <input type="text" class="input" id="monsterSpecies" placeholder="Espécie">
+            </div>
+            <div class="input-group compact">
+              <label>Prioridade</label>
+              <input type="text" class="input" id="monsterPrioridade" value="🍀 Sorte" readonly style="background:#0f0f14;cursor:not-allowed">
+            </div>
+          </div>
+        </div>
+
+        <!-- Treinamento -->
+        <div class="section-compact">
+          <div class="section-title">Treinamento</div>
+          <div class="row-2">
+            <div class="input-group compact">
+              <label>Dias de Treino</label>
+              <input type="number" class="input" id="diasTreino" value="0" min="0" placeholder="0">
+            </div>
+            <div class="input-group compact">
+              <label>Aprim. Ganhos</label>
+              <input type="number" class="input" id="aprimTreino" value="0" readonly style="background:#0f0f14;color:var(--ok)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tipagem -->
+        <div class="section-compact">
+          <div class="section-title">Tipagem</div>
+          <div class="row-2">
+            <div class="input-group compact">
+              <label>Primário</label>
+              <select class="select" id="monsterType1">
+                <option value="">Nenhum</option>
+                <option value="agua">Água</option>
+                <option value="alien">Alien</option>
+                <option value="desconhecido">Desconhecido</option>
+                <option value="deus">Deus</option>
+                <option value="docrates">Docrates</option>
+                <option value="dragao">Dragão</option>
+                <option value="eletrico">Elétrico</option>
+                <option value="fantasma">Fantasma</option>
+                <option value="fera">Fera</option>
+                <option value="fogo">Fogo</option>
+                <option value="gelo">Gelo</option>
+                <option value="inseto">Inseto</option>
+                <option value="luz">Luz</option>
+                <option value="magico">Mágico</option>
+                <option value="marinho">Marinho</option>
+                <option value="mistico">Místico</option>
+                <option value="normal">Normal</option>
+                <option value="nostalgico">Nostálgico</option>
+                <option value="pedra">Pedra</option>
+                <option value="planta">Planta</option>
+                <option value="psiquico">Psíquico</option>
+                <option value="subterraneo">Subterrâneo</option>
+                <option value="tecnologia">Tecnologia</option>
+                <option value="tempo">Tempo</option>
+                <option value="terrestre">Terrestre</option>
+                <option value="trevas">Trevas</option>
+                <option value="venenoso">Venenoso</option>
+                <option value="vento">Vento</option>
+                <option value="voador">Voador</option>
+                <option value="zumbi">Zumbi</option>
+              </select>
+            </div>
+            <div class="input-group compact">
+              <label>Secundário</label>
+              <select class="select" id="monsterType2">
+                <option value="">Nenhum</option>
+                <option value="agua">Água</option>
+                <option value="alien">Alien</option>
+                <option value="desconhecido">Desconhecido</option>
+                <option value="deus">Deus</option>
+                <option value="docrates">Docrates</option>
+                <option value="dragao">Dragão</option>
+                <option value="eletrico">Elétrico</option>
+                <option value="fantasma">Fantasma</option>
+                <option value="fera">Fera</option>
+                <option value="fogo">Fogo</option>
+                <option value="gelo">Gelo</option>
+                <option value="inseto">Inseto</option>
+                <option value="luz">Luz</option>
+                <option value="magico">Mágico</option>
+                <option value="marinho">Marinho</option>
+                <option value="mistico">Místico</option>
+                <option value="normal">Normal</option>
+                <option value="nostalgico">Nostálgico</option>
+                <option value="pedra">Pedra</option>
+                <option value="planta">Planta</option>
+                <option value="psiquico">Psíquico</option>
+                <option value="subterraneo">Subterrâneo</option>
+                <option value="tecnologia">Tecnologia</option>
+                <option value="tempo">Tempo</option>
+                <option value="terrestre">Terrestre</option>
+                <option value="trevas">Trevas</option>
+                <option value="venenoso">Venenoso</option>
+                <option value="vento">Vento</option>
+                <option value="voador">Voador</option>
+                <option value="zumbi">Zumbi</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input oculto para limite de habilidades -->
+        <input type="hidden" id="habMaximo" value="2">
+
+        <!-- Limites Genéticos -->
+        <div class="section-compact">
+          <div class="section-title">Limites Genéticos</div>
+          <div class="row-4">
+            <div class="input-group compact">
+              <label>Genética</label>
+              <input type="number" class="input" id="geneticaValor" value="20" min="1" max="100" style="text-align:center;font-weight:700;color:var(--brand)">
+            </div>
+            <div class="input-group compact">
+              <label>Bônus %</label>
+              <input type="number" class="input" id="geneticLimit" value="15" min="0" max="100">
+            </div>
+            <div class="input-group compact">
+              <label>Aprim.</label>
+              <select class="select" id="maxAprimoramento">
+                <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+              </select>
+            </div>
+            <div class="input-group compact">
+              <label>TIER</label>
+              <select class="select" id="maxTier">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10" selected>10</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção de Pontos Vitais -->
+    <div class="card" style="margin-top:12px">
+      <div class="card-header" style="padding:10px 12px">
+        <h2 style="font-size:14px">Pontos Vitais</h2>
+        <span id="vitalBase" style="color:var(--brand);font-weight:700;font-size:13px">Base: 0</span>
+      </div>
+      <div class="card-body" style="padding:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <span class="mini-label">TIER</span>
+            <select class="mini-select" id="vitalTier" onchange="calcVital()">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div>
+            <span class="mini-label">Aprimoramento</span>
+            <select class="mini-select" id="vitalAprimoramento" onchange="calcVital()">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+            </select>
+          </div>
+          <div>
+            <span class="mini-label">Bônus%</span>
+            <input type="number" class="mini-input" id="vitalBonus" value="0" min="0" onchange="calcVital()">
+          </div>
+        </div>
+
+        <div class="vital-slider-container" style="margin:12px 0">
+          <input type="range" class="vital-slider" id="vitalSlider" min="0" max="100" value="50" oninput="updateVitalSlider(this.value)" style="--vida-pct:50%">
+        </div>
+
+        <div class="vital-distribution" style="gap:10px">
+          <div class="vital-box vida" style="padding:10px">
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+              <span class="pct" id="vidaPct" style="font-size:22px">50%</span>
+              <span class="label" style="font-size:10px;margin:0">VIDA</span>
+            </div>
+            <div class="max-value" id="vidaMax" style="font-size:15px;margin-top:4px">0</div>
+            <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:6px">
+              <div style="text-align:center">
+                <span class="current-label" style="font-size:9px">Perdida</span>
+                <input type="number" class="mini-input" id="vidaPerdida" value="0" min="0" style="width:60px;padding:4px 6px;font-size:12px" onchange="calcVital()">
+              </div>
+              <div style="text-align:center">
+                <span class="current-label" style="font-size:9px">Atual</span>
+                <div class="current-value" id="vidaAtual" style="font-size:13px;padding:4px 0">0</div>
+              </div>
+            </div>
+          </div>
+          <div class="vital-box despertar" style="padding:10px">
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px">
+              <span class="pct" id="despertarPct" style="font-size:22px">50%</span>
+              <span class="label" style="font-size:10px;margin:0">DESP</span>
+            </div>
+            <div class="max-value" id="despertarMax" style="font-size:15px;margin-top:4px">0</div>
+            <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:6px">
+              <div style="text-align:center">
+                <span class="current-label" style="font-size:9px">Gasto</span>
+                <input type="number" class="mini-input" id="despertarGasto" value="0" min="0" style="width:60px;padding:4px 6px;font-size:12px" onchange="calcVital()">
+              </div>
+              <div style="text-align:center">
+                <span class="current-label" style="font-size:9px">Atual</span>
+                <div class="current-value" id="despertarAtual" style="font-size:13px;padding:4px 0">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel Direito - Status -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h2>Atributos de Combate</h2>
+      </div>
+      <div class="card-body">
+        <div class="status-grid">
+
+          <!-- Defesa Física -->
+          <div class="status-card defense" id="statusDefFis">
+            <div class="status-header">
+              <span class="status-name">Defesa Física</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalDefFis">1</span>) <span id="aprimBaseDefFis">1</span>+<span class="gained" id="aprimGainedDefFis">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('defFis')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('defFis')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row quad">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="defFis" data-field="tier" onchange="calcStatus('defFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="defFis" data-field="aprimoramento" onchange="calcStatus('defFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Peças</span>
+                <select class="mini-select" data-stat="defFis" data-field="pecas" onchange="calcStatus('defFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="defFis" data-field="bonus" value="0" min="0" onchange="calcStatus('defFis')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalDefFis">0</div>
+            </div>
+          </div>
+
+          <!-- Defesa Mágica -->
+          <div class="status-card defense" id="statusDefMag">
+            <div class="status-header">
+              <span class="status-name">Defesa Mágica</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalDefMag">1</span>) <span id="aprimBaseDefMag">1</span>+<span class="gained" id="aprimGainedDefMag">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('defMag')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('defMag')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row quad">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="defMag" data-field="tier" onchange="calcStatus('defMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="defMag" data-field="aprimoramento" onchange="calcStatus('defMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Peças</span>
+                <select class="mini-select" data-stat="defMag" data-field="pecas" onchange="calcStatus('defMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="defMag" data-field="bonus" value="0" min="0" onchange="calcStatus('defMag')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalDefMag">0</div>
+            </div>
+          </div>
+
+          <!-- Dano Físico -->
+          <div class="status-card attack" id="statusDanoFis">
+            <div class="status-header">
+              <span class="status-name">Dano Físico</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalDanoFis">1</span>) <span id="aprimBaseDanoFis">1</span>+<span class="gained" id="aprimGainedDanoFis">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('danoFis')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('danoFis')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row triple">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="danoFis" data-field="tier" onchange="calcStatus('danoFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="danoFis" data-field="aprimoramento" onchange="calcStatus('danoFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="danoFis" data-field="bonus" value="0" min="0" onchange="calcStatus('danoFis')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalDanoFis">0</div>
+            </div>
+          </div>
+
+          <!-- Dano Mágico -->
+          <div class="status-card attack" id="statusDanoMag">
+            <div class="status-header">
+              <span class="status-name">Dano Mágico</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalDanoMag">1</span>) <span id="aprimBaseDanoMag">1</span>+<span class="gained" id="aprimGainedDanoMag">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('danoMag')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('danoMag')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row triple">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="danoMag" data-field="tier" onchange="calcStatus('danoMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="danoMag" data-field="aprimoramento" onchange="calcStatus('danoMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="danoMag" data-field="bonus" value="0" min="0" onchange="calcStatus('danoMag')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalDanoMag">0</div>
+            </div>
+          </div>
+
+          <!-- Movimento -->
+          <div class="status-card speed" id="statusMov">
+            <div class="status-header">
+              <span class="status-name">Movimento</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalMov">1</span>) <span id="aprimBaseMov">1</span>+<span class="gained" id="aprimGainedMov">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('mov')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('mov')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row triple">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="mov" data-field="tier" onchange="calcStatus('mov')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="mov" data-field="aprimoramento" onchange="calcStatus('mov')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="mov" data-field="bonus" value="0" min="0" onchange="calcStatus('mov')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalMov">0</div>
+            </div>
+          </div>
+
+          <!-- Velocidade de Ataque Físico -->
+          <div class="status-card speed" id="statusVelAtkFis">
+            <div class="status-header">
+              <span class="status-name">Vel. Ataque Físico</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalVelAtkFis">1</span>) <span id="aprimBaseVelAtkFis">1</span>+<span class="gained" id="aprimGainedVelAtkFis">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('velAtkFis')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('velAtkFis')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row triple">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="velAtkFis" data-field="tier" onchange="calcStatus('velAtkFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="velAtkFis" data-field="aprimoramento" onchange="calcStatus('velAtkFis')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="velAtkFis" data-field="bonus" value="0" min="0" onchange="calcStatus('velAtkFis')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalVelAtkFis">0</div>
+            </div>
+          </div>
+
+          <!-- Velocidade de Ataque Mágico -->
+          <div class="status-card speed" id="statusVelAtkMag">
+            <div class="status-header">
+              <span class="status-name">Vel. Ataque Mágico</span>
+              <div class="aprim-display">
+                <span class="detail">(<span class="total" id="aprimTotalVelAtkMag">1</span>) <span id="aprimBaseVelAtkMag">1</span>+<span class="gained" id="aprimGainedVelAtkMag">0</span></span>
+                <button class="aprim-btn aprim-remove-btn" onclick="removeAprimFromStat('velAtkMag')" title="Remover aprimoramento">-</button>
+                <button class="aprim-btn aprim-add-btn" onclick="addAprimToStat('velAtkMag')" title="Adicionar aprimoramento">+</button>
+              </div>
+            </div>
+            <div class="status-row triple">
+              <div>
+                <span class="mini-label">TIER</span>
+                <select class="mini-select" data-stat="velAtkMag" data-field="tier" onchange="calcStatus('velAtkMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Aprim.</span>
+                <select class="mini-select" data-stat="velAtkMag" data-field="aprimoramento" onchange="calcStatus('velAtkMag')">
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                  <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                </select>
+              </div>
+              <div>
+                <span class="mini-label">Bônus%</span>
+                <input type="number" class="mini-input" data-stat="velAtkMag" data-field="bonus" value="0" min="0" onchange="calcStatus('velAtkMag')">
+              </div>
+            </div>
+            <div class="calc-display">
+              <div class="calc-label">TOTAL</div>
+              <div class="calc-value" id="totalVelAtkMag">0</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Habilidades -->
+    <div class="result-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="font-size:18px;display:flex;align-items:center;gap:8px">
+          <span>Habilidades</span>
+          <span id="abilityCount" style="background:var(--brand);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px">0</span>
+          <span id="abilityLimits" style="color:var(--muted);font-size:12px;font-weight:400">(máximo 2)</span>
+        </h2>
+        <button class="btn" onclick="addAbility()" style="padding:6px 12px;font-size:12px">+ Adicionar</button>
+      </div>
+      <div id="abilitiesList">
+        <!-- Habilidades geradas via JS -->
+        <div style="text-align:center;color:var(--muted);padding:20px">
+          Nenhuma habilidade adicionada
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aviso Genético -->
+<dialog id="geneticWarningModal" style="border:none;border-radius:16px;background:var(--card);color:var(--ink);padding:24px;max-width:400px;width:90%;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0">
+  <div style="text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+    <h2 style="font-size:18px;margin-bottom:12px;color:var(--warn)">Limite Genético Excedido!</h2>
+    <p id="geneticWarningText" style="color:var(--muted);font-size:14px;margin-bottom:16px"></p>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px">O valor será revertido ao anterior.</p>
+    <button class="btn primary" onclick="closeGeneticWarning()">Entendi</button>
+  </div>
+</dialog>
+
+<!-- Modal Tabela de TIER -->
+<dialog id="rarityModal" style="border:none;border-radius:16px;background:var(--card);color:var(--ink);padding:24px;max-width:500px;width:90%">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2 style="font-size:18px">Tabela de TIER (Fixo)</h2>
+    <button class="btn" onclick="document.getElementById('rarityModal').close()">Fechar</button>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-bottom:16px">Esta tabela mostra os pontos base de cada TIER. Esses valores são fixos.</p>
+  <table class="rarity-table">
+    <thead>
+      <tr><th>TIER</th><th>PONTOS BASE</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="rarity-badge rarity-inferior">1</span></td><td>15</td></tr>
+      <tr><td><span class="rarity-badge rarity-normal">2</span></td><td>35</td></tr>
+      <tr><td><span class="rarity-badge rarity-raro">3</span></td><td>70</td></tr>
+      <tr><td><span class="rarity-badge rarity-raiz">4</span></td><td>180</td></tr>
+      <tr><td><span class="rarity-badge rarity-unico-inf">5</span></td><td>450</td></tr>
+      <tr><td><span class="rarity-badge rarity-unico-sup">6</span></td><td>1,100</td></tr>
+      <tr><td><span class="rarity-badge rarity-pilar">7</span></td><td>2,800</td></tr>
+      <tr><td><span class="rarity-badge rarity-perfeito">8</span></td><td>7,000</td></tr>
+      <tr><td><span class="rarity-badge rarity-deus">9</span></td><td>25,000</td></tr>
+      <tr><td><span class="rarity-badge rarity-lendario">10</span></td><td>100,000</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:16px;padding:12px;background:#0f0f14;border-radius:8px">
+    <div style="font-size:12px;color:var(--muted)">Fórmula Base:</div>
+    <div style="font-size:14px;font-weight:600;color:var(--brand);margin-top:4px">BASE = TIER_PONTOS × (APRIMORAMENTO + 1)</div>
+  </div>
+</dialog>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== DADOS E ESTADO ==========
+const LS_KEY = 'techterra_monster_status_v1';
+
+// Mapeamento de TIER (1-10) para pontos base
+const TIER_TO_BASE = {
+  1: 15,      // Inferior
+  2: 35,      // Normal
+  3: 70,      // Raro
+  4: 180,     // Raiz
+  5: 450,     // Único Inferior
+  6: 1100,    // Único Superior
+  7: 2800,    // Pilar
+  8: 7000,    // Perfeito
+  9: 25000,   // Deus
+  10: 100000  // Lendário
+};
+
+// Estado inicial
+let state = {
+  monster: { name: '', species: '', image: '', type1: '', type2: '', diasTreino: 0, prioridade: 'sorte' },
+  genetics: { geneticaValor: 20, bonusLimit: 100, maxAprimoramento: 10, maxTier: 10, habMaximo: 2 },
+  vital: { tier: 3, aprimoramento: 1, vidaPct: 50, vidaPerdida: 0, despertarGasto: 0 },
+  stats: {
+    defFis: { tier: 3, aprimoramento: 1, pecas: 6, bonus: 0 },
+    defMag: { tier: 3, aprimoramento: 1, pecas: 6, bonus: 0 },
+    danoFis: { tier: 3, aprimoramento: 1, bonus: 0 },
+    danoMag: { tier: 3, aprimoramento: 1, bonus: 0 },
+    mov: { tier: 3, aprimoramento: 1, bonus: 0 },
+    velAtkFis: { tier: 3, aprimoramento: 1, bonus: 0 },
+    velAtkMag: { tier: 3, aprimoramento: 1, bonus: 0 }
+  },
+  // Aprimoramentos base (original do sorteio) e ganhos (via treino)
+  aprimBase: { defFis: 1, defMag: 1, danoFis: 1, danoMag: 1, mov: 1, velAtkFis: 1, velAtkMag: 1 },
+  aprimGanhos: { defFis: 0, defMag: 0, danoFis: 0, danoMag: 0, mov: 0, velAtkFis: 0, velAtkMag: 0 },
+  abilities: [] // { id, name, tipo, alcance, effect, cost, tier, aprimoramento }
+};
+
+// ========== FUNÇÕES DE CÁLCULO ==========
+
+// Converte TIER (1-10) para TIER_BASE (pontos)
+function getTierBase(tier) {
+  return TIER_TO_BASE[Number(tier)] || 35;
+}
+
+// Calcula BASE: TIER_BASE × (APRIMORAMENTO + 1)
+function calcBase(tier, aprimoramento) {
+  const tierBase = getTierBase(tier);
+  return tierBase * (Number(aprimoramento) + 1);
+}
+
+// Calcula Multiplicador: 1 + (BÔNUS% / 100)
+function calcMultiplicador(bonusPct, geneticLimit) {
+  const limitedBonus = Math.min(bonusPct, geneticLimit);
+  return 1 + (limitedBonus / 100);
+}
+
+// Defesa Física: BASE * (PEÇAS * 0.2) * MULTIPLICADOR
+function calcDefesaFisica(data, geneticLimit) {
+  const base = calcBase(data.tier, data.aprimoramento);
+  const pecasMult = Number(data.pecas) * 0.2;
+  const multiplicador = calcMultiplicador(Number(data.bonus), geneticLimit);
+  const total = base * pecasMult * multiplicador;
+  return { total: Math.round(total) };
+}
+
+// Defesa Mágica: BASE * (PEÇAS * 0.2) * MULTIPLICADOR
+function calcDefesaMagica(data, geneticLimit) {
+  const base = calcBase(data.tier, data.aprimoramento);
+  const pecasMult = Number(data.pecas) * 0.2;
+  const multiplicador = calcMultiplicador(Number(data.bonus), geneticLimit);
+  const total = base * pecasMult * multiplicador;
+  return { total: Math.round(total) };
+}
+
+// Status Simples: BASE * MULTIPLICADOR
+function calcStatusSimples(data, geneticLimit) {
+  const base = calcBase(data.tier, data.aprimoramento);
+  const multiplicador = calcMultiplicador(Number(data.bonus), geneticLimit);
+  const total = base * multiplicador;
+  return { total: Math.round(total) };
+}
+
+// Pontos Vitais
+function calcVitais(data) {
+  const baseRaw = calcBase(data.tier, data.aprimoramento);
+  const bonus = Number(data.bonus) || 0;
+  const base = Math.round(baseRaw * (1 + bonus / 100));
+  const vidaPct = Number(data.vidaPct);
+  const despertarPct = 100 - vidaPct;
+
+  const vidaMax = Math.round(base * (vidaPct / 100));
+  const despertarMax = Math.round(base * (despertarPct / 100));
+
+  const vidaAtual = Math.max(0, vidaMax - Number(data.vidaPerdida));
+  const despertarAtual = Math.max(0, despertarMax - Number(data.despertarGasto));
+
+  return { base, vidaMax, despertarMax, vidaAtual, despertarAtual, vidaPct, despertarPct };
+}
+
+// ========== FUNÇÕES DE UI ==========
+
+function getField(stat, field) {
+  const el = document.querySelector(`[data-stat="${stat}"][data-field="${field}"]`);
+  return el ? (el.type === 'number' ? Number(el.value) : el.value) : 0;
+}
+
+function setField(stat, field, value) {
+  const el = document.querySelector(`[data-stat="${stat}"][data-field="${field}"]`);
+  if (el) el.value = value;
+}
+
+// Guarda valores anteriores dos bônus e aprimoramentos para reverter
+let previousBonusValues = {};
+let previousAprimValues = {};
+let previousGeneticLimitValue = undefined;
+let previousMaxAprimValue = undefined;
+
+function calcStatus(stat, silent = false) {
+  const geneticLimit = Number(document.getElementById('geneticLimit').value);
+  const maxAprim = Number(document.getElementById('maxAprimoramento').value);
+  const bonus = getField(stat, 'bonus');
+  const aprim = getField(stat, 'aprimoramento');
+
+  // Verificar limites (só se não for chamada silenciosa)
+  if (!silent) {
+    // Verificar se bônus excede limite genético
+    if (bonus > geneticLimit) {
+      const previousValue = previousBonusValues[stat] !== undefined ? previousBonusValues[stat] : geneticLimit;
+      showGeneticWarning(stat, 'bonus', bonus, geneticLimit, previousValue);
+      return;
+    }
+
+    // Verificar se aprimoramento excede limite genético
+    if (aprim > maxAprim) {
+      const previousValue = previousAprimValues[stat] !== undefined ? previousAprimValues[stat] : maxAprim;
+      showGeneticWarning(stat, 'aprimoramento', aprim, maxAprim, previousValue);
+      return;
+    }
+  }
+
+  // Guardar valores atuais como anteriores
+  previousBonusValues[stat] = bonus;
+  previousAprimValues[stat] = aprim;
+
+  let result;
+
+  if (stat === 'defFis') {
+    const data = {
+      tier: getField(stat, 'tier'),
+      aprimoramento: getField(stat, 'aprimoramento'),
+      pecas: getField(stat, 'pecas'),
+      bonus: bonus
+    };
+    result = calcDefesaFisica(data, geneticLimit);
+    state.stats.defFis = data;
+  }
+  else if (stat === 'defMag') {
+    const data = {
+      tier: getField(stat, 'tier'),
+      aprimoramento: getField(stat, 'aprimoramento'),
+      pecas: getField(stat, 'pecas'),
+      bonus: bonus
+    };
+    result = calcDefesaMagica(data, geneticLimit);
+    state.stats.defMag = data;
+  }
+  else {
+    const data = {
+      tier: getField(stat, 'tier'),
+      aprimoramento: getField(stat, 'aprimoramento'),
+      bonus: bonus
+    };
+    result = calcStatusSimples(data, geneticLimit);
+    state.stats[stat] = data;
+  }
+
+  document.getElementById(`total${stat.charAt(0).toUpperCase() + stat.slice(1)}`).textContent = result.total.toLocaleString('pt-BR');
+
+  saveState();
+  updateSummary();
+}
+
+// Versão silenciosa - apenas chama calcStatus com silent=true
+function calcStatusSilent(stat) {
+  calcStatus(stat, true);
+}
+
+// Guarda valor anterior do aprimoramento e bônus vital
+let previousVitalAprim = undefined;
+let previousVitalBonus = undefined;
+
+function calcVital(silent = false) {
+  const maxAprim = Number(document.getElementById('maxAprimoramento').value);
+  const aprim = Number(document.getElementById('vitalAprimoramento').value);
+
+  // Verificar se aprimoramento excede limite genético (só se não for silencioso)
+  if (!silent && aprim > maxAprim) {
+    const prevValue = previousVitalAprim !== undefined ? previousVitalAprim : maxAprim;
+    showGeneticWarningVital(aprim, maxAprim, prevValue);
+    return;
+  }
+
+  previousVitalAprim = aprim;
+
+  // Verificar se bônus excede limite genético
+  const bonusLimit = Number(document.getElementById('geneticLimit').value);
+  const bonus = Number(document.getElementById('vitalBonus').value) || 0;
+  if (!silent && bonus > bonusLimit) {
+    showGeneticWarning('vital', 'bonus', bonus, bonusLimit, previousVitalBonus !== undefined ? previousVitalBonus : 0);
+    return;
+  }
+  previousVitalBonus = bonus;
+
+  const data = {
+    tier: Number(document.getElementById('vitalTier').value),
+    aprimoramento: aprim,
+    bonus: bonus,
+    vidaPct: Number(document.getElementById('vitalSlider').value),
+    vidaPerdida: Number(document.getElementById('vidaPerdida').value),
+    despertarGasto: Number(document.getElementById('despertarGasto').value)
+  };
+
+  const result = calcVitais(data);
+
+  document.getElementById('vitalBase').textContent = `Base: ${result.base.toLocaleString('pt-BR')}`;
+  document.getElementById('vidaPct').textContent = `${result.vidaPct}%`;
+  document.getElementById('despertarPct').textContent = `${result.despertarPct}%`;
+  document.getElementById('vidaMax').textContent = result.vidaMax.toLocaleString('pt-BR');
+  document.getElementById('despertarMax').textContent = result.despertarMax.toLocaleString('pt-BR');
+  document.getElementById('vidaAtual').textContent = result.vidaAtual.toLocaleString('pt-BR');
+  document.getElementById('despertarAtual').textContent = result.despertarAtual.toLocaleString('pt-BR');
+
+  state.vital = data;
+  saveState();
+  updateSummary();
+}
+
+function updateVitalSlider(value) {
+  const slider = document.getElementById('vitalSlider');
+  slider.style.setProperty('--vida-pct', value + '%');
+  calcVital();
+}
+
+function updateSummary() {
+  // Função mantida para compatibilidade - a seção de resumo foi substituída por habilidades
+}
+
+// ========== HABILIDADES ==========
+
+let abilityIdCounter = 0;
+
+// Obtém o maior tier entre todos os status do monstro
+function getMaiorTierStatus() {
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+  let maiorTier = 1;
+
+  statsNames.forEach(stat => {
+    const tierSelect = document.querySelector(`[data-stat="${stat}"][data-field="tier"]`);
+    if (tierSelect) {
+      const tier = Number(tierSelect.value) || 1;
+      if (tier > maiorTier) maiorTier = tier;
+    }
+  });
+
+  // Também considera o tier vital
+  const vitalTier = Number(document.getElementById('vitalTier').value) || 1;
+  if (vitalTier > maiorTier) maiorTier = vitalTier;
+
+  return maiorTier;
+}
+
+function getAbilityTierOptions() {
+  const maiorTier = getMaiorTierStatus();
+  const minTier = Math.max(1, maiorTier - 1);
+  let options = '';
+  for (let i = minTier; i <= maiorTier; i++) {
+    options += `<option value="${i}">${i}</option>`;
+  }
+  return options;
+}
+
+function getAbilityAprimOptions() {
+  const maxAprim = Number(document.getElementById('maxAprimoramento').value) || 10;
+  let options = '';
+  for (let i = 1; i <= maxAprim; i++) {
+    options += `<option value="${i}">${i}</option>`;
+  }
+  return options;
+}
+
+function addAbility() {
+  const maiorTier = getMaiorTierStatus();
+  const id = ++abilityIdCounter;
+  const newAbility = {
+    id: id,
+    name: '',
+    tipo: 'ativo', // ativo ou passivo
+    alcance: 0, // metros
+    effect: '',
+    cost: '',
+    tier: maiorTier,
+    aprimoramento: 1
+  };
+  state.abilities.push(newAbility);
+  renderAbilities();
+  saveState();
+
+  // Abre a nova habilidade automaticamente
+  setTimeout(() => {
+    const item = document.querySelector(`[data-ability-id="${id}"]`);
+    if (item) item.classList.add('open');
+  }, 50);
+}
+
+function removeAbility(id) {
+  state.abilities = state.abilities.filter(a => a.id !== id);
+  renderAbilities();
+  saveState();
+}
+
+function toggleAbility(id) {
+  const item = document.querySelector(`[data-ability-id="${id}"]`);
+  if (item) item.classList.toggle('open');
+}
+
+function updateAbility(id, field, value) {
+  const ability = state.abilities.find(a => a.id === id);
+  if (ability) {
+    // Campos numéricos
+    if (field === 'tier' || field === 'aprimoramento' || field === 'alcance') {
+      ability[field] = Number(value) || 0;
+    } else {
+      ability[field] = value;
+    }
+    saveState();
+    // Atualiza o badge de tier no header
+    if (field === 'tier') {
+      const badge = document.querySelector(`[data-ability-id="${id}"] .ability-tier-badge`);
+      if (badge) badge.textContent = `T${value}`;
+    }
+    // Atualiza o nome no header
+    if (field === 'name') {
+      const nameEl = document.querySelector(`[data-ability-id="${id}"] .ability-name`);
+      if (nameEl) nameEl.textContent = value || 'Nova Habilidade';
+    }
+  }
+}
+
+function renderAbilities() {
+  const container = document.getElementById('abilitiesList');
+  const countEl = document.getElementById('abilityCount');
+  const limitsEl = document.getElementById('abilityLimits');
+
+  countEl.textContent = state.abilities.length;
+
+  // Atualiza os limites
+  const habMax = state.genetics.habMaximo || 2;
+  limitsEl.textContent = `(máximo ${habMax})`;
+
+  if (state.abilities.length === 0) {
+    container.innerHTML = '<div class="ability-empty">Nenhuma habilidade adicionada</div>';
+    return;
+  }
+
+  const tierOptions = getAbilityTierOptions();
+  const aprimOptions = getAbilityAprimOptions();
+
+  container.innerHTML = state.abilities.map(ability => `
+    <div class="ability-item" data-ability-id="${ability.id}">
+      <div class="ability-header" onclick="toggleAbility(${ability.id})">
+        <div class="ability-title">
+          <span class="ability-tier-badge">T${ability.tier}</span>
+          <span class="ability-name">${ability.name || 'Nova Habilidade'}</span>
+        </div>
+        <div class="ability-actions">
+          <button class="ability-btn-remove" onclick="event.stopPropagation();removeAbility(${ability.id})">Remover</button>
+          <span class="ability-toggle">▼</span>
+        </div>
+      </div>
+      <div class="ability-content">
+        <div class="ability-body">
+          <div class="ability-row" style="grid-template-columns: 1fr auto auto;">
+            <div>
+              <span class="mini-label">Nome</span>
+              <input type="text" class="mini-input" value="${ability.name}" placeholder="Nome da habilidade" onchange="updateAbility(${ability.id}, 'name', this.value)">
+            </div>
+            <div>
+              <span class="mini-label">Tipo</span>
+              <select class="mini-select" onchange="updateAbility(${ability.id}, 'tipo', this.value)">
+                <option value="ativo" ${ability.tipo === 'ativo' ? 'selected' : ''}>Ativo</option>
+                <option value="passivo" ${ability.tipo === 'passivo' ? 'selected' : ''}>Passivo</option>
+              </select>
+            </div>
+            <div>
+              <span class="mini-label">Alcance (m)</span>
+              <input type="number" class="mini-input" style="width:70px" value="${ability.alcance || 0}" min="0" placeholder="0" onchange="updateAbility(${ability.id}, 'alcance', this.value)">
+            </div>
+          </div>
+          <div>
+            <span class="mini-label">Efeito</span>
+            <textarea class="mini-input" style="min-height:60px;resize:vertical" placeholder="Descreva o efeito da habilidade" onchange="updateAbility(${ability.id}, 'effect', this.value)">${ability.effect}</textarea>
+          </div>
+          <div class="ability-row triple">
+            <div>
+              <span class="mini-label">Custo</span>
+              <input type="text" class="mini-input" value="${ability.cost}" placeholder="Ex: 10 Desp" onchange="updateAbility(${ability.id}, 'cost', this.value)">
+            </div>
+            <div>
+              <span class="mini-label">TIER</span>
+              <select class="mini-select" onchange="updateAbility(${ability.id}, 'tier', this.value)">
+                ${tierOptions.replace(`value="${ability.tier}"`, `value="${ability.tier}" selected`)}
+              </select>
+            </div>
+            <div>
+              <span class="mini-label">Aprim.</span>
+              <select class="mini-select" onchange="updateAbility(${ability.id}, 'aprimoramento', this.value)">
+                ${aprimOptions.replace(`value="${ability.aprimoramento}"`, `value="${ability.aprimoramento}" selected`)}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ========== TREINAMENTO ==========
+
+// Calcula aprimoramentos ganhos por treino (1 a cada 30 dias)
+// Limitado pelo espaço disponível no limite genético
+function calcAprimTreino() {
+  const dias = Number(document.getElementById('diasTreino').value) || 0;
+  const aprimDoTreino = Math.floor(dias / 30);
+
+  // Calcular limite genético disponível
+  const limiteTotal = getLimiteAprimTotal();
+  const aprimBaseTotal = Object.values(state.aprimBase || {}).reduce((sum, v) => sum + (v || 1), 0) || 7; // 7 stats com base 1
+  const espacoDisponivel = Math.max(0, limiteTotal - aprimBaseTotal);
+
+  // Aprim. Ganhos efetivos = menor entre treino e espaço disponível
+  const aprimEfetivo = Math.min(aprimDoTreino, espacoDisponivel);
+
+  document.getElementById('aprimTreino').value = aprimEfetivo;
+  updateAllAprimButtons();
+}
+
+// Calcula total de aprimoramentos já distribuídos
+function getTotalAprimDistribuidos() {
+  let total = 0;
+  Object.values(state.aprimGanhos).forEach(v => total += v);
+  return total;
+}
+
+// Calcula aprimoramentos restantes para distribuir
+function getAprimRestantes() {
+  const dias = Number(document.getElementById('diasTreino').value) || 0;
+  const aprimDoTreino = Math.floor(dias / 30);
+
+  // Calcular limite genético disponível
+  const limiteTotal = getLimiteAprimTotal();
+  const aprimBaseTotal = Object.values(state.aprimBase || {}).reduce((sum, v) => sum + (v || 1), 0) || 7;
+  const espacoDisponivel = Math.max(0, limiteTotal - aprimBaseTotal);
+
+  // Aprim. Ganhos efetivos = menor entre treino e espaço disponível
+  const aprimEfetivo = Math.min(aprimDoTreino, espacoDisponivel);
+
+  return aprimEfetivo - getTotalAprimDistribuidos();
+}
+
+// Atualiza o display de aprimoramentos de um stat
+function updateAprimDisplay(stat) {
+  const base = state.aprimBase[stat] || 1;
+  const ganhos = state.aprimGanhos[stat] || 0;
+  const total = base + ganhos;
+
+  document.getElementById(`aprimTotal${stat.charAt(0).toUpperCase() + stat.slice(1)}`).textContent = total;
+  document.getElementById(`aprimBase${stat.charAt(0).toUpperCase() + stat.slice(1)}`).textContent = base;
+  document.getElementById(`aprimGained${stat.charAt(0).toUpperCase() + stat.slice(1)}`).textContent = ganhos;
+}
+
+// Atualiza todos os displays de aprimoramentos
+function updateAllAprimDisplays() {
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+  statsNames.forEach(stat => updateAprimDisplay(stat));
+}
+
+// Obtém o limite total de aprimoramentos da genética atual
+function getLimiteAprimTotal() {
+  const geneticaValor = Number(document.getElementById('geneticaValor').value);
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  return raridade ? raridade.aprimTotal : 1;
+}
+
+// Calcula o total de aprimoramentos atualmente em uso (base + ganhos de todos os stats)
+function getTotalAprimEmUso() {
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+  let total = 0;
+  statsNames.forEach(stat => {
+    total += (state.aprimBase[stat] || 1) + (state.aprimGanhos[stat] || 0);
+  });
+  return total;
+}
+
+// Atualiza estado dos botões +/- (desabilita conforme limites)
+function updateAllAprimButtons() {
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+  const restantes = getAprimRestantes();
+  const maxAprimPorStatus = Number(document.getElementById('maxAprimoramento').value) || 10;
+  const limiteTotal = getLimiteAprimTotal();
+  const totalEmUso = getTotalAprimEmUso();
+
+  statsNames.forEach(stat => {
+    const cardId = `#status${stat.charAt(0).toUpperCase() + stat.slice(1)}`;
+    const addBtn = document.querySelector(`${cardId} .aprim-add-btn`);
+    const removeBtn = document.querySelector(`${cardId} .aprim-remove-btn`);
+    const currentAprim = (state.aprimBase[stat] || 1) + (state.aprimGanhos[stat] || 0);
+    const ganhos = state.aprimGanhos[stat] || 0;
+
+    if (addBtn) {
+      // Desabilita + se: sem pontos de treino OU atingiu limite por status OU atingiu limite total
+      addBtn.disabled = restantes <= 0 || currentAprim >= maxAprimPorStatus || totalEmUso >= limiteTotal;
+    }
+    if (removeBtn) {
+      // Desabilita - se: não há ganhos para remover
+      removeBtn.disabled = ganhos <= 0;
+    }
+  });
+}
+
+// Adiciona um ponto de aprimoramento a um stat
+function addAprimToStat(stat) {
+  const restantes = getAprimRestantes();
+  if (restantes <= 0) {
+    showToast('Sem aprimoramentos de treino disponíveis!');
+    return;
+  }
+
+  const maxAprimPorStatus = Number(document.getElementById('maxAprimoramento').value) || 10;
+  const currentAprim = (state.aprimBase[stat] || 1) + (state.aprimGanhos[stat] || 0);
+
+  if (currentAprim >= maxAprimPorStatus) {
+    showToast('Limite por status atingido!');
+    return;
+  }
+
+  const limiteTotal = getLimiteAprimTotal();
+  const totalEmUso = getTotalAprimEmUso();
+
+  if (totalEmUso >= limiteTotal) {
+    showToast(`Limite total de aprimoramentos atingido (${limiteTotal})!`);
+    return;
+  }
+
+  // Incrementa o aprimoramento ganho
+  state.aprimGanhos[stat] = (state.aprimGanhos[stat] || 0) + 1;
+
+  // Atualiza o dropdown de aprimoramento
+  const newTotal = (state.aprimBase[stat] || 1) + state.aprimGanhos[stat];
+  const aprimSelect = document.querySelector(`[data-stat="${stat}"][data-field="aprimoramento"]`);
+  if (aprimSelect) {
+    aprimSelect.value = newTotal;
+    markAsManuallyEdited(aprimSelect);
+  }
+
+  // Atualiza display e recalcula
+  updateAprimDisplay(stat);
+  updateAllAprimButtons();
+  calcStatus(stat, true);
+  saveState();
+
+  showToast(`+1 Aprim. em ${STAT_NAMES[stat]}!`);
+}
+
+// Remove um ponto de aprimoramento de um stat
+function removeAprimFromStat(stat) {
+  const ganhos = state.aprimGanhos[stat] || 0;
+
+  if (ganhos <= 0) {
+    showToast('Sem aprimoramentos para remover!');
+    return;
+  }
+
+  // Decrementa o aprimoramento ganho
+  state.aprimGanhos[stat] = ganhos - 1;
+
+  // Atualiza o dropdown de aprimoramento
+  const newTotal = (state.aprimBase[stat] || 1) + state.aprimGanhos[stat];
+  const aprimSelect = document.querySelector(`[data-stat="${stat}"][data-field="aprimoramento"]`);
+  if (aprimSelect) {
+    aprimSelect.value = newTotal;
+    if (state.aprimGanhos[stat] === 0) {
+      aprimSelect.classList.remove('manually-edited');
+    }
+  }
+
+  // Atualiza display e recalcula
+  updateAprimDisplay(stat);
+  updateAllAprimButtons();
+  calcStatus(stat, true);
+  saveState();
+
+  showToast(`-1 Aprim. em ${STAT_NAMES[stat]}!`);
+}
+
+// Rebalanceia os aprimoramentos quando os limites genéticos mudam
+function rebalancearAprimoramentos() {
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+  const maxAprimPorStatus = Number(document.getElementById('maxAprimoramento').value) || 10;
+  const limiteTotal = getLimiteAprimTotal();
+  let mudou = false;
+
+  // 1. Primeiro, ajustar cada status individualmente para respeitar o limite por status
+  statsNames.forEach(stat => {
+    const base = state.aprimBase[stat] || 1;
+    const ganhos = state.aprimGanhos[stat] || 0;
+    const total = base + ganhos;
+
+    if (total > maxAprimPorStatus) {
+      // Reduzir ganhos primeiro
+      const excesso = total - maxAprimPorStatus;
+      const ganhosARemover = Math.min(ganhos, excesso);
+      state.aprimGanhos[stat] = ganhos - ganhosARemover;
+
+      // Se ainda excede, reduzir base
+      const novoTotal = (state.aprimBase[stat] || 1) + state.aprimGanhos[stat];
+      if (novoTotal > maxAprimPorStatus) {
+        state.aprimBase[stat] = maxAprimPorStatus - state.aprimGanhos[stat];
+      }
+      mudou = true;
+    }
+  });
+
+  // 2. Depois, verificar o limite total e remover ganhos se necessário
+  let totalEmUso = getTotalAprimEmUso();
+  while (totalEmUso > limiteTotal) {
+    // Encontrar o stat com mais ganhos para remover
+    let statComMaisGanhos = null;
+    let maxGanhos = 0;
+    statsNames.forEach(stat => {
+      const ganhos = state.aprimGanhos[stat] || 0;
+      if (ganhos > maxGanhos) {
+        maxGanhos = ganhos;
+        statComMaisGanhos = stat;
+      }
+    });
+
+    if (statComMaisGanhos && maxGanhos > 0) {
+      state.aprimGanhos[statComMaisGanhos]--;
+      mudou = true;
+    } else {
+      // Não há mais ganhos para remover, precisamos reduzir base
+      // Encontrar o stat com maior base (acima de 1) para reduzir
+      let statComMaiorBase = null;
+      let maxBase = 1;
+      statsNames.forEach(stat => {
+        const base = state.aprimBase[stat] || 1;
+        if (base > maxBase) {
+          maxBase = base;
+          statComMaiorBase = stat;
+        }
+      });
+
+      if (statComMaiorBase && maxBase > 1) {
+        state.aprimBase[statComMaiorBase]--;
+        mudou = true;
+      } else {
+        break; // Não há mais o que reduzir
+      }
+    }
+    totalEmUso = getTotalAprimEmUso();
+  }
+
+  // 3. Atualizar UI se houve mudanças
+  if (mudou) {
+    statsNames.forEach(stat => {
+      const newTotal = (state.aprimBase[stat] || 1) + (state.aprimGanhos[stat] || 0);
+      const aprimSelect = document.querySelector(`[data-stat="${stat}"][data-field="aprimoramento"]`);
+      if (aprimSelect) {
+        aprimSelect.value = newTotal;
+      }
+      updateAprimDisplay(stat);
+      calcStatus(stat, true);
+    });
+    updateAllAprimButtons();
+    showToast('Aprimoramentos rebalanceados para os novos limites!');
+  }
+}
+
+// ========== PERSISTÊNCIA ==========
+
+function saveState() {
+  state.monster.name = document.getElementById('monsterName').value;
+  state.monster.species = document.getElementById('monsterSpecies').value;
+  state.monster.type1 = document.getElementById('monsterType1').value;
+  state.monster.type2 = document.getElementById('monsterType2').value;
+  state.monster.diasTreino = Number(document.getElementById('diasTreino').value) || 0;
+  // Prioridade é salva diretamente (campo readonly, valor definido pelo sorteio)
+  state.genetics.geneticaValor = Number(document.getElementById('geneticaValor').value);
+  state.genetics.bonusLimit = Number(document.getElementById('geneticLimit').value);
+  state.genetics.maxAprimoramento = Number(document.getElementById('maxAprimoramento').value);
+  state.genetics.maxTier = Number(document.getElementById('maxTier').value);
+  state.genetics.habMaximo = Number(document.getElementById('habMaximo').value);
+
+  // Capturar campos editados manualmente (cor verde)
+  const manuallyEditedFields = [];
+  document.querySelectorAll('.manually-edited').forEach(el => {
+    if (el.id) {
+      manuallyEditedFields.push({ type: 'id', value: el.id });
+    } else if (el.dataset.stat && el.dataset.field) {
+      manuallyEditedFields.push({ type: 'data', stat: el.dataset.stat, field: el.dataset.field });
+    }
+  });
+  state.manuallyEditedFields = manuallyEditedFields;
+
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+    } catch(e) {
+      console.error('Erro ao carregar estado:', e);
+    }
+  }
+
+  // Restaurar UI
+  document.getElementById('monsterName').value = state.monster.name || '';
+  document.getElementById('monsterSpecies').value = state.monster.species || '';
+  document.getElementById('monsterType1').value = state.monster.type1 || '';
+  document.getElementById('monsterType2').value = state.monster.type2 || '';
+  document.getElementById('diasTreino').value = state.monster.diasTreino || 0;
+  // Restaurar prioridade (campo readonly)
+  const prioridade = state.monster.prioridade || 'sorte';
+  document.getElementById('monsterPrioridade').value = PRIORIDADE_NOMES[prioridade] || PRIORIDADE_NOMES.sorte;
+  calcAprimTreino();
+  document.getElementById('geneticaValor').value = state.genetics.geneticaValor || 20;
+  document.getElementById('geneticLimit').value = state.genetics.bonusLimit || 100;
+  document.getElementById('maxAprimoramento').value = state.genetics.maxAprimoramento || 10;
+  document.getElementById('maxTier').value = state.genetics.maxTier || 10;
+  document.getElementById('habMaximo').value = state.genetics.habMaximo || 2;
+
+  // Restaurar imagem
+  if (state.monster.image) {
+    document.getElementById('monsterPreview').src = state.monster.image;
+    document.getElementById('monsterPreview').style.display = 'block';
+    document.getElementById('monsterPlaceholder').style.display = 'none';
+  }
+
+  // Restaurar vitais
+  document.getElementById('vitalTier').value = state.vital.tier || 3;
+  document.getElementById('vitalAprimoramento').value = state.vital.aprimoramento || 1;
+  document.getElementById('vitalBonus').value = state.vital.bonus || 0;
+  document.getElementById('vitalSlider').value = state.vital.vidaPct || 50;
+  document.getElementById('vidaPerdida').value = state.vital.vidaPerdida || 0;
+  document.getElementById('despertarGasto').value = state.vital.despertarGasto || 0;
+  updateVitalSlider(state.vital.vidaPct || 50);
+
+  // Restaurar stats
+  Object.keys(state.stats).forEach(stat => {
+    const data = state.stats[stat];
+    Object.keys(data).forEach(field => {
+      setField(stat, field, data[field]);
+    });
+  });
+
+  // Restaurar aprimoramentos base e ganhos (se não existirem, inicializa)
+  if (!state.aprimBase) {
+    state.aprimBase = { defFis: 1, defMag: 1, danoFis: 1, danoMag: 1, mov: 1, velAtkFis: 1, velAtkMag: 1 };
+    // Inicializa aprimBase com os valores atuais dos stats
+    Object.keys(state.stats).forEach(stat => {
+      state.aprimBase[stat] = state.stats[stat].aprimoramento || 1;
+    });
+  }
+  if (!state.aprimGanhos) {
+    state.aprimGanhos = { defFis: 0, defMag: 0, danoFis: 0, danoMag: 0, mov: 0, velAtkFis: 0, velAtkMag: 0 };
+  }
+
+  // Restaurar habilidades
+  if (!state.abilities) state.abilities = [];
+  if (state.abilities.length > 0) {
+    abilityIdCounter = Math.max(...state.abilities.map(a => a.id || 0));
+  }
+  renderAbilities();
+
+  // Restaurar marcações de campos editados manualmente (cor verde)
+  if (state.manuallyEditedFields && Array.isArray(state.manuallyEditedFields)) {
+    state.manuallyEditedFields.forEach(field => {
+      let el = null;
+      if (field.type === 'id') {
+        el = document.getElementById(field.value);
+      } else if (field.type === 'data') {
+        el = document.querySelector(`[data-stat="${field.stat}"][data-field="${field.field}"]`);
+      }
+      if (el) {
+        el.classList.add('manually-edited');
+      }
+    });
+  }
+}
+
+// ========== AÇÕES ==========
+
+function openRarityTable() {
+  document.getElementById('rarityModal').showModal();
+}
+
+function resetAll() {
+  if (confirm('Deseja realmente resetar todos os dados?')) {
+    localStorage.removeItem(LS_KEY);
+    location.reload();
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Nomes dos status para exibição
+const STAT_NAMES = {
+  defFis: 'Defesa Física',
+  defMag: 'Defesa Mágica',
+  danoFis: 'Dano Físico',
+  danoMag: 'Dano Mágico',
+  mov: 'Movimento',
+  velAtkFis: 'Vel. Ataque Físico',
+  velAtkMag: 'Vel. Ataque Mágico',
+  vital: 'Pontos Vitais'
+};
+
+// Guarda informações para reverter o valor
+let geneticWarningData = { stat: null, field: null, previousValue: 0 };
+
+function showGeneticWarning(stat, field, value, limit, previousValue) {
+  const modal = document.getElementById('geneticWarningModal');
+  const text = document.getElementById('geneticWarningText');
+
+  if (field === 'bonus') {
+    text.innerHTML = `<strong>${STAT_NAMES[stat] || stat}</strong>: Você tentou usar <strong>${value}%</strong> de bônus, mas o limite genético é <strong>${limit}%</strong>.`;
+  } else if (field === 'aprimoramento') {
+    text.innerHTML = `<strong>${STAT_NAMES[stat] || stat}</strong>: Você tentou usar aprimoramento <strong>${value}</strong>, mas o limite genético é <strong>${limit}</strong>.`;
+  }
+
+  // Guardar dados para reverter
+  geneticWarningData = { stat, field, previousValue };
+
+  modal.showModal();
+}
+
+function closeGeneticWarning() {
+  const modal = document.getElementById('geneticWarningModal');
+  modal.close();
+
+  // Reverter o valor ao anterior
+  if (geneticWarningData.stat === 'vital') {
+    // Caso especial para pontos vitais
+    if (geneticWarningData.field === 'bonus') {
+      document.getElementById('vitalBonus').value = geneticWarningData.previousValue;
+      previousVitalBonus = geneticWarningData.previousValue;
+    } else {
+      document.getElementById('vitalAprimoramento').value = geneticWarningData.previousValue;
+      previousVitalAprim = geneticWarningData.previousValue;
+    }
+    calcVital(true);
+  } else if (geneticWarningData.stat === 'geneticLimit') {
+    // Caso especial para campo Bônus % em Limites Genéticos
+    document.getElementById('geneticLimit').value = geneticWarningData.previousValue;
+    previousGeneticLimitValue = geneticWarningData.previousValue;
+  } else if (geneticWarningData.stat === 'maxAprimoramento') {
+    // Caso especial para campo Aprim. em Limites Genéticos
+    document.getElementById('maxAprimoramento').value = geneticWarningData.previousValue;
+    previousMaxAprimValue = geneticWarningData.previousValue;
+  } else if (geneticWarningData.stat && geneticWarningData.field) {
+    const input = document.querySelector(`[data-stat="${geneticWarningData.stat}"][data-field="${geneticWarningData.field}"]`);
+    if (input) {
+      input.value = geneticWarningData.previousValue;
+      // Recalcular com o valor anterior (sem mostrar warning novamente)
+      calcStatusSilent(geneticWarningData.stat);
+    }
+  }
+
+  geneticWarningData = { stat: null, field: null, previousValue: 0 };
+}
+
+function showGeneticWarningVital(value, limit, previousValue) {
+  const modal = document.getElementById('geneticWarningModal');
+  const text = document.getElementById('geneticWarningText');
+  text.innerHTML = `<strong>Pontos Vitais</strong>: Você tentou usar aprimoramento <strong>${value}</strong>, mas o limite genético é <strong>${limit}</strong>.`;
+
+  geneticWarningData = { stat: 'vital', field: 'aprimoramento', previousValue };
+  modal.showModal();
+}
+
+function showGeneticLimitWarning(value, limit, previousValue) {
+  const modal = document.getElementById('geneticWarningModal');
+  const text = document.getElementById('geneticWarningText');
+  text.innerHTML = `<strong>Limite de Bônus</strong>: Você tentou definir <strong>${value}%</strong>, mas a genética atual permite no máximo <strong>${limit}%</strong>.`;
+
+  geneticWarningData = { stat: 'geneticLimit', field: 'bonus', previousValue };
+  modal.showModal();
+}
+
+function showMaxAprimWarning(value, limit, previousValue) {
+  const modal = document.getElementById('geneticWarningModal');
+  const text = document.getElementById('geneticWarningText');
+  text.innerHTML = `<strong>Limite de Aprimoramento</strong>: Você tentou definir <strong>${value}</strong>, mas a genética atual permite no máximo <strong>${limit}</strong>.`;
+
+  geneticWarningData = { stat: 'maxAprimoramento', field: 'aprimoramento', previousValue };
+  modal.showModal();
+}
+
+function exportData() {
+  const name = state.monster.name || 'monstro';
+
+  // Capturar campos editados manualmente
+  const manuallyEditedFields = [];
+  document.querySelectorAll('.manually-edited').forEach(el => {
+    if (el.id) {
+      manuallyEditedFields.push({ type: 'id', value: el.id });
+    } else if (el.dataset.stat && el.dataset.field) {
+      manuallyEditedFields.push({ type: 'data', stat: el.dataset.stat, field: el.dataset.field });
+    }
+  });
+
+  const data = {
+    exportDate: new Date().toISOString(),
+    ...state,
+    manuallyEditedFields: manuallyEditedFields,
+    calculatedStats: {
+      vida: calcVitais(state.vital),
+      defFis: calcDefesaFisica(state.stats.defFis, state.genetics.bonusLimit),
+      defMag: calcDefesaMagica(state.stats.defMag, state.genetics.bonusLimit),
+      danoFis: calcStatusSimples(state.stats.danoFis, state.genetics.bonusLimit),
+      danoMag: calcStatusSimples(state.stats.danoMag, state.genetics.bonusLimit),
+      mov: calcStatusSimples(state.stats.mov, state.genetics.bonusLimit),
+      velAtkFis: calcStatusSimples(state.stats.velAtkFis, state.genetics.bonusLimit),
+      velAtkMag: calcStatusSimples(state.stats.velAtkMag, state.genetics.bonusLimit)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `techterra_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('Ficha exportada com sucesso!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Validar se é um arquivo válido
+      if (!data.monster || !data.genetics || !data.stats) {
+        showToast('Arquivo inválido!');
+        return;
+      }
+
+      // Limpar marcas de edição manual
+      clearManuallyEdited();
+
+      // Resetar valores anteriores para validação
+      previousBonusValues = {};
+      previousAprimValues = {};
+      previousVitalAprim = undefined;
+      previousGeneticLimitValue = undefined;
+
+      // Restaurar estado
+      state.monster = data.monster || state.monster;
+      state.genetics = data.genetics || state.genetics;
+      state.vital = data.vital || state.vital;
+      state.stats = data.stats || state.stats;
+      state.abilities = (data.abilities || []).map(ability => ({
+        ...ability,
+        tipo: ability.tipo || 'ativo',      // Default para habilidades antigas
+        alcance: ability.alcance || 0        // Default para habilidades antigas
+      }));
+
+      // Restaurar aprimoramentos base e ganhos
+      if (data.aprimBase) {
+        state.aprimBase = data.aprimBase;
+      } else {
+        // Inicializa com os valores atuais dos stats
+        state.aprimBase = { defFis: 1, defMag: 1, danoFis: 1, danoMag: 1, mov: 1, velAtkFis: 1, velAtkMag: 1 };
+        Object.keys(state.stats).forEach(stat => {
+          state.aprimBase[stat] = state.stats[stat].aprimoramento || 1;
+        });
+      }
+      if (data.aprimGanhos) {
+        state.aprimGanhos = data.aprimGanhos;
+      } else {
+        state.aprimGanhos = { defFis: 0, defMag: 0, danoFis: 0, danoMag: 0, mov: 0, velAtkFis: 0, velAtkMag: 0 };
+      }
+
+      // Atualizar UI - Perfil
+      document.getElementById('monsterName').value = state.monster.name || '';
+      document.getElementById('monsterSpecies').value = state.monster.species || '';
+      document.getElementById('monsterType1').value = state.monster.type1 || '';
+      document.getElementById('monsterType2').value = state.monster.type2 || '';
+      document.getElementById('diasTreino').value = state.monster.diasTreino || 0;
+      // Restaurar prioridade
+      const prioridadeImport = state.monster.prioridade || 'sorte';
+      document.getElementById('monsterPrioridade').value = PRIORIDADE_NOMES[prioridadeImport] || PRIORIDADE_NOMES.sorte;
+      calcAprimTreino();
+
+      // Atualizar UI - Imagem
+      if (state.monster.image) {
+        document.getElementById('monsterPreview').src = state.monster.image;
+        document.getElementById('monsterPreview').style.display = 'block';
+        document.getElementById('monsterPlaceholder').style.display = 'none';
+      }
+
+      // Atualizar UI - Genética
+      document.getElementById('geneticaValor').value = state.genetics.geneticaValor || 20;
+      document.getElementById('geneticLimit').value = state.genetics.bonusLimit || 100;
+      document.getElementById('maxAprimoramento').value = state.genetics.maxAprimoramento || 10;
+      document.getElementById('maxTier').value = state.genetics.maxTier || 10;
+      document.getElementById('habMaximo').value = state.genetics.habMaximo || 2;
+
+      // Atualizar UI - Vitais
+      document.getElementById('vitalTier').value = state.vital.tier || 3;
+      document.getElementById('vitalAprimoramento').value = state.vital.aprimoramento || 1;
+      document.getElementById('vitalBonus').value = state.vital.bonus || 0;
+      document.getElementById('vitalSlider').value = state.vital.vidaPct || 50;
+      document.getElementById('vidaPerdida').value = state.vital.vidaPerdida || 0;
+      document.getElementById('despertarGasto').value = state.vital.despertarGasto || 0;
+      updateVitalSlider(state.vital.vidaPct || 50);
+
+      // Atualizar UI - Stats
+      Object.keys(state.stats).forEach(stat => {
+        const statData = state.stats[stat];
+        Object.keys(statData).forEach(field => {
+          setField(stat, field, statData[field]);
+        });
+      });
+
+      // Atualizar contador de habilidades
+      if (state.abilities.length > 0) {
+        abilityIdCounter = Math.max(...state.abilities.map(a => a.id || 0));
+      } else {
+        abilityIdCounter = 0;
+      }
+
+      // Recalcular tudo (silencioso para não mostrar modal na importação)
+      ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(s => calcStatus(s, true));
+      calcVital(true);
+
+      // Atualizar displays de aprimoramentos
+      updateAllAprimDisplays();
+      updateAllAprimButtons();
+
+      renderAbilities();
+      saveState();
+
+      // Restaurar marcações de campos editados manualmente
+      if (data.manuallyEditedFields && Array.isArray(data.manuallyEditedFields)) {
+        data.manuallyEditedFields.forEach(field => {
+          let el = null;
+          if (field.type === 'id') {
+            el = document.getElementById(field.value);
+          } else if (field.type === 'data') {
+            el = document.querySelector(`[data-stat="${field.stat}"][data-field="${field.field}"]`);
+          }
+          if (el) el.classList.add('manually-edited');
+        });
+      }
+
+      showToast(`Ficha "${state.monster.name || 'monstro'}" importada!`);
+    } catch (err) {
+      console.error('Erro ao importar:', err);
+      showToast('Erro ao importar arquivo!');
+    }
+  };
+  reader.readAsText(file);
+
+  // Limpar input para permitir reimportar o mesmo arquivo
+  event.target.value = '';
+}
+
+// ========== SORTEAR MONSTRO ==========
+
+const TIPOS = [
+  'agua', 'alien', 'desconhecido', 'deus', 'docrates', 'dragao', 'eletrico', 'fantasma',
+  'fera', 'fogo', 'gelo', 'inseto', 'luz', 'magico', 'marinho', 'mistico', 'normal',
+  'nostalgico', 'pedra', 'planta', 'psiquico', 'subterraneo', 'tecnologia', 'tempo',
+  'terrestre', 'trevas', 'venenoso', 'vento', 'voador', 'zumbi'
+];
+
+const PRIORIDADE_NOMES = {
+  sorte: '🍀 Sorte',
+  guerreiro: '⚔️ Guerreiro',
+  mago: '🔮 Mago',
+  velocista: '💨 Velocista',
+  tank: '🛡️ Tank',
+  hibrido: '⚖️ Híbrido'
+};
+
+// Configurações de prioridade para sorteio
+// foco = stats que devem ter tiers/aprim MAIS ALTOS (prioridade)
+// focoVida = prioriza % de vida nos PVs
+// focoDespertar = prioriza % de despertar nos PVs (mana)
+const PRIORIDADE_CONFIG = {
+  sorte: { foco: [], focoVida: false, focoDespertar: false, pecasBonus: false, equilibrado: false },
+  guerreiro: {
+    foco: ['danoFis', 'velAtkFis', 'defFis'], // coisas físicas
+    focoVida: true, // vida
+    focoDespertar: false,
+    pecasBonus: false,
+    equilibrado: false
+  },
+  mago: {
+    foco: ['danoMag', 'velAtkMag', 'defMag'], // coisas mágicas
+    focoVida: false,
+    focoDespertar: true, // despertar = mana
+    pecasBonus: false,
+    equilibrado: false
+  },
+  velocista: {
+    foco: ['mov', 'velAtkFis', 'velAtkMag'], // velocidades
+    focoVida: false,
+    focoDespertar: false,
+    pecasBonus: false,
+    equilibrado: false
+  },
+  tank: {
+    foco: ['defFis', 'defMag'], // defesas
+    focoVida: true, // vida
+    focoDespertar: false,
+    pecasBonus: true, // mais peças nas defesas
+    equilibrado: false
+  },
+  hibrido: {
+    foco: [], // todos equilibrados
+    focoVida: false,
+    focoDespertar: false,
+    pecasBonus: false,
+    equilibrado: true // menor variação entre stats
+  }
+};
+
+// Tabela de Genética por Raridade (1-20) - Baseada no documento oficial
+const GENETICA_RARIDADE = [
+  { raridade: 1,  genetica: [1, 5],    chance: 10,           bonusMax: 0,   aprimTotal: 1,  aprimMaxStatus: 1,  habMin: 1,  habMax: 2,  aprimHabMax: 1 },
+  { raridade: 2,  genetica: [6, 10],   chance: 5,            bonusMax: 5,   aprimTotal: 2,  aprimMaxStatus: 1,  habMin: 1,  habMax: 3,  aprimHabMax: 1 },
+  { raridade: 3,  genetica: [11, 15],  chance: 4,            bonusMax: 10,  aprimTotal: 3,  aprimMaxStatus: 2,  habMin: 2,  habMax: 4,  aprimHabMax: 2 },
+  { raridade: 4,  genetica: [16, 20],  chance: 3,            bonusMax: 15,  aprimTotal: 6,  aprimMaxStatus: 3,  habMin: 3,  habMax: 5,  aprimHabMax: 3 },
+  { raridade: 5,  genetica: [21, 25],  chance: 6,            bonusMax: 20,  aprimTotal: 8,  aprimMaxStatus: 4,  habMin: 4,  habMax: 6,  aprimHabMax: 4 },
+  { raridade: 6,  genetica: [26, 30],  chance: 10,           bonusMax: 25,  aprimTotal: 10, aprimMaxStatus: 5,  habMin: 5,  habMax: 7,  aprimHabMax: 5 },
+  { raridade: 7,  genetica: [31, 35],  chance: 20,           bonusMax: 30,  aprimTotal: 12, aprimMaxStatus: 5,  habMin: 6,  habMax: 8,  aprimHabMax: 5 },
+  { raridade: 8,  genetica: [36, 40],  chance: 40,           bonusMax: 40,  aprimTotal: 15, aprimMaxStatus: 6,  habMin: 7,  habMax: 10, aprimHabMax: 6 },
+  { raridade: 9,  genetica: [41, 45],  chance: 80,           bonusMax: 50,  aprimTotal: 18, aprimMaxStatus: 7,  habMin: 8,  habMax: 12, aprimHabMax: 7 },
+  { raridade: 10, genetica: [46, 50],  chance: 160,          bonusMax: 60,  aprimTotal: 22, aprimMaxStatus: 7,  habMin: 9,  habMax: 14, aprimHabMax: 7 },
+  { raridade: 11, genetica: [51, 55],  chance: 500,          bonusMax: 70,  aprimTotal: 26, aprimMaxStatus: 8,  habMin: 10, habMax: 16, aprimHabMax: 8 },
+  { raridade: 12, genetica: [56, 60],  chance: 5000,         bonusMax: 80,  aprimTotal: 30, aprimMaxStatus: 8,  habMin: 11, habMax: 18, aprimHabMax: 8 },
+  { raridade: 13, genetica: [61, 65],  chance: 50000,        bonusMax: 85,  aprimTotal: 35, aprimMaxStatus: 8,  habMin: 12, habMax: 20, aprimHabMax: 8 },
+  { raridade: 14, genetica: [66, 70],  chance: 500000,       bonusMax: 90,  aprimTotal: 40, aprimMaxStatus: 9,  habMin: 13, habMax: 22, aprimHabMax: 9 },
+  { raridade: 15, genetica: [71, 75],  chance: 2000000,      bonusMax: 95,  aprimTotal: 45, aprimMaxStatus: 9,  habMin: 14, habMax: 25, aprimHabMax: 9 },
+  { raridade: 16, genetica: [76, 80],  chance: 10000000,     bonusMax: 100, aprimTotal: 50, aprimMaxStatus: 9,  habMin: 15, habMax: 28, aprimHabMax: 9 },
+  { raridade: 17, genetica: [81, 85],  chance: 50000000,     bonusMax: 100, aprimTotal: 55, aprimMaxStatus: 9,  habMin: 15, habMax: 30, aprimHabMax: 9 },
+  { raridade: 18, genetica: [86, 90],  chance: 200000000,    bonusMax: 100, aprimTotal: 63, aprimMaxStatus: 9,  habMin: 15, habMax: 32, aprimHabMax: 9 },
+  { raridade: 19, genetica: [91, 95],  chance: 500000000,    bonusMax: 100, aprimTotal: 72, aprimMaxStatus: 10, habMin: 15, habMax: 35, aprimHabMax: 9 },
+  { raridade: 20, genetica: [96, 100], chance: 1000000000,   bonusMax: 100, aprimTotal: 90, aprimMaxStatus: 10, habMin: 15, habMax: 50, aprimHabMax: 10 }
+];
+
+// Tabela de Genética simplificada por TIER (1-10) para compatibilidade
+const GENETICA_TABLE = [
+  { tier: 1,  genetica: [1, 10],   peso: 300,     bonusMax: 5,   aprimTotal: 2,  aprimMaxStatus: 1,  habMin: 1,  habMax: 3 },
+  { tier: 2,  genetica: [11, 20],  peso: 583,     bonusMax: 15,  aprimTotal: 6,  aprimMaxStatus: 3,  habMin: 2,  habMax: 5 },
+  { tier: 3,  genetica: [21, 30],  peso: 266,     bonusMax: 25,  aprimTotal: 10, aprimMaxStatus: 5,  habMin: 4,  habMax: 7 },
+  { tier: 4,  genetica: [31, 40],  peso: 75,      bonusMax: 40,  aprimTotal: 15, aprimMaxStatus: 6,  habMin: 6,  habMax: 10 },
+  { tier: 5,  genetica: [41, 50],  peso: 18.75,   bonusMax: 60,  aprimTotal: 22, aprimMaxStatus: 7,  habMin: 8,  habMax: 14 },
+  { tier: 6,  genetica: [51, 60],  peso: 2.2,     bonusMax: 80,  aprimTotal: 30, aprimMaxStatus: 8,  habMin: 10, habMax: 18 },
+  { tier: 7,  genetica: [61, 70],  peso: 0.022,   bonusMax: 90,  aprimTotal: 40, aprimMaxStatus: 9,  habMin: 12, habMax: 22 },
+  { tier: 8,  genetica: [71, 80],  peso: 0.0006,  bonusMax: 100, aprimTotal: 50, aprimMaxStatus: 9,  habMin: 14, habMax: 28 },
+  { tier: 9,  genetica: [81, 90],  peso: 0.000025,bonusMax: 100, aprimTotal: 63, aprimMaxStatus: 9,  habMin: 15, habMax: 32 },
+  { tier: 10, genetica: [91, 100], peso: 0.000003,bonusMax: 100, aprimTotal: 90, aprimMaxStatus: 10, habMin: 15, habMax: 50 }
+];
+
+// Função para obter limites de habilidades baseado na genética exata (1-100)
+function getHabilidadesLimitesPorGenetica(geneticaValor) {
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  if (raridade) {
+    return { habMin: raridade.habMin, habMax: raridade.habMax, aprimHabMax: raridade.aprimHabMax };
+  }
+  return { habMin: 1, habMax: 2, aprimHabMax: 1 };
+}
+
+// Função para obter todos os limites baseado na genética exata (1-100)
+function getLimitesPorGenetica(geneticaValor) {
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  if (raridade) {
+    return {
+      bonusMax: raridade.bonusMax,
+      aprimTotal: raridade.aprimTotal,
+      aprimMaxStatus: raridade.aprimMaxStatus,
+      habMin: raridade.habMin,
+      habMax: raridade.habMax,
+      aprimHabMax: raridade.aprimHabMax
+    };
+  }
+  return { bonusMax: 0, aprimTotal: 1, aprimMaxStatus: 1, habMin: 1, habMax: 2, aprimHabMax: 1 };
+}
+
+// Sorteia genética usando a tabela de 20 raridades com chances próprias
+// Chance é "1 em X", então peso = 1/X (normalizado)
+function sortearGenetica() {
+  // Calcular pesos: peso = 1 / chance (quanto maior a chance "1 em X", menor o peso)
+  const pesosGenetica = GENETICA_RARIDADE.map(r => ({
+    ...r,
+    peso: 1 / r.chance
+  }));
+
+  // Soma total dos pesos
+  const totalPeso = pesosGenetica.reduce((sum, r) => sum + r.peso, 0);
+
+  // Sortear
+  let roll = Math.random() * totalPeso;
+  for (const r of pesosGenetica) {
+    roll -= r.peso;
+    if (roll <= 0) {
+      // Retorna valor exato dentro do range
+      return rand(r.genetica[0], r.genetica[1]);
+    }
+  }
+  return rand(1, 5); // fallback
+}
+
+// Peso base por TIER para modo 'sorte' (chances reais)
+// tier 10 = 1 em 100.000, tier 9 = 1 em 30.000, etc.
+const TIER_PESOS_BASE = {
+  1: 10000,    // muito comum
+  2: 5000,     // comum
+  3: 2000,     // moderado
+  4: 1000,     // incomum
+  5: 500,      // raro
+  6: 100,      // muito raro
+  7: 10,       // épico
+  8: 1,        // lendário (1 em 10.000)
+  9: 0.033,    // mítico (1 em 30.000)
+  10: 0.01     // divino (1 em 100.000)
+};
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randItem(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Aplica multiplicador ao peso baseado no modo
+function aplicarMultiplicadorModo(peso, tier, modo) {
+  switch (modo) {
+    case 'sorte':
+      // Chances reais, sem modificação
+      return peso;
+    case 'fraco':
+      // 3x mais difícil conseguir tiers altos
+      if (tier >= 6) return peso / 3;
+      if (tier <= 3) return peso * 1.5;
+      return peso;
+    case 'medio':
+      // Normal, sem modificação
+      return peso;
+    case 'forte':
+      // 5x mais fácil conseguir tiers altos
+      if (tier >= 6) return peso * 5;
+      if (tier <= 3) return peso / 2;
+      return peso;
+    case 'deus':
+      // 50x mais fácil conseguir tiers altos
+      if (tier >= 8) return peso * 50;
+      if (tier >= 6) return peso * 20;
+      if (tier <= 3) return peso / 5;
+      return peso;
+    case 'evento':
+    case 'entidade':
+      // Esses modos usam lógica especial
+      return peso;
+    default:
+      return peso;
+  }
+}
+
+// Sorteia TIER baseado no modo e range (retorna apenas o número do tier)
+function sortearTier(modo, tierMin, tierMax) {
+  // Modo 'entidade': apenas tier 9-10, com 1 em 30 de ser tier 10
+  if (modo === 'entidade') {
+    const isTier10 = Math.random() < (1 / 30);
+    return isTier10 ? 10 : 9;
+  }
+
+  // Modo 'evento': distribuição uniforme dentro do range
+  if (modo === 'evento') {
+    return rand(tierMin, tierMax);
+  }
+
+  // Criar lista de tiers com pesos ajustados
+  let tiersComPeso = [];
+  for (let t = tierMin; t <= tierMax; t++) {
+    let pesoBase = TIER_PESOS_BASE[t] || 1;
+    let pesoAjustado = aplicarMultiplicadorModo(pesoBase, t, modo);
+    tiersComPeso.push({ tier: t, peso: pesoAjustado });
+  }
+
+  // Normaliza e sorteia
+  const totalPeso = tiersComPeso.reduce((sum, t) => sum + t.peso, 0);
+  let r = Math.random() * totalPeso;
+
+  for (const t of tiersComPeso) {
+    r -= t.peso;
+    if (r <= 0) return t.tier;
+  }
+  return tiersComPeso[0].tier; // fallback
+}
+
+// Distribui aprimoramentos respeitando limites
+function distribuirAprimoramentos(totalAprim, maxPorStatus, numStatus = 9) {
+  const aprims = new Array(numStatus).fill(0);
+  let restante = totalAprim;
+
+  // Distribui aleatoriamente respeitando o máximo por status
+  while (restante > 0) {
+    const idx = rand(0, numStatus - 1);
+    if (aprims[idx] < maxPorStatus) {
+      aprims[idx]++;
+      restante--;
+    }
+    // Evitar loop infinito se todos estão no máximo
+    if (aprims.every(a => a >= maxPorStatus)) break;
+  }
+
+  return aprims;
+}
+
+// Limpa a marca de edição manual de todos os campos
+function clearManuallyEdited() {
+  document.querySelectorAll('.manually-edited').forEach(el => el.classList.remove('manually-edited'));
+}
+
+// Marca um campo como editado manualmente
+function markAsManuallyEdited(element) {
+  if (element) element.classList.add('manually-edited');
+}
+
+function sortearMonstro() {
+  // Limpar habilidades existentes e marcas de edição manual
+  state.abilities = [];
+  abilityIdCounter = 0;
+  clearManuallyEdited();
+
+  // Resetar valores anteriores para validação
+  previousBonusValues = {};
+  previousAprimValues = {};
+  previousVitalAprim = undefined;
+  previousGeneticLimitValue = undefined;
+  previousMaxAprimValue = undefined;
+
+  // Resetar aprimoramentos ganhos e base (ANTES de calcAprimTreino)
+  state.aprimGanhos = { defFis: 0, defMag: 0, danoFis: 0, danoMag: 0, mov: 0, velAtkFis: 0, velAtkMag: 0 };
+  state.aprimBase = { defFis: 1, defMag: 1, danoFis: 1, danoMag: 1, mov: 1, velAtkFis: 1, velAtkMag: 1 };
+
+  // Ler configurações do UI
+  const modo = document.getElementById('modoSorteio').value;
+  let tierMin = parseInt(document.getElementById('tierMin').value) || 1;
+  let tierMax = parseInt(document.getElementById('tierMax').value) || 10;
+
+  // Validar range
+  tierMin = Math.max(1, Math.min(10, tierMin));
+  tierMax = Math.max(tierMin, Math.min(10, tierMax));
+
+  // Modo 'entidade' força tier 9-10
+  if (modo === 'entidade') {
+    tierMin = 9;
+    tierMax = 10;
+    document.getElementById('tierMin').value = 9;
+    document.getElementById('tierMax').value = 10;
+  }
+
+  // 1. Sortear TIER (baseado no modo e range) - independente da genética
+  const tierSorteado = sortearTier(modo, tierMin, tierMax);
+
+  // 2. Sortear GENÉTICA (baseado no filtro selecionado)
+  const filtroGenetica = document.getElementById('filtroGenetica').value;
+  let geneticaValor;
+
+  if (filtroGenetica === 'sorte') {
+    // Sorteia usando as chances reais da tabela de 20 raridades
+    geneticaValor = sortearGenetica();
+  } else {
+    // Usa a raridade específica selecionada
+    const raridadeNum = parseInt(filtroGenetica);
+    const raridade = GENETICA_RARIDADE.find(r => r.raridade === raridadeNum);
+    if (raridade) {
+      geneticaValor = rand(raridade.genetica[0], raridade.genetica[1]);
+    } else {
+      geneticaValor = sortearGenetica(); // fallback
+    }
+  }
+
+  // 3. Obter limites baseados na genética
+  const limites = getLimitesPorGenetica(geneticaValor);
+  const bonusLimit = limites.bonusMax;
+  const maxAprimPorStatus = limites.aprimMaxStatus;
+
+  // 4. Ler prioridade selecionada
+  const filtroPrioridade = document.getElementById('filtroPrioridade').value;
+  const prioridadeConfig = PRIORIDADE_CONFIG[filtroPrioridade] || PRIORIDADE_CONFIG.sorte;
+
+  // 5. Sortear perfil (nome e espécie ficam para o jogador preencher)
+  document.getElementById('monsterName').value = 'Não preenchido';
+  document.getElementById('monsterSpecies').value = 'Não preenchido';
+  document.getElementById('monsterType1').value = randItem(TIPOS);
+  document.getElementById('monsterType2').value = Math.random() > 0.3 ? randItem(TIPOS) : '';
+  document.getElementById('diasTreino').value = 0;
+  // Salvar prioridade no state e exibir
+  state.monster.prioridade = filtroPrioridade;
+  document.getElementById('monsterPrioridade').value = PRIORIDADE_NOMES[filtroPrioridade] || PRIORIDADE_NOMES.sorte;
+  calcAprimTreino();
+
+  // 5. Definir limites genéticos na UI
+  document.getElementById('geneticaValor').value = geneticaValor;
+  document.getElementById('geneticLimit').value = bonusLimit;
+  document.getElementById('maxAprimoramento').value = maxAprimPorStatus;
+  document.getElementById('maxTier').value = tierSorteado;
+  document.getElementById('habMaximo').value = limites.habMax;
+
+  // Se filtro de genética não for 'sorte', marca os campos de genética como editados
+  if (filtroGenetica !== 'sorte') {
+    markAsManuallyEdited(document.getElementById('geneticaValor'));
+    markAsManuallyEdited(document.getElementById('geneticLimit'));
+    markAsManuallyEdited(document.getElementById('maxAprimoramento'));
+  }
+
+  // Atualiza valores anteriores para validação
+  previousGeneticLimitValue = bonusLimit;
+  previousMaxAprimValue = maxAprimPorStatus;
+
+  // 6. Sortear aprimoramentos balanceados
+  // Sorteia um número base (1 até limite) e cada status varia de (base-3) até base, mínimo 1
+  const aprimBase = rand(1, maxAprimPorStatus);
+  const aprimMin = Math.max(1, aprimBase - 3);
+
+  // Status: defFis, defMag, danoFis, danoMag, mov, velAtkFis, velAtkMag
+  const statsNames = ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'];
+
+  // 7. Sortear pontos vitais (com prioridade)
+  let vitalAprim = rand(aprimMin, aprimBase);
+  let vitalTier = rand(1, tierSorteado);
+  let vitalBonus = rand(0, bonusLimit);
+  let vidaPct = rand(20, 80);
+
+  // Aplicar foco de prioridade aos vitais
+  if (prioridadeConfig.focoVida) {
+    // Foco em vida: tier/aprim mais altos e mais % para vida
+    vitalTier = Math.min(10, Math.max(vitalTier, rand(Math.ceil(tierSorteado * 0.7), tierSorteado)));
+    vitalAprim = Math.min(maxAprimPorStatus, Math.max(vitalAprim, rand(Math.ceil(aprimBase * 0.7), aprimBase)));
+    vidaPct = rand(55, 80); // Mais vida
+  }
+  if (prioridadeConfig.focoDespertar) {
+    // Foco em despertar (mana): mais % para despertar
+    vidaPct = rand(20, 45); // Menos vida = mais despertar
+  }
+
+  document.getElementById('vitalTier').value = vitalTier;
+  document.getElementById('vitalAprimoramento').value = vitalAprim;
+  document.getElementById('vitalBonus').value = vitalBonus;
+  document.getElementById('vitalSlider').value = vidaPct;
+  updateVitalSlider(vidaPct);
+
+  // 8. Sortear cada status de combate (com prioridade por redistribuição)
+  // NOVO SISTEMA: Sorteia 7 valores, ordena do maior para menor, e distribui
+  // Os stats focados (prioridade) recebem os maiores valores primeiro
+
+  // Sortear 7 valores de tier (um para cada stat)
+  // GARANTIA: pelo menos 1 stat terá o tier máximo (tierSorteado)
+  let tiersArray = [tierSorteado]; // Primeiro valor é garantido ser o tier sorteado
+  for (let i = 0; i < 6; i++) { // Sorteia os outros 6
+    tiersArray.push(rand(1, tierSorteado));
+  }
+  // Ordenar do maior para o menor
+  tiersArray.sort((a, b) => b - a);
+
+  // Sortear 7 valores de aprimoramento
+  let aprimsArray = [];
+  for (let i = 0; i < 7; i++) {
+    aprimsArray.push(rand(aprimMin, aprimBase));
+  }
+  aprimsArray.sort((a, b) => b - a);
+
+  // Sortear 7 valores de bônus
+  let bonusArray = [];
+  for (let i = 0; i < 7; i++) {
+    bonusArray.push(rand(0, bonusLimit));
+  }
+  bonusArray.sort((a, b) => b - a);
+
+  // Separar stats em focados e não-focados
+  const statsFocados = statsNames.filter(stat => prioridadeConfig.foco.includes(stat));
+  const statsNaoFocados = statsNames.filter(stat => !prioridadeConfig.foco.includes(stat));
+
+  // Embaralhar os não-focados para distribuição aleatória
+  for (let i = statsNaoFocados.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [statsNaoFocados[i], statsNaoFocados[j]] = [statsNaoFocados[j], statsNaoFocados[i]];
+  }
+
+  // Ordem de distribuição: primeiro focados, depois não-focados
+  const statsOrdenados = [...statsFocados, ...statsNaoFocados];
+
+  // Para híbrido: embaralha tudo (distribuição equilibrada/aleatória)
+  if (prioridadeConfig.equilibrado) {
+    for (let i = statsOrdenados.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [statsOrdenados[i], statsOrdenados[j]] = [statsOrdenados[j], statsOrdenados[i]];
+    }
+  }
+
+  // Distribuir valores para cada stat na ordem de prioridade
+  statsOrdenados.forEach((stat, idx) => {
+    const statTier = tiersArray[idx];
+    const aprim = aprimsArray[idx];
+    const bonus = bonusArray[idx];
+
+    // Salvar aprimoramento base
+    state.aprimBase[stat] = aprim;
+
+    // Setar TIER
+    const tierSelect = document.querySelector(`[data-stat="${stat}"][data-field="tier"]`);
+    if (tierSelect) tierSelect.value = statTier;
+
+    // Setar aprimoramento
+    const aprimSelect = document.querySelector(`[data-stat="${stat}"][data-field="aprimoramento"]`);
+    if (aprimSelect) aprimSelect.value = aprim;
+
+    // Setar peças (só para defesas)
+    const pecasSelect = document.querySelector(`[data-stat="${stat}"][data-field="pecas"]`);
+    if (pecasSelect) {
+      let pecas = rand(1, 6);
+      // Tank tem mais peças nas defesas
+      if (prioridadeConfig.pecasBonus && (stat === 'defFis' || stat === 'defMag')) {
+        pecas = Math.min(6, pecas + rand(1, 2)); // +1 a +2 peças extras
+      }
+      pecasSelect.value = pecas;
+    }
+
+    // Setar bônus %
+    const bonusInput = document.querySelector(`[data-stat="${stat}"][data-field="bonus"]`);
+    if (bonusInput) {
+      bonusInput.value = bonus;
+    }
+
+    // Recalcular (silencioso para não mostrar modal durante sorteio)
+    calcStatus(stat, true);
+  });
+
+  // Atualizar displays de aprimoramentos
+  updateAllAprimDisplays();
+  updateAllAprimButtons();
+
+  // Salvar e atualizar
+  saveState();
+  updateSummary();
+  renderAbilities(); // Atualiza os limites de habilidades
+
+  // Nomes dos modos
+  const modoNomes = {
+    sorte: '🍀 Sorte',
+    fraco: '😰 Fraco',
+    medio: '⚖️ Médio',
+    forte: '💪 Forte',
+    evento: '🎯 Evento',
+    deus: '⚡ Deus',
+    entidade: '👁️ Entidade'
+  };
+
+  const prioridadeNome = PRIORIDADE_NOMES[filtroPrioridade] || '🍀 Sorte';
+  showToast(`[${modoNomes[modo]}] TIER ${tierSorteado} | Genética ${geneticaValor} | ${prioridadeNome}`);
+}
+
+// ========== UPLOAD DE IMAGEM ==========
+
+// Função para processar e exibir imagem
+function setMonsterImage(dataUrl) {
+  state.monster.image = dataUrl;
+  document.getElementById('monsterPreview').src = dataUrl;
+  document.getElementById('monsterPreview').style.display = 'block';
+  document.getElementById('monsterPlaceholder').style.display = 'none';
+  saveState();
+  showToast('Imagem adicionada!');
+}
+
+// Upload via input file
+document.getElementById('monsterImg').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    setMonsterImage(ev.target.result);
+  };
+  reader.readAsDataURL(file);
+});
+
+// Colar imagem (Ctrl+V) em qualquer lugar da página
+document.addEventListener('paste', function(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        setMonsterImage(ev.target.result);
+      };
+      reader.readAsDataURL(file);
+      break;
+    }
+  }
+});
+
+const avatar = document.getElementById('monsterAvatar');
+
+// Drag and drop de imagem
+avatar.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  avatar.classList.add('drag-over');
+});
+
+avatar.addEventListener('dragleave', function(e) {
+  e.preventDefault();
+  avatar.classList.remove('drag-over');
+});
+
+avatar.addEventListener('drop', function(e) {
+  e.preventDefault();
+  avatar.classList.remove('drag-over');
+
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      setMonsterImage(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// ========== EVENTOS ==========
+
+// Reseta tier X a Y ao trocar modo de sorteio
+document.getElementById('modoSorteio').addEventListener('change', function() {
+  if (this.value === 'entidade') {
+    document.getElementById('tierMin').value = '9';
+    document.getElementById('tierMax').value = '10';
+  } else {
+    document.getElementById('tierMin').value = '1';
+    document.getElementById('tierMax').value = '10';
+  }
+});
+
+// Sincronizar tier min/max - se min > max, ajusta max
+document.getElementById('tierMin').addEventListener('change', function() {
+  const tierMin = parseInt(this.value);
+  const tierMaxEl = document.getElementById('tierMax');
+  const tierMax = parseInt(tierMaxEl.value);
+  if (tierMin > tierMax) {
+    tierMaxEl.value = tierMin;
+  }
+});
+
+// Sincronizar tier max/min - se max < min, ajusta min
+document.getElementById('tierMax').addEventListener('change', function() {
+  const tierMax = parseInt(this.value);
+  const tierMinEl = document.getElementById('tierMin');
+  const tierMin = parseInt(tierMinEl.value);
+  if (tierMax < tierMin) {
+    tierMinEl.value = tierMax;
+  }
+});
+
+document.getElementById('monsterName').addEventListener('input', function() {
+  markAsManuallyEdited(this);
+  saveState();
+  updateSummary();
+});
+
+document.getElementById('monsterSpecies').addEventListener('input', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('diasTreino').addEventListener('input', function() {
+  markAsManuallyEdited(this);
+  calcAprimTreino();
+  saveState();
+});
+document.getElementById('monsterType1').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('monsterType2').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+
+// Quando genética muda, recalcula todos os limites
+document.getElementById('geneticaValor').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  const geneticaValor = Number(this.value);
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  if (raridade) {
+    const geneticLimitEl = document.getElementById('geneticLimit');
+    const maxAprimEl = document.getElementById('maxAprimoramento');
+
+    geneticLimitEl.value = raridade.bonusMax;
+    maxAprimEl.value = raridade.aprimMaxStatus;
+    document.getElementById('habMaximo').value = raridade.habMax;
+
+    // Marca os campos como editados pois a genética mudou
+    markAsManuallyEdited(geneticLimitEl);
+    markAsManuallyEdited(maxAprimEl);
+
+    // Atualiza valores anteriores para validação
+    previousGeneticLimitValue = raridade.bonusMax;
+    previousMaxAprimValue = raridade.aprimMaxStatus;
+  }
+
+  // Rebalancear aprimoramentos se necessário
+  rebalancearAprimoramentos();
+  calcAprimTreino(); // Atualiza display de Aprim. Ganhos com novo limite
+
+  saveState();
+  renderAbilities();
+  // Recalcular status (silencioso pois a genética mudou, não o usuário alterando bônus)
+  ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(s => calcStatus(s, true));
+});
+
+document.getElementById('geneticLimit').addEventListener('change', function() {
+  const geneticaValor = Number(document.getElementById('geneticaValor').value);
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  const maxBonusGenetica = raridade ? raridade.bonusMax : 100;
+  const LIMITE_ABSOLUTO = 100; // Limite máximo absoluto do sistema
+  const maxBonus = Math.min(maxBonusGenetica, LIMITE_ABSOLUTO);
+  let novoValor = Number(this.value);
+
+  // Limite absoluto de 100 - corrige automaticamente
+  if (novoValor > LIMITE_ABSOLUTO) {
+    novoValor = LIMITE_ABSOLUTO;
+    this.value = LIMITE_ABSOLUTO;
+    showToast(`Limite máximo do sistema é ${LIMITE_ABSOLUTO}%`);
+  }
+
+  // Verificar se excede o limite da genética
+  if (novoValor > maxBonusGenetica) {
+    showGeneticLimitWarning(novoValor, maxBonusGenetica, previousGeneticLimitValue !== undefined ? previousGeneticLimitValue : maxBonusGenetica);
+    return;
+  }
+
+  previousGeneticLimitValue = novoValor;
+  markAsManuallyEdited(this);
+  saveState();
+  // Recalcula todos os status com novo limite (silencioso)
+  ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(s => calcStatus(s, true));
+});
+
+document.getElementById('maxAprimoramento').addEventListener('change', function() {
+  const geneticaValor = Number(document.getElementById('geneticaValor').value);
+  const raridade = GENETICA_RARIDADE.find(r => geneticaValor >= r.genetica[0] && geneticaValor <= r.genetica[1]);
+  const maxAprim = raridade ? raridade.aprimMaxStatus : 10;
+  const novoValor = Number(this.value);
+
+  // Verificar se excede o limite da genética
+  if (novoValor > maxAprim) {
+    showMaxAprimWarning(novoValor, maxAprim, previousMaxAprimValue !== undefined ? previousMaxAprimValue : maxAprim);
+    return;
+  }
+
+  previousMaxAprimValue = novoValor;
+  markAsManuallyEdited(this);
+  saveState();
+  renderAbilities();
+  // Rebalancear aprimoramentos se necessário
+  rebalancearAprimoramentos();
+  updateAllAprimButtons();
+  // Recalcular todos os status com novo limite de aprimoramento (silencioso)
+  ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(s => calcStatus(s, true));
+  calcVital(true);
+});
+
+document.getElementById('maxTier').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+  renderAbilities();
+});
+
+// Atualiza habilidades quando tiers dos status mudarem + marca como editado
+['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(stat => {
+  // Tier
+  const tierSelect = document.querySelector(`[data-stat="${stat}"][data-field="tier"]`);
+  if (tierSelect) {
+    tierSelect.addEventListener('change', function() {
+      markAsManuallyEdited(this);
+      saveState();
+      renderAbilities();
+    });
+  }
+  // Aprimoramento
+  const aprimSelect = document.querySelector(`[data-stat="${stat}"][data-field="aprimoramento"]`);
+  if (aprimSelect) {
+    aprimSelect.addEventListener('change', function() {
+      markAsManuallyEdited(this);
+      saveState();
+    });
+  }
+  // Peças
+  const pecasSelect = document.querySelector(`[data-stat="${stat}"][data-field="pecas"]`);
+  if (pecasSelect) {
+    pecasSelect.addEventListener('change', function() {
+      markAsManuallyEdited(this);
+      saveState();
+    });
+  }
+  // Bônus
+  const bonusInput = document.querySelector(`[data-stat="${stat}"][data-field="bonus"]`);
+  if (bonusInput) {
+    bonusInput.addEventListener('change', function() {
+      markAsManuallyEdited(this);
+      saveState();
+    });
+  }
+});
+
+// Vitais
+document.getElementById('vitalTier').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+  renderAbilities();
+});
+document.getElementById('vitalAprimoramento').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('vitalBonus').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('vitalSlider').addEventListener('input', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('vidaPerdida').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+document.getElementById('despertarGasto').addEventListener('change', function() {
+  markAsManuallyEdited(this);
+  saveState();
+});
+
+// ========== INICIALIZAÇÃO ==========
+
+function init() {
+  // F5 sempre limpa os dados e começa do zero
+  localStorage.removeItem(LS_KEY);
+
+  // Inicializa com valores padrão
+  ['defFis', 'defMag', 'danoFis', 'danoMag', 'mov', 'velAtkFis', 'velAtkMag'].forEach(s => calcStatus(s, true));
+  calcVital(true);
+  calcAprimTreino();
+  updateAllAprimDisplays();
+  updateAllAprimButtons();
+  renderAbilities();
+  updateSummary();
+}
+
+init();
+</script>
+
+</body>
+</html>
