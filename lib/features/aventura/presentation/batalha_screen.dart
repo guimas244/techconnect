@@ -64,6 +64,7 @@ class _DropResultado {
   final List<ItemConsumivel> consumiveis;
   final int moedaEvento; // Quantidade de moedas de evento (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave
+  final int jaulinha; // Quantidade de jaulinhas (0.2% chance)
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
 
@@ -77,6 +78,7 @@ class _DropResultado {
     this.consumiveis = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
+    this.jaulinha = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -1505,7 +1507,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           onDescartarMagia: (magia) async {
             print('[BatalhaScreen] Magia descartada: ${magia.nome}');
           },
-          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave) =>
+          onGuardarItensNaMochila: (novosItens, slots, moedaEvento, moedaChave, jaulinha) =>
               _guardarItensNaMochila(
                 pacote.emailJogador,
                 pacote.mochila,
@@ -1513,6 +1515,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 slots,
                 moedaEvento: moedaEvento,
                 moedaChave: moedaChave,
+                jaulinha: jaulinha,
                 tier: pacote.tier,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
@@ -1640,7 +1643,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
 
       // Agora guarda apenas os consumíveis importantes
-      if (consumiveisImportantes.isNotEmpty || pacote.recompensas.moedaEvento > 0 || pacote.recompensas.moedaChave > 0) {
+      if (consumiveisImportantes.isNotEmpty || pacote.recompensas.moedaEvento > 0 || pacote.recompensas.moedaChave > 0 || pacote.recompensas.jaulinha > 0) {
         await _guardarItensNaMochila(
           pacote.emailJogador,
           mochilaAtualizada,
@@ -1648,6 +1651,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           <int>{}, // Já liberamos os slots necessários
           moedaEvento: pacote.recompensas.moedaEvento,
           moedaChave: pacote.recompensas.moedaChave,
+          jaulinha: pacote.recompensas.jaulinha,
           tier: pacote.tier,
         );
       }
@@ -1694,6 +1698,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       itensConsumiveisRecebidos: drop.consumiveis,
       moedaEvento: drop.moedaEvento,
       moedaChave: drop.moedaChave,
+      jaulinha: drop.jaulinha,
       dropsDoSortudo: drop.dropsDoSortudo,
       superDrop: drop.superDrop,
     );
@@ -1959,6 +1964,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final jaulinhaElite = resultadoRecompensas['jaulinha'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       if (item != null) {
@@ -1971,6 +1977,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
+          jaulinha: jaulinhaElite,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -1989,6 +1996,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           consumiveis: consumiveis,
           moedaEvento: moedaEvento,
           moedaChave: moedaChave,
+          jaulinha: jaulinhaElite,
           dropsDoSortudo: dropsDoSortudo,
           superDrop: superDrop,
         );
@@ -2004,6 +2012,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
       final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
       final moedaChave = resultadoRecompensas['moedaChave'] as int;
+      final jaulinhaEquipado = resultadoRecompensas['jaulinha'] as int;
       final superDrop = resultadoRecompensas['superDrop'] as bool;
 
       print('[BatalhaScreen] 🎒 Monstro normal dropou o item equipado: ${itemEquipado.nome} (${itemEquipado.raridade.nome})');
@@ -2015,6 +2024,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         consumiveis: consumiveis,
         moedaEvento: moedaEvento,
         moedaChave: moedaChave,
+        jaulinha: jaulinhaEquipado,
         dropsDoSortudo: dropsDoSortudo,
         superDrop: superDrop,
       );
@@ -2029,9 +2039,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final magias = resultadoRecompensas['magias'] as List<MagiaDrop>;
     final moedaEvento = resultadoRecompensas['moedaEvento'] as int;
     final moedaChave = resultadoRecompensas['moedaChave'] as int;
+    final jaulinha = resultadoRecompensas['jaulinha'] as int;
     final superDrop = resultadoRecompensas['superDrop'] as bool;
 
-    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop');
+    print('[BatalhaScreen] 🎁 Resultado: ${itens.length} itens, ${magias.length} magias, jaulinha: $jaulinha, superDrop: $superDrop');
 
     return _DropResultado(
       itens: itens,
@@ -2039,6 +2050,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       consumiveis: consumiveis,
       moedaEvento: moedaEvento,
       moedaChave: moedaChave,
+      jaulinha: jaulinha,
       dropsDoSortudo: dropsDoSortudo,
       superDrop: superDrop,
     );
@@ -2117,11 +2129,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Set<int> slotsParaLiberar, {
     int moedaEvento = 0,
     int moedaChave = 0,
+    int jaulinha = 0,
     int tier = 0,
   }) async {
-    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave');
+    print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave + $jaulinha jaulinha');
 
-    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0) {
+    if (novosItens.isEmpty && slotsParaLiberar.isEmpty && moedaEvento == 0 && moedaChave == 0 && jaulinha == 0) {
       print('[BatalhaScreen] Nenhum drop para salvar');
       return;
     }
@@ -2140,6 +2153,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('[BatalhaScreen] 🔑 Adicionando $moedaChave moeda(s) chave à mochila');
       mochila = mochila.adicionarMoedaChave(moedaChave);
       print('[BatalhaScreen] ✅ Moeda chave adicionada! Total: ${mochila.quantidadeMoedaChave}');
+    }
+
+    // Adiciona jaulinha (slot 29 - 6º da linha 5)
+    if (jaulinha > 0) {
+      print('[BatalhaScreen] 🐾 Adicionando $jaulinha jaulinha(s) à mochila');
+      mochila = mochila.adicionarJaulinha(jaulinha);
+      print('[BatalhaScreen] ✅ Jaulinha adicionada! Total: ${mochila.quantidadeJaulinha}');
     }
 
     // Primeiro, libera os slots selecionados

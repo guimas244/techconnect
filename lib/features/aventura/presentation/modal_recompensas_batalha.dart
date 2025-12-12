@@ -27,6 +27,7 @@ class RecompensasBatalha {
 
   final int moedaEvento; // Quantidade de moedas de evento recebidas (moedaHalloween)
   final int moedaChave; // Quantidade de moedas chave recebidas
+  final int jaulinha; // Quantidade de jaulinhas recebidas (0.2% chance)
 
   final List<TipoDrop> dropsDoSortudo; // Lista de tipos de drop que vieram da passiva Sortudo
   final bool superDrop; // Se ativou o super drop
@@ -44,6 +45,7 @@ class RecompensasBatalha {
     this.itensConsumiveisRecebidos = const [],
     this.moedaEvento = 0,
     this.moedaChave = 0,
+    this.jaulinha = 0,
     this.dropsDoSortudo = const [],
     this.superDrop = false,
   });
@@ -69,6 +71,7 @@ class ModalRecompensasBatalha extends StatefulWidget {
     Set<int> slotsParaLiberar,
     int moedaEvento,
     int moedaChave,
+    int jaulinha,
   ) onGuardarItensNaMochila;
   final Future<void> Function() onConcluir;
 
@@ -359,14 +362,15 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
     });
 
     try {
-      // SEMPRE salva se tiver moedas de evento/chave, mesmo que descarte todos os itens
-      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0) {
+      // SEMPRE salva se tiver moedas de evento/chave/jaulinha, mesmo que descarte todos os itens
+      if (salvarItens || widget.recompensas.moedaEvento > 0 || widget.recompensas.moedaChave > 0 || widget.recompensas.jaulinha > 0) {
         print('[ModalRecompensas] 💾 Chamando onGuardarItensNaMochila...');
         await widget.onGuardarItensNaMochila(
           itensParaGuardar,
           _slotsParaLiberar,
           widget.recompensas.moedaEvento,
           widget.recompensas.moedaChave,
+          widget.recompensas.jaulinha,
         );
         print('[ModalRecompensas] ✅ onGuardarItensNaMochila concluído');
       } else {
@@ -3428,6 +3432,10 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
+      case TipoItemConsumivel.chaveAuto:
+        return Icons.vpn_key;
+      case TipoItemConsumivel.jaulinha:
+        return Icons.pets;
     }
   }
 

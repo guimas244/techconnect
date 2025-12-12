@@ -92,7 +92,10 @@ class RecompensaService {
     // 5. Moeda Chave (chance independente baseada no tier - 10x menos que moeda evento)
     int moedaChave = _calcularDropMoedaChave(tierAtual);
 
-    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave');
+    // 6. Jaulinha (0.2% de chance fixa - item raríssimo)
+    int jaulinha = _calcularDropJaulinha();
+
+    print('🎁 [RecompensaService] Recompensas geradas: ${itens.length} itens, ${magias.length} magias, superDrop: $superDrop, moedaEvento: $moedaEvento, moedaChave: $moedaChave, jaulinha: $jaulinha');
 
     return {
       'itens': itens,
@@ -100,6 +103,7 @@ class RecompensaService {
       'superDrop': superDrop,
       'moedaEvento': moedaEvento,
       'moedaChave': moedaChave,
+      'jaulinha': jaulinha,
     };
   }
 
@@ -171,6 +175,24 @@ class RecompensaService {
 
     if (dropou) {
       print('🔑 [RecompensaService] MOEDA CHAVE DROPADA! (Tier $tier, Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');
+      return 1;
+    }
+
+    return 0;
+  }
+
+  /// Calcula drop de Jaulinha (0.2% de chance fixa)
+  /// Item raríssimo que permite mudar o tipo principal de um monstro
+  int _calcularDropJaulinha() {
+    const double chance = 0.2; // 0.2% fixo
+
+    final roll = _random.nextDouble() * 100;
+    final dropou = roll < chance;
+
+    print('🎲 [RecompensaService] Rolando jaulinha: Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%, Dropou: $dropou');
+
+    if (dropou) {
+      print('🐾 [RecompensaService] JAULINHA DROPADA! (Chance: $chance%, Roll: ${roll.toStringAsFixed(2)}%)');
       return 1;
     }
 

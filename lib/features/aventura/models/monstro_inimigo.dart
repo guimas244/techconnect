@@ -42,18 +42,29 @@ class MonstroInimigo {
        energiaAtual = energiaAtual ?? energia;
 
   factory MonstroInimigo.fromJson(Map<String, dynamic> json) {
+    // Migra caminhos antigos de imagem para o novo formato
+    String imagem = json['imagem'] ?? '';
+    if (imagem.contains('assets/monstros/inicial/')) {
+      imagem = imagem.replaceAll('assets/monstros/inicial/', 'assets/monstros_aventura/colecao_inicial/');
+    } else if (imagem.contains('assets/monstros/nostalgico/') || imagem.contains('assets/monstros/nostalgicos/')) {
+      imagem = imagem.replaceAll('assets/monstros/nostalgico/', 'assets/monstros_aventura/colecao_nostalgicos/');
+      imagem = imagem.replaceAll('assets/monstros/nostalgicos/', 'assets/monstros_aventura/colecao_nostalgicos/');
+    } else if (imagem.contains('assets/monstros/halloween/')) {
+      imagem = imagem.replaceAll('assets/monstros/halloween/', 'assets/monstros_aventura/colecao_halloween/');
+    }
+
     return MonstroInimigo(
       tipo: Tipo.values.firstWhere(
         (t) => t.name == json['tipo'],
         orElse: () => Tipo.normal,
       ),
-      tipoExtra: json['tipoExtra'] != null 
+      tipoExtra: json['tipoExtra'] != null
           ? Tipo.values.firstWhere(
               (t) => t.name == json['tipoExtra'],
               orElse: () => Tipo.normal,
             )
           : null,
-      imagem: json['imagem'] ?? '',
+      imagem: imagem,
       vida: json['vida'] ?? 75,
       vidaAtual: (() {
         final vidaAtualJson = json['vidaAtual'];

@@ -92,30 +92,7 @@ class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
                         width: 2,
                       ),
                     ),
-                    child: item.iconPath.isEmpty
-                        ? Icon(
-                            _getIconForType(item.tipo),
-                            size: 60,
-                            color: item.raridade.cor,
-                          )
-                        : Image.asset(
-                            item.iconPath,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              // Se for ovo, usa a imagem JPEG sempre
-                              if (item.tipo == TipoItemConsumivel.ovoEvento) {
-                                return Image.asset(
-                                  'assets/eventos/halloween/ovo_halloween.png',
-                                  fit: BoxFit.contain,
-                                );
-                              }
-                              return Icon(
-                                _getIconForType(item.tipo),
-                                size: 60,
-                                color: item.raridade.cor,
-                              );
-                            },
-                          ),
+                    child: _buildItemImage(item),
                   ),
                   const SizedBox(height: 15),
 
@@ -468,7 +445,71 @@ class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
         return Icons.key;
       case TipoItemConsumivel.ovoEvento:
         return Icons.egg;
+      case TipoItemConsumivel.chaveAuto:
+        return Icons.vpn_key;
+      case TipoItemConsumivel.jaulinha:
+        return Icons.pets;
     }
+  }
+
+  /// Constrói a imagem do item com fallbacks para itens especiais
+  Widget _buildItemImage(ItemConsumivel item) {
+    // Itens especiais sempre usam imagem hardcoded
+    String? imagemEspecial;
+
+    switch (item.tipo) {
+      case TipoItemConsumivel.ovoEvento:
+        imagemEspecial = 'assets/eventos/halloween/ovo_halloween.png';
+        break;
+      case TipoItemConsumivel.moedaChave:
+        imagemEspecial = 'assets/eventos/halloween/moeda_chave.png';
+        break;
+      case TipoItemConsumivel.chaveAuto:
+        imagemEspecial = 'assets/eventos/halloween/chave_auto.png';
+        break;
+      case TipoItemConsumivel.jaulinha:
+        imagemEspecial = 'assets/eventos/halloween/jaulinha.png';
+        break;
+      default:
+        break;
+    }
+
+    // Se tem imagem especial, usa ela
+    if (imagemEspecial != null) {
+      return Image.asset(
+        imagemEspecial,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            _getIconForType(item.tipo),
+            size: 60,
+            color: item.raridade.cor,
+          );
+        },
+      );
+    }
+
+    // Se tem iconPath, tenta usar
+    if (item.iconPath.isNotEmpty) {
+      return Image.asset(
+        item.iconPath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            _getIconForType(item.tipo),
+            size: 60,
+            color: item.raridade.cor,
+          );
+        },
+      );
+    }
+
+    // Fallback para ícone
+    return Icon(
+      _getIconForType(item.tipo),
+      size: 60,
+      color: item.raridade.cor,
+    );
   }
 
   String _getTypeName(TipoItemConsumivel tipo) {
@@ -495,6 +536,10 @@ class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
         return 'Moeda Chave';
       case TipoItemConsumivel.ovoEvento:
         return 'Ovo do Evento';
+      case TipoItemConsumivel.chaveAuto:
+        return 'Chave Auto';
+      case TipoItemConsumivel.jaulinha:
+        return 'Jaulinha';
     }
   }
 }

@@ -1,12 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/developer_config.dart';
+import '../../../core/providers/user_provider.dart';
+import '../../aventura/services/mochila_service.dart';
 
-class AdminScreen extends StatelessWidget {
+class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
+  Future<void> _adicionarItensTeste(BuildContext context, WidgetRef ref) async {
+    // Verifica se modo desenvolvedor está ativo
+    if (!DeveloperConfig.ENABLE_TYPE_EDITING) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Modo dev desativado (ENABLE_TYPE_EDITING = false)'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final email = ref.read(validUserEmailProvider);
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro: Usuário não identificado'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      // Carrega mochila atual
+      if (!context.mounted) return;
+      var mochila = await MochilaService.carregarMochila(context, email);
+      if (mochila == null) return;
+
+      // Adiciona 100 ovos, 100 moedas chave e 1 chave auto (máx 1)
+      mochila = mochila.adicionarOvoEvento(100);
+      mochila = mochila.adicionarMoedaChave(100);
+      mochila = mochila.adicionarChaveAuto(1);
+
+      // Salva a mochila
+      if (!context.mounted) return;
+      await MochilaService.salvarMochila(context, email, mochila);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Adicionados: 100 Ovos + 100 Moedas Chave + 1 Chave Auto!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
@@ -66,6 +121,14 @@ class AdminScreen extends StatelessWidget {
                   label: 'Drops',
                   color: Colors.blueGrey.shade600,
                   onTap: () => context.push('/admin/drops'),
+                ),
+                _MenuBlock(
+                  icon: Icons.science,
+                  label: 'Testes',
+                  color: DeveloperConfig.ENABLE_TYPE_EDITING
+                      ? Colors.orange.shade700
+                      : Colors.grey.shade600,
+                  onTap: () => _adicionarItensTeste(context, ref),
                 ),
               ],
             ),

@@ -9,6 +9,8 @@ class Mochila {
   // SLOTS DE EVENTO - LINHA 5 (ÚLTIMA LINHA) - Índices 24-29
   static const int slotOvoEvento = 24; // 1º slot da linha 5 (índice 24) - Ovo de Halloween
   static const int slotMoedaChave = 27; // 4º slot da linha 5 (índice 27) - Moeda Chave
+  static const int slotChaveAuto = 28; // 5º slot da linha 5 (índice 28) - Chave Auto
+  static const int slotJaulinha = 29; // 6º slot da linha 5 (índice 29) - Jaulinha
   // Slots antigos mantidos para compatibilidade de migração
   static const int slotMoedaEventoAntigo = 3; // Slot antigo da moeda de Halloween (será convertido em ovo)
   static const int slotOvoEventoAntigo = 4; // Slot antigo do ovo de Halloween
@@ -249,6 +251,140 @@ class Mochila {
   Mochila inicializarMoedaChave() {
     if (itens[slotMoedaChave] == null) {
       return adicionarMoedaChave(0);
+    }
+    return this;
+  }
+
+  // Obtém quantidade de chave auto
+  int get quantidadeChaveAuto {
+    final chave = itens[slotChaveAuto];
+    if (chave != null && chave.tipo == TipoItemConsumivel.chaveAuto) {
+      return chave.quantidade;
+    }
+    return 0;
+  }
+
+  // Limite máximo de chaves auto
+  static const int maxChaveAuto = 1;
+
+  // Adiciona chaves auto (máximo 1)
+  Mochila adicionarChaveAuto(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final chaveAtual = novosItens[slotChaveAuto];
+
+    if (chaveAtual != null && chaveAtual.tipo == TipoItemConsumivel.chaveAuto) {
+      // Atualiza quantidade existente, respeitando o limite
+      final novaQuantidade = (chaveAtual.quantidade + quantidade).clamp(0, maxChaveAuto);
+      novosItens[slotChaveAuto] = chaveAtual.copyWith(
+        quantidade: novaQuantidade,
+      );
+    } else {
+      // Cria nova chave auto, respeitando o limite
+      novosItens[slotChaveAuto] = ItemConsumivel(
+        id: 'chave_auto',
+        nome: 'Chave Auto',
+        descricao: 'Chave mecânica que ativa o modo automático por 2 andares. Não usa consumíveis durante o auto. Você ganha 1 a cada 25 andares.',
+        tipo: TipoItemConsumivel.chaveAuto,
+        iconPath: 'assets/eventos/halloween/chave_auto.png',
+        quantidade: quantidade.clamp(0, maxChaveAuto),
+        raridade: RaridadeConsumivel.lendario,
+      );
+    }
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Remove chaves auto (retorna null se não tiver chaves suficientes)
+  Mochila? removerChaveAuto(int quantidade) {
+    final chaveAtual = itens[slotChaveAuto];
+
+    if (chaveAtual == null || chaveAtual.tipo != TipoItemConsumivel.chaveAuto) {
+      return null; // Não tem chave
+    }
+
+    if (chaveAtual.quantidade < quantidade) {
+      return null; // Não tem chaves suficientes
+    }
+
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final novaQuantidade = chaveAtual.quantidade - quantidade;
+
+    // Mantém a chave mesmo com 0 quantidade
+    novosItens[slotChaveAuto] = chaveAtual.copyWith(quantidade: novaQuantidade);
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Inicializa chave auto com 1 se não existir (todo jogador começa com 1)
+  Mochila inicializarChaveAuto() {
+    if (itens[slotChaveAuto] == null) {
+      return adicionarChaveAuto(1);
+    }
+    return this;
+  }
+
+  // ==================== JAULINHA ====================
+
+  // Obtém quantidade de jaulinhas
+  int get quantidadeJaulinha {
+    final jaulinha = itens[slotJaulinha];
+    if (jaulinha != null && jaulinha.tipo == TipoItemConsumivel.jaulinha) {
+      return jaulinha.quantidade;
+    }
+    return 0;
+  }
+
+  // Adiciona jaulinhas
+  Mochila adicionarJaulinha(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final jaulinhaAtual = novosItens[slotJaulinha];
+
+    if (jaulinhaAtual != null && jaulinhaAtual.tipo == TipoItemConsumivel.jaulinha) {
+      // Atualiza quantidade existente
+      novosItens[slotJaulinha] = jaulinhaAtual.copyWith(
+        quantidade: jaulinhaAtual.quantidade + quantidade,
+      );
+    } else {
+      // Cria nova jaulinha
+      novosItens[slotJaulinha] = ItemConsumivel(
+        id: 'jaulinha',
+        nome: 'Jaulinha',
+        descricao: 'Permite mudar o tipo principal de um monstro. Selecione um monstro e escolha seu novo tipo!',
+        tipo: TipoItemConsumivel.jaulinha,
+        iconPath: 'assets/eventos/halloween/jaulinha.png',
+        quantidade: quantidade,
+        raridade: RaridadeConsumivel.impossivel,
+      );
+    }
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Remove jaulinhas (retorna null se não tiver jaulinhas suficientes)
+  Mochila? removerJaulinha(int quantidade) {
+    final jaulinhaAtual = itens[slotJaulinha];
+
+    if (jaulinhaAtual == null || jaulinhaAtual.tipo != TipoItemConsumivel.jaulinha) {
+      return null; // Não tem jaulinha
+    }
+
+    if (jaulinhaAtual.quantidade < quantidade) {
+      return null; // Não tem jaulinhas suficientes
+    }
+
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final novaQuantidade = jaulinhaAtual.quantidade - quantidade;
+
+    // Mantém a jaulinha mesmo com 0 quantidade
+    novosItens[slotJaulinha] = jaulinhaAtual.copyWith(quantidade: novaQuantidade);
+
+    return copyWith(itens: novosItens);
+  }
+
+  // Inicializa jaulinha com 3 para teste (será alterado para 0 em produção)
+  Mochila inicializarJaulinha() {
+    if (itens[slotJaulinha] == null) {
+      return adicionarJaulinha(3); // 3 para teste
     }
     return this;
   }

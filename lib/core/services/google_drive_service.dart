@@ -358,11 +358,14 @@ class GoogleDriveService {
       } else if (pasta == 'mochila') {
         print('🎒 [GoogleDriveService] Buscando na pasta MOCHILA');
         arquivos = await _driveService!.api.listFilesInMochila();
+      } else if (pasta == 'configuracoes') {
+        print('⚙️ [GoogleDriveService] Buscando na pasta CONFIGURACOES');
+        arquivos = await _driveService!.listInConfiguracoesFolder();
       } else {
         // Fallback para pasta raiz
         arquivos = await _driveService!.listInRootFolder();
       }
-      
+
       final arquivo = arquivos.firstWhere(
         (file) => file.name == nomeArquivo,
         orElse: () => drive.File(),
@@ -459,6 +462,10 @@ class GoogleDriveService {
           // Suporte à pasta de coleções
           print('✅ [GoogleDriveService] Usando pasta COLECAO para: $pasta');
           await _driveService!.createJsonFileInColecao(nomeArquivo, dadosJson);
+        } else if (pasta == 'configuracoes') {
+          // Suporte à pasta de configurações
+          print('⚙️ [GoogleDriveService] Usando pasta CONFIGURACOES para: $pasta');
+          await _driveService!.createJsonFileInConfiguracoes(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
@@ -503,13 +510,17 @@ class GoogleDriveService {
           // Suporte à pasta de coleções
           print('✅ [GoogleDriveService] Usando pasta COLECAO para: $pasta');
           await _driveService!.createJsonFileInColecao(nomeArquivo, dadosJson);
+        } else if (pasta == 'configuracoes') {
+          // Suporte à pasta de configurações
+          print('⚙️ [GoogleDriveService] Usando pasta CONFIGURACOES para: $pasta');
+          await _driveService!.createJsonFileInConfiguracoes(nomeArquivo, dadosJson);
         } else {
           // Fallback para pasta padrão (tipagens)
           print('⚠️ [GoogleDriveService] FALLBACK para TIPAGENS usado para pasta: "$pasta"');
           await _driveService!.createJsonFile(nomeArquivo, dadosJson);
         }
       }
-      
+
       print('✅ Arquivo salvo no Drive na pasta $pasta: $nomeArquivo');
       return true;
     }

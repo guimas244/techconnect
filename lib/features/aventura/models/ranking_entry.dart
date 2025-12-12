@@ -4,6 +4,8 @@ class RankingEntry {
   final int score; // Score obtido
   final DateTime dataHora; // Data e hora em horário de Brasília
   final String version; // Versão do jogo quando foi salvo
+  final int andar; // Andar (tier) em que o jogador estava no momento do salvamento
+  final int killsTotais; // Total de kills do jogador no momento do salvamento
 
   const RankingEntry({
     required this.runId,
@@ -11,6 +13,8 @@ class RankingEntry {
     required this.score,
     required this.dataHora,
     required this.version,
+    this.andar = 0, // Default 0 para entradas antigas
+    this.killsTotais = 0, // Default 0 para entradas antigas
   });
 
   factory RankingEntry.fromJson(Map<String, dynamic> json) {
@@ -20,6 +24,8 @@ class RankingEntry {
       score: json['score'] ?? 0,
       dataHora: DateTime.parse(json['dataHora']),
       version: json['version'] ?? '1.0', // Versão padrão para entradas antigas
+      andar: json['andar'] ?? 0, // Default 0 para entradas antigas
+      killsTotais: json['killsTotais'] ?? 0, // Default 0 para entradas antigas
     );
   }
 
@@ -30,6 +36,8 @@ class RankingEntry {
       'score': score,
       'dataHora': dataHora.toIso8601String(),
       'version': version,
+      'andar': andar,
+      'killsTotais': killsTotais,
     };
   }
 
@@ -39,6 +47,8 @@ class RankingEntry {
     int? score,
     DateTime? dataHora,
     String? version,
+    int? andar,
+    int? killsTotais,
   }) {
     return RankingEntry(
       runId: runId ?? this.runId,
@@ -46,6 +56,8 @@ class RankingEntry {
       score: score ?? this.score,
       dataHora: dataHora ?? this.dataHora,
       version: version ?? this.version,
+      andar: andar ?? this.andar,
+      killsTotais: killsTotais ?? this.killsTotais,
     );
   }
 
@@ -61,7 +73,7 @@ class RankingEntry {
 
   @override
   String toString() {
-    return 'RankingEntry{runId: $runId, email: $email, score: $score, dataHora: $dataHora, version: $version}';
+    return 'RankingEntry{runId: $runId, email: $email, score: $score, dataHora: $dataHora, version: $version, andar: $andar, killsTotais: $killsTotais}';
   }
 }
 

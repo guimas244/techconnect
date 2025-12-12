@@ -39,6 +39,17 @@ class MonstroAventura {
        energiaAtual = energiaAtual ?? energia;
 
   factory MonstroAventura.fromJson(Map<String, dynamic> json) {
+    // Migra caminhos antigos de imagem para o novo formato
+    String imagem = json['imagem'] ?? '';
+    if (imagem.contains('assets/monstros/inicial/')) {
+      imagem = imagem.replaceAll('assets/monstros/inicial/', 'assets/monstros_aventura/colecao_inicial/');
+    } else if (imagem.contains('assets/monstros/nostalgico/') || imagem.contains('assets/monstros/nostalgicos/')) {
+      imagem = imagem.replaceAll('assets/monstros/nostalgico/', 'assets/monstros_aventura/colecao_nostalgicos/');
+      imagem = imagem.replaceAll('assets/monstros/nostalgicos/', 'assets/monstros_aventura/colecao_nostalgicos/');
+    } else if (imagem.contains('assets/monstros/halloween/')) {
+      imagem = imagem.replaceAll('assets/monstros/halloween/', 'assets/monstros_aventura/colecao_halloween/');
+    }
+
     return MonstroAventura(
       tipo: Tipo.values.firstWhere(
         (t) => t.name == json['tipo'],
@@ -48,7 +59,7 @@ class MonstroAventura {
         (t) => t.name == json['tipoExtra'],
         orElse: () => Tipo.normal,
       ),
-      imagem: json['imagem'] ?? '',
+      imagem: imagem,
       vida: json['vida'] ?? 75,
       vidaAtual: json['vidaAtual'] ?? json['vida'] ?? 75, // Se não tem vidaAtual, usa vida
       energia: json['energia'] ?? 20,

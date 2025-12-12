@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../shared/widgets/menu_block.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
@@ -9,6 +8,7 @@ import '../../aventura/providers/aventura_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/config/version_config.dart';
+import '../../aventura/services/game_config_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,11 +22,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isConnecting = false;
   String _connectionStatus = 'Não conectado ao Google Drive';
   final GoogleDriveService _driveService = GoogleDriveService();
+  final GameConfigService _gameConfigService = GameConfigService();
+  double _multiplicadorDrop = 1.0;
+  bool _carregandoConfig = false;
 
   @override
   void initState() {
     super.initState();
     _checkDriveConnection();
+  }
+
+  Future<void> _carregarConfiguracaoDrops() async {
+    if (_carregandoConfig) return;
+
+    setState(() => _carregandoConfig = true);
+
+    try {
+      final config = await _gameConfigService.carregarConfiguracao();
+      if (mounted) {
+        setState(() {
+          _multiplicadorDrop = config.multiplicadorDrop;
+          _carregandoConfig = false;
+        });
+      }
+    } catch (e) {
+      print('❌ [HomeScreen] Erro ao carregar config de drops: $e');
+      if (mounted) {
+        setState(() => _carregandoConfig = false);
+      }
+    }
   }
 
   Future<void> _checkDriveConnection() async {
@@ -127,6 +151,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
         _isConnecting = false;
       });
+
+      // Carrega configuração de drops após conectar
+      if (isConnected) {
+        _carregarConfiguracaoDrops();
+      }
     } catch (e) {
       setState(() {
         _isDriveConnected = false;
@@ -227,7 +256,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
         _isConnecting = false;
       });
-      
+
+      // Carrega configuração de drops após conectar
+      if (success) {
+        _carregarConfiguracaoDrops();
+      }
+
       if (!success) {
         throw Exception('Falha na autenticação');
       }
@@ -237,7 +271,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _connectionStatus = 'Erro ao conectar: $e';
         _isConnecting = false;
       });
-      
+
       // Mostrar erro em dialog
       if (mounted) {
         showDialog(
@@ -296,50 +330,136 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
+              // Header com duas colunas
               Container(
                 margin: const EdgeInsets.all(24),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    const Text(
-                      'TECHTERRA',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3748),
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'v${VersionConfig.currentVersion}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.person, color: Colors.grey.shade600, size: 20),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            userEmail,
+                    // Coluna 1: Info do jogo
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'TECHTERRA',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'v${VersionConfig.currentVersion}',
                             style: TextStyle(
                               color: Colors.grey.shade600,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.person, color: Colors.grey.shade600, size: 16),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  userEmail,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 11,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Divisor vertical
+                    Container(
+                      width: 1,
+                      height: 70,
+                      color: Colors.grey.shade300,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    // Coluna 2: Info de drops
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                color: _multiplicadorDrop > 1 ? Colors.amber.shade600 : Colors.grey.shade500,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'DROP',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D3748),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _multiplicadorDrop > 1
+                                  ? Colors.amber.shade100
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _multiplicadorDrop > 1
+                                    ? Colors.amber.shade400
+                                    : Colors.grey.shade400,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: _carregandoConfig
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(
+                                    '${_multiplicadorDrop.toStringAsFixed(_multiplicadorDrop % 1 == 0 ? 0 : 1)}x',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: _multiplicadorDrop > 1
+                                          ? Colors.amber.shade800
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _multiplicadorDrop > 1 ? 'Bônus ativo!' : 'Normal',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: _multiplicadorDrop > 1
+                                  ? Colors.amber.shade700
+                                  : Colors.grey.shade500,
+                              fontWeight: _multiplicadorDrop > 1 ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

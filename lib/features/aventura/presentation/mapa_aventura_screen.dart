@@ -28,8 +28,14 @@ import '../presentation/progresso_screen.dart';
 import '../presentation/modal_tier11_transicao.dart';
 import '../../../core/config/score_config.dart';
 import '../../../core/config/version_config.dart';
+import '../../../core/config/developer_config.dart';
 import '../services/auto_mode_service.dart';
 import '../services/mochila_service.dart';
+import '../services/chave_auto_service.dart';
+import '../services/recompensa_andar_service.dart';
+import 'modal_chave_auto_drops.dart';
+import 'modal_premio_andar.dart';
+import '../models/item_consumivel.dart';
 import '../services/magia_service.dart';
 import '../services/item_service.dart';
 import '../models/mochila.dart';
@@ -65,6 +71,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   bool _autoModeEmExecucao = false;
   final AutoModeService _autoModeService = AutoModeService();
   Mochila? _mochilaAutoMode;
+
+  // Modo Chave Auto (auto sem usar consumíveis, 2 andares)
+  final ChaveAutoService _chaveAutoService = ChaveAutoService();
+
+  // Serviço de recompensas por andar (chave auto a cada 25, nuty a cada 30)
+  final RecompensaAndarService _recompensaService = RecompensaAndarService();
 
   // Filtro de drops - todas as raridades marcadas por padrão
   Map<RaridadeItem, bool> _filtroDrops = {
@@ -282,6 +294,55 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
           },
         ),
         actions: [
+          // Ícone de recompensa pendente (só aparece quando há recompensa)
+          if (_recompensaService.temRecompensaPendente)
+            Padding(
+              padding: const EdgeInsets.only(right: 4.0),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _mostrarRecompensaPendente,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: Stack(
+                      children: [
+                        const Icon(
+                          Icons.mail,
+                          color: Colors.amber,
+                          size: 28,
+                        ),
+                        // Badge com número de recompensas
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${_recompensaService.quantidadeRecompensas}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           // Ícone de configuração de filtro de drops
           IconButton(
             icon: const Icon(Icons.settings),
@@ -377,6 +438,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             } catch (e) {
               print('[Mochila] Erro ao salvar historia: $e');
             }
+          },
+          onChaveAutoUsada: () {
+            // Ativa o modo chave auto
+            _ativarModoChaveAuto();
           },
         );
       case 3:
@@ -499,59 +564,60 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
 
-            // Botão Modo Automático
-            Positioned(
-              top: 76,
-              right: 16,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _toggleModoAuto,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _modoAutoAtivo
-                          ? Colors.green.withOpacity(0.9)
-                          : Colors.blueGrey.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _modoAutoAtivo ? Colors.greenAccent : Colors.white,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _modoAutoAtivo
-                              ? Colors.green.withOpacity(0.5)
-                              : Colors.black.withOpacity(0.3),
-                          blurRadius: 8,
-                          spreadRadius: 1,
+            // Botão Modo Automático (apenas em modo dev)
+            if (DeveloperConfig.ENABLE_TYPE_EDITING)
+              Positioned(
+                top: 76,
+                right: 16,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _toggleModoAuto,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _modoAutoAtivo
+                            ? Colors.green.withOpacity(0.9)
+                            : Colors.blueGrey.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _modoAutoAtivo ? Colors.greenAccent : Colors.white,
+                          width: 2,
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _modoAutoAtivo ? Icons.smart_toy : Icons.smart_toy_outlined,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _modoAutoAtivo ? 'AUTO ON' : 'AUTO',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                        boxShadow: [
+                          BoxShadow(
+                            color: _modoAutoAtivo
+                                ? Colors.green.withOpacity(0.5)
+                                : Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            spreadRadius: 1,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _modoAutoAtivo ? Icons.smart_toy : Icons.smart_toy_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _modoAutoAtivo ? 'AUTO ON' : 'AUTO',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
         // Overlay de loading quando avançando tier
         if (isAdvancingTier)
@@ -1650,6 +1716,88 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
   }
 
+  /// Ativa o modo Chave Auto (2 andares sem usar consumíveis)
+  void _ativarModoChaveAuto() {
+    // Ativa o serviço de chave auto
+    _chaveAutoService.ativar();
+
+    // Muda para a aba do mapa
+    setState(() {
+      _abaAtual = 1;
+      _modoAutoAtivo = true;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔑 Modo Chave Auto ATIVADO - 2 andares automáticos!'),
+        backgroundColor: Colors.cyan,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    print('🔑 [ChaveAuto] Modo Chave Auto ATIVADO - Iniciando batalha automática...');
+
+    // Inicia a primeira batalha automaticamente
+    _iniciarBatalhaAutomatica();
+  }
+
+  /// Finaliza o modo Chave Auto e mostra os drops coletados
+  Future<void> _finalizarModoChaveAuto() async {
+    if (!_chaveAutoService.ativo) return;
+
+    final drops = _chaveAutoService.finalizar();
+
+    setState(() {
+      _modoAutoAtivo = false;
+      _autoModeEmExecucao = false;
+    });
+
+    print('🔑 [ChaveAuto] Finalizado com ${drops.length} drops');
+
+    // Mostra o modal de seleção de drops
+    if (mounted && drops.isNotEmpty) {
+      final itensSelecionados = await mostrarModalChaveAutoDrops(context, drops);
+
+      if (itensSelecionados != null && itensSelecionados.isNotEmpty) {
+        // Adiciona os itens selecionados à mochila
+        await _adicionarItensNaMochila(itensSelecionados);
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🔑 Modo Chave Auto finalizado! Nenhum consumível encontrado.'),
+          backgroundColor: Colors.cyan,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Adiciona itens selecionados na mochila
+  Future<void> _adicionarItensNaMochila(List<ItemConsumivel> itens) async {
+    final email = ref.read(validUserEmailProvider);
+    if (email.isEmpty) return;
+
+    var mochila = await MochilaService.carregarMochila(context, email);
+    if (mochila == null) return;
+
+    for (final item in itens) {
+      mochila = mochila!.adicionarItem(item);
+    }
+
+    await MochilaService.salvarMochila(context, email, mochila!);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ ${itens.length} ${itens.length == 1 ? 'item adicionado' : 'itens adicionados'} à mochila!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   /// Inicia uma batalha automaticamente escolhendo o inimigo mais fácil
   Future<void> _iniciarBatalhaAutomatica() async {
     if (!_modoAutoAtivo || _autoModeEmExecucao) return;
@@ -1894,17 +2042,22 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     }
 
     // === PRIORIDADE 1: Tentar usar poção para renascer ===
-    await _carregarMochilaAutoMode();
-    if (_mochilaAutoMode != null) {
-      final usouPocao = await _usarPocaoParaRenascerAutoMode();
-      if (usouPocao) {
-        // Poção usada com sucesso, continua batalha
-        if (mounted && _modoAutoAtivo) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          _iniciarBatalhaAutomatica();
+    // NOTA: Se modo Chave Auto ativo, não usa consumíveis
+    if (!_chaveAutoService.ativo) {
+      await _carregarMochilaAutoMode();
+      if (_mochilaAutoMode != null) {
+        final usouPocao = await _usarPocaoParaRenascerAutoMode();
+        if (usouPocao) {
+          // Poção usada com sucesso, continua batalha
+          if (mounted && _modoAutoAtivo) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            _iniciarBatalhaAutomatica();
+          }
+          return;
         }
-        return;
       }
+    } else {
+      print('🔑 [ChaveAuto] Modo Chave Auto ativo - ignorando uso de poções');
     }
 
     // === PRIORIDADE 2: Pagar ouro para renascer ===
@@ -2015,6 +2168,13 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   /// Para o modo automático e mostra mensagem
   void _pararModoAuto(String mensagem) {
     if (!mounted) return;
+
+    // Se modo chave auto estiver ativo, finaliza e mostra drops
+    if (_chaveAutoService.ativo) {
+      print('🔑 [ChaveAuto] Parando modo auto devido a: $mensagem');
+      _finalizarModoChaveAuto();
+      return;
+    }
 
     setState(() {
       _modoAutoAtivo = false;
@@ -2721,13 +2881,18 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     print('🔧 [AutoMode] Tentando resolver monstros mortos...');
 
     // === PRIORIDADE 1: Tentar usar poção da mochila ===
-    await _carregarMochilaAutoMode();
-    if (_mochilaAutoMode != null) {
-      final usouPocao = await _usarPocaoParaRenascerAutoMode();
-      if (usouPocao) {
-        print('✅ [AutoMode] Monstro revivido com poção da mochila!');
-        return true;
+    // NOTA: Se modo Chave Auto ativo, não usa consumíveis
+    if (!_chaveAutoService.ativo) {
+      await _carregarMochilaAutoMode();
+      if (_mochilaAutoMode != null) {
+        final usouPocao = await _usarPocaoParaRenascerAutoMode();
+        if (usouPocao) {
+          print('✅ [AutoMode] Monstro revivido com poção da mochila!');
+          return true;
+        }
       }
+    } else {
+      print('🔑 [ChaveAuto] Modo Chave Auto ativo - ignorando uso de poções');
     }
 
     // === PRIORIDADE 2: Comprar cura na loja ===
@@ -3315,6 +3480,24 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       });
 
       print('🏯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
+
+      // Verifica se o novo andar tem recompensas (chave auto a cada 25, nuty a cada 30)
+      _recompensaService.entrarNoAndar(historiaAtualizada.tier);
+      if (_recompensaService.temRecompensaPendente) {
+        print('🎁 [MapaAventura] Recompensas disponíveis no andar ${historiaAtualizada.tier}!');
+        // O ícone de notificação será exibido automaticamente no AppBar
+        // O jogador pode coletar quando quiser clicando no ícone
+      }
+
+      // Verifica se modo Chave Auto está ativo e registra o andar completado
+      if (_chaveAutoService.ativo) {
+        final continuarChaveAuto = _chaveAutoService.completarAndar();
+        if (!continuarChaveAuto) {
+          // Todos os andares da chave auto foram completados
+          print('🔑 [ChaveAuto] Todos os andares completados, finalizando modo...');
+          await _finalizarModoChaveAuto();
+        }
+      }
 
       // Mostra modal de transição tier 11 se aplicável
       // Aguarda o usuário fechar o dialog antes de continuar (para não interromper auto mode)
@@ -3928,6 +4111,52 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       await prefs.setBool('filtro_drop_${entry.key.name}', entry.value);
     }
     await prefs.setInt('filtro_drop_valor_minimo_magia', _valorMinimoMagia);
+  }
+
+  /// Mostra modal de recompensa pendente
+  Future<void> _mostrarRecompensaPendente() async {
+    if (!_recompensaService.temRecompensaPendente) return;
+
+    final premio = _recompensaService.recompensasPendentes.first;
+
+    await mostrarModalPremioAndar(
+      context,
+      premio,
+      () async {
+        // Coleta a recompensa
+        _recompensaService.coletarRecompensa(premio.tipo);
+
+        // Adiciona o item na mochila
+        await _adicionarRecompensaNaMochila(premio);
+
+        // Atualiza a tela
+        if (mounted) {
+          setState(() {});
+        }
+      },
+    );
+  }
+
+  /// Adiciona a recompensa na mochila do jogador
+  Future<void> _adicionarRecompensaNaMochila(InfoPremio premio) async {
+    final email = ref.read(validUserEmailProvider);
+    if (email.isEmpty) return;
+
+    var mochila = await MochilaService.carregarMochila(context, email);
+    if (mochila == null) return;
+
+    switch (premio.tipo) {
+      case TipoPremio.chaveAuto:
+        mochila = mochila.adicionarChaveAuto(premio.quantidade);
+        break;
+      case TipoPremio.nuty:
+        // TODO: Implementar slot de Nuty quando necessário
+        // Por enquanto, não faz nada pois ainda não temos o slot de Nuty
+        break;
+    }
+
+    if (!mounted) return;
+    await MochilaService.salvarMochila(context, email, mochila);
   }
 
   /// Mostra modal de filtro de drops

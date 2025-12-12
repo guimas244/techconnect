@@ -599,7 +599,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
-                                                    _formatarNomeJogador(jogador.email),
+                                                    _formatarNomeJogador(jogador),
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: 16,
@@ -702,25 +702,35 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     );
   }
 
-  String _formatarNomeJogador(String emailCompleto) {
+  String _formatarNomeJogador(RankingEntry jogador) {
+    final emailCompleto = jogador.email;
     // Extrai o nome antes do @ e remove números/caracteres especiais
     String nomeBase = emailCompleto.split('@')[0];
-    
+
+    // Monta a string de info adicional (andar e kills)
+    String infoAdicional = '';
+    if (jogador.andar > 0 || jogador.killsTotais > 0) {
+      final partes = <String>[];
+      if (jogador.andar > 0) partes.add('T:${jogador.andar}');
+      if (jogador.killsTotais > 0) partes.add('K:${jogador.killsTotais}');
+      infoAdicional = ' ${partes.join(' ')}';
+    }
+
     // Verifica se tem versão no formato "nome - versão"
     if (emailCompleto.contains(' - ')) {
       String versaoInfo = emailCompleto.split(' - ').sublist(1).join(' - ');
       String nomeJogador = VersionConfig.extractPlayerNameOnly(emailCompleto).split('@')[0];
-      
+
       // Verifica se é downgrade
       if (versaoInfo.contains('downgrade')) {
         String versao = versaoInfo.replaceAll(' downgrade', '');
-        return '$nomeJogador\nv$versao downgrade';
+        return '$nomeJogador\nv$versao downgrade$infoAdicional';
       } else {
-        return '$nomeJogador\nv$versaoInfo';
+        return '$nomeJogador\nv$versaoInfo$infoAdicional';
       }
     }
-    
+
     // Se não tem versão, consideramos 1.0
-    return '$nomeBase\nv1.0';
+    return '$nomeBase\nv1.0$infoAdicional';
   }
 }

@@ -1108,8 +1108,13 @@ class AventuraRepository {
   /// Atualiza o ranking quando o score de uma aventura for alterado
   Future<void> atualizarRankingPorScore(HistoriaJogador historia) async {
     try {
-      print('🏆 [Repository] Atualizando ranking para: ${historia.email} - Score: ${historia.score} - RunId: ${historia.runId}');
-      
+      // Calcula o total de kills (batalhas onde o jogador venceu)
+      final killsTotais = historia.historicoBatalhas
+          .where((batalha) => batalha.vencedor == batalha.jogadorNome)
+          .length;
+
+      print('🏆 [Repository] Atualizando ranking para: ${historia.email} - Score: ${historia.score} - RunId: ${historia.runId} - Kills: $killsTotais');
+
       // Só atualiza o ranking se tiver runId (score pode ser 0)
       if (historia.runId.isNotEmpty) {
         await _rankingService.atualizarRanking(
@@ -1117,6 +1122,7 @@ class AventuraRepository {
           email: historia.email,
           score: historia.score,
           tier: historia.tier,
+          killsTotais: killsTotais,
         );
         print('✅ [Repository] Ranking atualizado com sucesso');
       } else {

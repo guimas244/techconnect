@@ -83,6 +83,8 @@ enum TipoItemConsumivel {
   moedaHalloween, // Moeda de Halloween (válida até 31/10)
   ovoEvento, // Ovo de evento (Halloween, etc)
   moedaChave, // Moeda Chave (começa a dropar em 01/11)
+  chaveAuto, // Chave Auto - ativa auto mode por 2 andares
+  jaulinha, // Jaulinha - permite mudar o tipo principal de um monstro
 }
 
 enum RaridadeConsumivel {

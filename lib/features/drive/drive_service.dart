@@ -1160,4 +1160,134 @@ class DriveService {
       return '';
     }
   }
+
+  /// Cria a pasta CONFIGURACOES se não existir e retorna seu ID
+  Future<String?> criarPastaConfiguracoes() async {
+    try {
+      // Primeiro verifica se a pasta já existe
+      final res = await api.files.list(
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = 'configuracoes' and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+      );
+
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaConfiguracoesId = res.files!.first.id!;
+        print('✅ [DEBUG] Pasta CONFIGURACOES encontrada: $pastaConfiguracoesId');
+        return pastaConfiguracoesId;
+      }
+
+      // Se não existe, cria a pasta
+      print('📁 [DEBUG] Criando pasta CONFIGURACOES...');
+      final folder = drive.File();
+      folder.name = 'configuracoes';
+      folder.mimeType = 'application/vnd.google-apps.folder';
+      folder.parents = [folderId];
+
+      final driveFolder = await api.files.create(folder);
+      print('✅ [DEBUG] Pasta CONFIGURACOES criada com ID: ${driveFolder.id}');
+      return driveFolder.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta CONFIGURACOES: $e');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaConfiguracoes, repassando...');
+        rethrow;
+      }
+      return null;
+    }
+  }
+
+  /// Lista arquivos na pasta CONFIGURACOES
+  Future<List<drive.File>> listInConfiguracoesFolder() async {
+    final pastaConfiguracoesId = await criarPastaConfiguracoes();
+    if (pastaConfiguracoesId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta CONFIGURACOES');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaConfiguracoesId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta CONFIGURACOES
+  Future<void> createJsonFileInConfiguracoes(String filename, Map<String, dynamic> jsonData) async {
+    final pastaConfiguracoesId = await criarPastaConfiguracoes();
+    if (pastaConfiguracoesId == null) {
+      throw Exception('Não foi possível acessar pasta CONFIGURACOES');
+    }
+
+    // Verificar se arquivo já existe na pasta CONFIGURACOES
+    final arquivosConfiguracoes = await listInConfiguracoesFolder();
+    final arquivoExistente = arquivosConfiguracoes.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Tentar atualizar arquivo existente
+      try {
+        await updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado na pasta CONFIGURACOES: $filename');
+        return;
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo (sem permissão): $e');
+        print('🔄 [DriveService] Criando novo arquivo ao invés de atualizar...');
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+      }
+    }
+
+    // Criar novo arquivo na pasta CONFIGURACOES
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [pastaConfiguracoesId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Arquivo criado na pasta CONFIGURACOES: $filename');
+  }
+
+  /// Baixa arquivo da pasta CONFIGURACOES pelo nome
+  Future<String> downloadFileFromConfiguracoes(String filename) async {
+    try {
+      final pastaConfiguracoesId = await criarPastaConfiguracoes();
+      if (pastaConfiguracoesId == null) {
+        print('❌ [DEBUG] Não foi possível acessar pasta CONFIGURACOES');
+        return '';
+      }
+
+      // Procura o arquivo na pasta CONFIGURACOES
+      final arquivosConfiguracoes = await listInConfiguracoesFolder();
+      final arquivoDesejado = arquivosConfiguracoes.firstWhere(
+        (file) => file.name == filename,
+        orElse: () => drive.File(),
+      );
+
+      if (arquivoDesejado.id == null) {
+        print('📊 [DEBUG] Arquivo $filename não encontrado na pasta CONFIGURACOES');
+        return '';
+      }
+
+      print('📥 [DEBUG] Baixando arquivo $filename da pasta CONFIGURACOES');
+      return await downloadFileContent(arquivoDesejado.id!);
+
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao baixar arquivo da pasta CONFIGURACOES: $e');
+      return '';
+    }
+  }
 }

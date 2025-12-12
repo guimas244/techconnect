@@ -47,6 +47,7 @@ class RankingService {
     required String email,
     required int score,
     required int tier,
+    int killsTotais = 0,
     DateTime? dataHora,
   }) async {
     try {
@@ -76,6 +77,8 @@ class RankingService {
           score: 0, // ZERA O SCORE
           dataHora: dataHora ?? DateTime.now(),
           version: 'versão inválida ($runId)',
+          andar: 0,
+          killsTotais: 0,
         );
         
         // Remove entrada anterior e adiciona a nova invalidada
@@ -123,6 +126,8 @@ class RankingService {
         score: scoreParaSalvar,
         dataHora: dataHoraFinal,
         version: versaoParaSalvar,
+        andar: tier,
+        killsTotais: killsTotais,
       );
 
       // Adiciona ou atualiza a entrada
