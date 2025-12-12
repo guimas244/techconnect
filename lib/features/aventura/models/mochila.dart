@@ -19,6 +19,9 @@ class Mochila {
   })  : itens = itens ?? List.filled(totalSlots, null),
         slotsDesbloqueados = slotsDesbloqueados ?? slotsIniciaisDesbloqueados;
 
+  // Slot reservado para poções no tier 100+ (3º slot, índice 2)
+  static const int slotReservadoPocoes = 2;
+
   // Adiciona item na primeira posição vazia desbloqueada
   Mochila adicionarItem(ItemConsumivel item) {
     final novosItens = List<ItemConsumivel?>.from(itens);
@@ -33,6 +36,58 @@ class Mochila {
 
     // Se não achou espaço, retorna sem modificar
     return this;
+  }
+
+  /// Adiciona item respeitando reserva do slot 2 para poções (tier 100+)
+  /// Non-potion items skip slot 2, only potions can be placed there
+  Mochila adicionarItemComReservaSlot(ItemConsumivel item, {required int tier}) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final ehPocao = item.tipo == TipoItemConsumivel.pocao;
+    final reservaAtiva = tier >= 100;
+
+    // Procura primeira posição vazia desbloqueada
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      // Se reserva ativa e não é poção, pula o slot reservado
+      if (reservaAtiva && i == slotReservadoPocoes && !ehPocao) {
+        continue;
+      }
+
+      if (novosItens[i] == null) {
+        novosItens[i] = item;
+        return copyWith(itens: novosItens);
+      }
+    }
+
+    // Se não achou espaço, retorna sem modificar
+    return this;
+  }
+
+  /// Limpa o slot reservado de itens que não são poções (tier 100+)
+  /// Retorna a mochila atualizada com apenas poções no slot 2
+  Mochila limparSlotReservadoNonPocao() {
+    final itemNoSlot = itens[slotReservadoPocoes];
+
+    // Se slot está vazio ou já tem poção, não faz nada
+    if (itemNoSlot == null || itemNoSlot.tipo == TipoItemConsumivel.pocao) {
+      return this;
+    }
+
+    // Remove item não-poção do slot reservado
+    print('🧹 [Mochila] Removendo ${itemNoSlot.nome} do slot 3 (reservado para poções)');
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    novosItens[slotReservadoPocoes] = null;
+    return copyWith(itens: novosItens);
+  }
+
+  /// Verifica se há poções disponíveis no slot reservado ou em qualquer lugar
+  bool get temPocao {
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      final item = itens[i];
+      if (item != null && item.tipo == TipoItemConsumivel.pocao && item.quantidade > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // Remove item de uma posição

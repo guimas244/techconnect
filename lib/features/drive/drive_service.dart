@@ -816,7 +816,42 @@ class DriveService {
         return arquivoExistente.id; // Retorna ID do arquivo atualizado
       } catch (e) {
         print('❌ [HISTORIAS-LOG] Erro ao atualizar arquivo: $e');
-        rethrow;
+
+        // Se for erro 403 (sem permissão), deleta o arquivo antigo e cria um novo
+        if (e.toString().contains('403') || e.toString().contains('access_denied') || e.toString().contains('write access')) {
+          print('🔒 [HISTORIAS-LOG] Erro 403 - Sem permissão para atualizar. Deletando e recriando...');
+          try {
+            // Tenta deletar o arquivo antigo
+            await api.files.delete(arquivoExistente.id!);
+            print('🗑️ [HISTORIAS-LOG] Arquivo antigo deletado: ${arquivoExistente.id}');
+            // Continua para criar novo arquivo abaixo (após o if)
+          } catch (deleteError) {
+            print('⚠️ [HISTORIAS-LOG] Não foi possível deletar arquivo antigo: $deleteError');
+            // Modifica o nome do arquivo para evitar conflito
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final novoFilename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+            print('📝 [HISTORIAS-LOG] Usando novo nome: $novoFilename');
+
+            // Cria arquivo com novo nome
+            final file = drive.File();
+            file.name = novoFilename;
+            file.parents = [pastaAtualId];
+
+            final jsonString = json.encode(jsonData);
+            final jsonBytes = utf8.encode(jsonString);
+            final media = drive.Media(
+              Stream.fromIterable([jsonBytes]),
+              jsonBytes.length,
+              contentType: 'application/json',
+            );
+
+            final response = await api.files.create(file, uploadMedia: media);
+            print('✅ [HISTORIAS-LOG] Novo arquivo criado com nome alternativo: $novoFilename');
+            return response.id;
+          }
+        } else {
+          rethrow;
+        }
       }
     }
 
@@ -994,5 +1029,135 @@ class DriveService {
 
     await api.files.create(file, uploadMedia: media);
     print('✅ [DriveService] Arquivo criado na pasta COLECAO: $filename');
+  }
+
+  /// Cria a pasta PROGRESSO se não existir e retorna seu ID
+  Future<String?> criarPastaProgresso() async {
+    try {
+      // Primeiro verifica se a pasta já existe
+      final res = await api.files.list(
+        q: "trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = 'progresso' and '$folderId' in parents",
+        spaces: "drive",
+        $fields: "files(id,name)",
+      );
+
+      if (res.files != null && res.files!.isNotEmpty) {
+        final pastaProgressoId = res.files!.first.id!;
+        print('✅ [DEBUG] Pasta PROGRESSO encontrada: $pastaProgressoId');
+        return pastaProgressoId;
+      }
+
+      // Se não existe, cria a pasta
+      print('📁 [DEBUG] Criando pasta PROGRESSO...');
+      final folder = drive.File();
+      folder.name = 'progresso';
+      folder.mimeType = 'application/vnd.google-apps.folder';
+      folder.parents = [folderId];
+
+      final driveFolder = await api.files.create(folder);
+      print('✅ [DEBUG] Pasta PROGRESSO criada com ID: ${driveFolder.id}');
+      return driveFolder.id;
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao criar pasta PROGRESSO: $e');
+      if (e.toString().contains('401') || e.toString().contains('403') || e.toString().contains('authentication') || e.toString().contains('Expected OAuth 2 access token') || e.toString().contains('DetailedApiRequestError')) {
+        print('🔒 [DEBUG] Erro de autenticação detectado em criarPastaProgresso, repassando...');
+        rethrow;
+      }
+      return null;
+    }
+  }
+
+  /// Lista arquivos na pasta PROGRESSO
+  Future<List<drive.File>> listInProgressoFolder() async {
+    final pastaProgressoId = await criarPastaProgresso();
+    if (pastaProgressoId == null) {
+      print('❌ [DEBUG] Não foi possível acessar pasta PROGRESSO');
+      return [];
+    }
+
+    final res = await api.files.list(
+      q: "trashed = false and '$pastaProgressoId' in parents",
+      spaces: "drive",
+      $fields: "files(id,name,mimeType,modifiedTime)",
+      pageSize: 100,
+    );
+
+    return res.files ?? [];
+  }
+
+  /// Cria ou atualiza arquivo JSON na pasta PROGRESSO
+  Future<void> createJsonFileInProgresso(String filename, Map<String, dynamic> jsonData) async {
+    final pastaProgressoId = await criarPastaProgresso();
+    if (pastaProgressoId == null) {
+      throw Exception('Não foi possível acessar pasta PROGRESSO');
+    }
+
+    // Verificar se arquivo já existe na pasta PROGRESSO
+    final arquivosProgresso = await listInProgressoFolder();
+    final arquivoExistente = arquivosProgresso.firstWhere(
+      (file) => file.name == filename,
+      orElse: () => drive.File(),
+    );
+
+    if (arquivoExistente.id != null) {
+      // Tentar atualizar arquivo existente
+      try {
+        await updateJsonFile(arquivoExistente.id!, jsonData);
+        print('✅ [DriveService] Arquivo atualizado na pasta PROGRESSO: $filename');
+        return;
+      } catch (e) {
+        print('⚠️ [DriveService] Erro ao atualizar arquivo (sem permissão): $e');
+        print('🔄 [DriveService] Criando novo arquivo ao invés de atualizar...');
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        filename = '${filename.replaceAll('.json', '')}_$timestamp.json';
+        print('📝 [DriveService] Novo nome de arquivo: $filename');
+      }
+    }
+
+    // Criar novo arquivo na pasta PROGRESSO
+    final file = drive.File();
+    file.name = filename;
+    file.parents = [pastaProgressoId];
+
+    final jsonString = json.encode(jsonData);
+    final jsonBytes = utf8.encode(jsonString);
+    final media = drive.Media(
+      Stream.fromIterable([jsonBytes]),
+      jsonBytes.length,
+      contentType: 'application/json',
+    );
+
+    await api.files.create(file, uploadMedia: media);
+    print('✅ [DriveService] Arquivo criado na pasta PROGRESSO: $filename');
+  }
+
+  /// Baixa arquivo da pasta PROGRESSO pelo nome
+  Future<String> downloadFileFromProgresso(String filename) async {
+    try {
+      final pastaProgressoId = await criarPastaProgresso();
+      if (pastaProgressoId == null) {
+        print('❌ [DEBUG] Não foi possível acessar pasta PROGRESSO');
+        return '';
+      }
+
+      // Procura o arquivo na pasta PROGRESSO
+      final arquivosProgresso = await listInProgressoFolder();
+      final arquivoDesejado = arquivosProgresso.firstWhere(
+        (file) => file.name == filename,
+        orElse: () => drive.File(),
+      );
+
+      if (arquivoDesejado.id == null) {
+        print('📊 [DEBUG] Arquivo $filename não encontrado na pasta PROGRESSO');
+        return '';
+      }
+
+      print('📥 [DEBUG] Baixando arquivo $filename da pasta PROGRESSO');
+      return await downloadFileContent(arquivoDesejado.id!);
+
+    } catch (e) {
+      print('❌ [DEBUG] Erro ao baixar arquivo da pasta PROGRESSO: $e');
+      return '';
+    }
   }
 }

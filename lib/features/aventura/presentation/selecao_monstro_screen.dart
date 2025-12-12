@@ -9,19 +9,133 @@ import '../presentation/batalha_screen.dart';
 import 'modal_monstro_aventura.dart';
 import 'modal_monstro_inimigo.dart';
 import '../services/matchup_service.dart';
+import '../services/auto_mode_service.dart';
 import '../../../shared/models/tipo_enum.dart';
 import 'package:remixicon/remixicon.dart';
 
-class SelecaoMonstroScreen extends ConsumerWidget {
+class SelecaoMonstroScreen extends ConsumerStatefulWidget {
   final MonstroInimigo monstroInimigo;
+  final bool autoMode; // Modo automático - seleciona melhor monstro automaticamente
 
   const SelecaoMonstroScreen({
     super.key,
     required this.monstroInimigo,
+    this.autoMode = false,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SelecaoMonstroScreen> createState() => _SelecaoMonstroScreenState();
+}
+
+class _SelecaoMonstroScreenState extends ConsumerState<SelecaoMonstroScreen> {
+  final AutoModeService _autoModeService = AutoModeService();
+  bool _processandoAutoMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoMode) {
+      // Agenda execução do auto mode após o primeiro frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _executarAutoMode();
+      });
+    }
+  }
+
+  Future<void> _executarAutoMode() async {
+    if (_processandoAutoMode) return;
+
+    setState(() {
+      _processandoAutoMode = true;
+    });
+
+    try {
+      print('🤖 [AutoMode] Iniciando seleção automática de monstro...');
+
+      // Carrega história do jogador
+      final historia = await _carregarHistoriaJogador(ref);
+      if (historia == null || historia.monstros.isEmpty) {
+        print('❌ [AutoMode] Sem monstros disponíveis');
+        if (mounted) Navigator.of(context).pop(false);
+        return;
+      }
+
+      // Seleciona o melhor monstro
+      final melhorMonstro = await _autoModeService.selecionarMelhorMonstro(
+        historia.monstros,
+        widget.monstroInimigo,
+      );
+
+      if (melhorMonstro == null) {
+        print('❌ [AutoMode] Nenhum monstro vivo disponível');
+        if (mounted) Navigator.of(context).pop(false);
+        return;
+      }
+
+      print('✅ [AutoMode] Monstro selecionado: ${melhorMonstro.tipo.displayName}');
+
+      if (!mounted) return;
+
+      // Vai direto para a batalha com modo auto ativado
+      final resultado = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BatalhaScreen(
+            jogador: melhorMonstro,
+            inimigo: widget.monstroInimigo,
+            equipeCompleta: historia.monstros,
+            autoMode: true, // Passa o modo auto para a batalha
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (resultado == true && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pop(false);
+      }
+    } catch (e) {
+      print('❌ [AutoMode] Erro: $e');
+      if (mounted) Navigator.of(context).pop(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Se estiver em modo auto e processando, mostra loading
+    if (widget.autoMode && _processandoAutoMode) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFEEEEEE),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                '🤖 Modo Automático',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey.shade900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selecionando melhor monstro...',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
@@ -79,19 +193,19 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                   children: [
                     // Imagem e tipos do monstro inimigo com borda
                     GestureDetector(
-                      onTap: () => _mostrarDetalheMonstroInimigo(context, monstroInimigo),
+                      onTap: () => _mostrarDetalheMonstroInimigo(context, widget.monstroInimigo),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: monstroInimigo.tipo.cor.withValues(alpha: 0.1),
+                          color: widget.monstroInimigo.tipo.cor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: monstroInimigo.tipo.cor.withValues(alpha: 0.6),
+                            color: widget.monstroInimigo.tipo.cor.withValues(alpha: 0.6),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: monstroInimigo.tipo.cor.withValues(alpha: 0.3),
+                              color: widget.monstroInimigo.tipo.cor.withValues(alpha: 0.3),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -106,7 +220,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 image: DecorationImage(
-                                  image: AssetImage(monstroInimigo.imagem),
+                                  image: AssetImage(widget.monstroInimigo.imagem),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -123,12 +237,12 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(4),
                                     image: DecorationImage(
-                                      image: AssetImage(monstroInimigo.tipo.iconAsset),
+                                      image: AssetImage(widget.monstroInimigo.tipo.iconAsset),
                                       fit: BoxFit.contain,
                                     ),
                                   ),
                                 ),
-                                if (monstroInimigo.tipoExtra != null) ...[
+                                if (widget.monstroInimigo.tipoExtra != null) ...[
                                   const SizedBox(width: 4),
                                   // Tipo extra
                                   Container(
@@ -137,7 +251,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(4),
                                       image: DecorationImage(
-                                        image: AssetImage(monstroInimigo.tipoExtra!.iconAsset),
+                                        image: AssetImage(widget.monstroInimigo.tipoExtra!.iconAsset),
                                         fit: BoxFit.contain,
                                       ),
                                     ),
@@ -163,14 +277,14 @@ class SelecaoMonstroScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            monstroInimigo.tipo.displayName,
+                            widget.monstroInimigo.tipo.displayName,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            'Vida: ${monstroInimigo.vida} | Ataque: ${monstroInimigo.ataque} | Defesa: ${monstroInimigo.defesa}',
+                            'Vida: ${widget.monstroInimigo.vida} | Ataque: ${widget.monstroInimigo.ataque} | Defesa: ${widget.monstroInimigo.defesa}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey.shade600,
@@ -400,10 +514,10 @@ class SelecaoMonstroScreen extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Dano que o tipo principal do inimigo causa no meu tipo principal
-        _buildSingleDanoDefensivoIndicator(monstroInimigo.tipo, monstro.tipo, ref),
+        _buildSingleDanoDefensivoIndicator(widget.monstroInimigo.tipo, monstro.tipo, ref),
         const SizedBox(width: 4),
         // Dano que o tipo principal do inimigo causa no meu tipo extra
-        _buildSingleDanoDefensivoIndicator(monstroInimigo.tipo, monstro.tipoExtra, ref),
+        _buildSingleDanoDefensivoIndicator(widget.monstroInimigo.tipo, monstro.tipoExtra, ref),
       ],
     );
   }
@@ -491,7 +605,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
       return await matchupService.calcularMatchup(
         tipoAtacantePrincipal: meuTipo,
         tipoAtacanteExtra: null, // Apenas um tipo por vez
-        tipoDefensorPrincipal: monstroInimigo.tipo, // Apenas tipo principal do inimigo
+        tipoDefensorPrincipal: widget.monstroInimigo.tipo, // Apenas tipo principal do inimigo
         tipoDefensorExtra: null, // Ignora tipo extra do inimigo conforme solicitado
         mixOfensivo: 1.0, // 100% do meu tipo
       );
@@ -574,7 +688,7 @@ class SelecaoMonstroScreen extends ConsumerWidget {
       MaterialPageRoute(
         builder: (context) => BatalhaScreen(
           jogador: monstro,
-          inimigo: monstroInimigo,
+          inimigo: widget.monstroInimigo,
           equipeCompleta: historia?.monstros ?? [],
         ),
       ),

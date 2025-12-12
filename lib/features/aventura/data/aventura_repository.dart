@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import '../../../core/services/google_drive_service.dart';
+import '../../../core/utils/date_folder_manager.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/models/atributo_jogo_enum.dart';
 import '../../../core/config/version_config.dart';
@@ -24,6 +25,7 @@ class AventuraRepository {
   final RankingService _rankingService = RankingService();
   final AventuraHiveService _hiveService = AventuraHiveService();
   final ColecaoService _colecaoService = ColecaoService();
+  final DateFolderManager _folderManager = DateFolderManager();
 
   /// Inicializa o repository (deve ser chamado no início do app)
   Future<void> init() async {
@@ -119,8 +121,8 @@ class AventuraRepository {
   Future<bool> _salvarNoDrive(HistoriaJogador historia) async {
     try {
       // Cria o caminho com data atual e email do jogador
-      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final hoje = _folderManager.agora; // Usa DateFolderManager para horário correto
+      final dataFormatada = _folderManager.formatarDataParaPasta(hoje);
       final caminhoCompleto = 'historias/$dataFormatada/${historia.email}';
       final nomeArquivo = 'historico_${historia.email}.json';
 
@@ -156,8 +158,8 @@ class AventuraRepository {
       print('📝 [Repository] Buscando arquivo: historico_$email.json');
 
       // Cria o caminho com data atual e email do jogador
-      final hoje = DateTime.now().subtract(const Duration(hours: 3));
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final hoje = _folderManager.agora;
+      final dataFormatada = _folderManager.formatarDataParaPasta(hoje);
       final caminhoCompleto = 'historias/$dataFormatada/$email';
       final nomeArquivo = 'historico_$email.json';
 
@@ -314,8 +316,8 @@ class AventuraRepository {
       print('📥 [Repository] Baixando aventura do Drive para: $email');
 
       // Cria o caminho com data atual e email do jogador
-      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final hoje = _folderManager.agora;
+      final dataFormatada = _folderManager.formatarDataParaPasta(hoje);
       final caminhoCompleto = 'historias/$dataFormatada/$email';
       final nomeArquivo = 'historico_$email.json';
 
@@ -1185,8 +1187,8 @@ class AventuraRepository {
       print('📦 [Repository] Novo nome: $novoNome');
       
       // Cria o caminho com data atual (mesmo padrão usado em carregarHistoricoJogador e salvarHistoricoJogador)
-      final hoje = DateTime.now().subtract(const Duration(hours: 3)); // Horário Brasília
-      final dataFormatada = '${hoje.year.toString().padLeft(4, '0')}-${hoje.month.toString().padLeft(2, '0')}-${hoje.day.toString().padLeft(2, '0')}';
+      final hoje = _folderManager.agora;
+      final dataFormatada = _folderManager.formatarDataParaPasta(hoje);
       final caminhoCompleto = 'historias/$dataFormatada/$email';
       
       print('📦 [Repository] Caminho completo: $caminhoCompleto');

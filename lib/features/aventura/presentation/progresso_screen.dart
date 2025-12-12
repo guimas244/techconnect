@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/progresso_diario.dart';
 import '../../../shared/models/tipo_enum.dart';
+import '../../../core/services/google_drive_service.dart';
+import '../../../core/providers/user_provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/progresso_bonus_provider.dart';
 
@@ -29,6 +31,10 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
     'DEF': 0,
     'SPD': 0,
   };
+
+  // Variáveis para salvar/baixar kills do Drive
+  bool _salvandoKills = false;
+  bool _baixandoKills = false;
 
   @override
   void initState() {
@@ -100,6 +106,111 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _salvarKillsNoDrive() async {
+    final emailUsuario = ref.read(validUserEmailProvider);
+    if (emailUsuario.isEmpty) {
+      _mostrarSnackBar('Erro: Usuário não identificado', isErro: true);
+      return;
+    }
+
+    setState(() => _salvandoKills = true);
+
+    try {
+      // Carrega progresso do SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final progressoJson = prefs.getString('progresso_diario');
+
+      if (progressoJson == null || progressoJson.isEmpty) {
+        _mostrarSnackBar('Nenhum progresso de kills para salvar', isErro: true);
+        return;
+      }
+
+      final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
+
+      // Adiciona metadados
+      progressoData['email'] = emailUsuario;
+      progressoData['salvadoEm'] = DateTime.now().toIso8601String();
+
+      // Inicializa conexão e salva no Drive
+      final driveService = GoogleDriveService();
+      await driveService.inicializarConexao();
+      final filename = '${emailUsuario.replaceAll('@', '_').replaceAll('.', '_')}_kills.json';
+
+      await driveService.driveService.createJsonFileInProgresso(filename, progressoData);
+
+      _mostrarSnackBar('Kills salvos no Drive com sucesso!');
+    } catch (e) {
+      print('Erro ao salvar kills no Drive: $e');
+      _mostrarSnackBar('Erro ao salvar: $e', isErro: true);
+    } finally {
+      if (mounted) {
+        setState(() => _salvandoKills = false);
+      }
+    }
+  }
+
+  Future<void> _baixarKillsDoDrive() async {
+    final emailUsuario = ref.read(validUserEmailProvider);
+    if (emailUsuario.isEmpty) {
+      _mostrarSnackBar('Erro: Usuário não identificado', isErro: true);
+      return;
+    }
+
+    setState(() => _baixandoKills = true);
+
+    try {
+      // Inicializa conexão e baixa do Drive
+      final driveService = GoogleDriveService();
+      await driveService.inicializarConexao();
+      final filename = '${emailUsuario.replaceAll('@', '_').replaceAll('.', '_')}_kills.json';
+
+      final conteudo = await driveService.driveService.downloadFileFromProgresso(filename);
+
+      if (conteudo.isEmpty) {
+        _mostrarSnackBar('Nenhum backup de kills encontrado no Drive', isErro: true);
+        return;
+      }
+
+      final progressoData = jsonDecode(conteudo) as Map<String, dynamic>;
+
+      // Remove metadados antes de salvar localmente
+      progressoData.remove('email');
+      progressoData.remove('salvadoEm');
+
+      // Salva no SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('progresso_diario', jsonEncode(progressoData));
+
+      // Recarrega o progresso na tela
+      await _carregarProgressoAtual();
+
+      // Mostra informações do progresso baixado
+      final progresso = ProgressoDiario.fromJson(progressoData);
+      final totalKills = progresso.totalKillsComHistorico;
+      final diasHistorico = progresso.historico.length;
+
+      _mostrarSnackBar('Kills restaurados! Total: $totalKills kills, $diasHistorico dias no histórico');
+    } catch (e) {
+      print('Erro ao baixar kills do Drive: $e');
+      _mostrarSnackBar('Erro ao baixar: $e', isErro: true);
+    } finally {
+      if (mounted) {
+        setState(() => _baixandoKills = false);
+      }
+    }
+  }
+
+  void _mostrarSnackBar(String mensagem, {bool isErro = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: isErro ? Colors.red.shade700 : Colors.green.shade700,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -273,6 +384,87 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          // Botões de Salvar/Baixar Kills do Drive
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.shade700, width: 2),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.cloud, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'BACKUP NO DRIVE',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    // Botão Salvar Kills
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _salvandoKills ? null : _salvarKillsNoDrive,
+                        icon: _salvandoKills
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.cloud_upload, size: 18),
+                        label: Text(_salvandoKills ? 'Salvando...' : 'Salvar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Botão Baixar Kills
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _baixandoKills ? null : _baixarKillsDoDrive,
+                        icon: _baixandoKills
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.cloud_download, size: 18),
+                        label: Text(_baixandoKills ? 'Baixando...' : 'Restaurar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // Informação sobre validade
           Container(
             padding: const EdgeInsets.all(12),
@@ -545,10 +737,10 @@ class _ProgressoScreenState extends ConsumerState<ProgressoScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '${tipo.value}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: tipoEnum.cor,
+                          color: Colors.white,
                         ),
                       ),
                     ],

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sorteador de Páginas e Itens</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      margin-top: 40px;
+      background: #020617;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      border: 1px solid #1f2937;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 22px;
+      text-align: center;
+      color: #f9fafb;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .field {
+      flex: 1;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    input[type="number"] {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      background: #020617;
+      color: #f9fafb;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input[type="number"]:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px #38bdf8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+    }
+
+    #btnSortear {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #0b1120;
+      box-shadow: 0 12px 24px rgba(56, 189, 248, 0.35);
+    }
+
+    #btnSortear:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 28px rgba(56, 189, 248, 0.4);
+    }
+
+    #btnLimpar {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #4b5563;
+    }
+
+    #btnLimpar:hover {
+      background: #1f2937;
+    }
+
+    .error {
+      margin-top: 4px;
+      color: #fca5a5;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    .results-card {
+      background: radial-gradient(circle at top, #1f2937 0, #020617 60%);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid #374151;
+      max-height: 360px;
+      overflow: auto;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .results-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f9fafb;
+    }
+
+    .results-meta {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #020617;
+      z-index: 1;
+      border-bottom: 1px solid #4b5563;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    tr:nth-child(odd) td {
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #1e293b;
+      color: #e5e7eb;
+    }
+
+    .badge-page {
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.6);
+    }
+
+    .badge-item {
+      background: rgba(52, 211, 153, 0.12);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.6);
+    }
+
+    .no-results {
+      font-size: 13px;
+      color: #9ca3af;
+      text-align: center;
+      padding: 16px 4px 4px;
+    }
+
+    @media (max-width: 480px) {
+      .form-row {
+        flex-direction: column;
+      }
+      .container {
+        margin: 16px;
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sorteador de Páginas e Itens</h1>
+    <div class="subtitle">
+      Informe o intervalo de páginas e a quantidade de sorteios.  
+      Cada sorteio gera 1 página e 1 item de 1 a 4.
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="inputMinPage">Página inicial (x)</label>
+        <input type="number" id="inputMinPage" min="1" value="1" />
+      </div>
+      <div class="field">
+        <label for="inputMaxPage">Página final (y)</label>
+        <input type="number" id="inputMaxPage" min="1" value="10" />
+      </div>
+      <div class="field">
+        <label for="inputQtd">Quantidade de sorteios</label>
+        <input type="number" id="inputQtd" min="1" value="5" />
+      </div>
+    </div>
+
+    <div class="error" id="errorMsg"></div>
+
+    <div class="actions">
+      <button id="btnSortear">Sortear</button>
+      <button id="btnLimpar" type="button">Limpar resultados</button>
+    </div>
+
+    <div class="results-card">
+      <div class="results-header">
+        <div class="results-title">Resultados</div>
+        <div class="results-meta" id="resultsMeta">Nenhum sorteio realizado ainda</div>
+      </div>
+
+      <div id="resultsWrapper">
+        <div class="no-results">
+          Execute um sorteio para ver as páginas e itens aqui.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function getRandomIntInclusive(min, max) {
+      const minCeil = Math.ceil(min);
+      const maxFloor = Math.floor(max);
+      return Math.floor(Math.random() * (maxFloor - minCeil + 1)) + minCeil;
+    }
+
+    const inputMinPage = document.getElementById("inputMinPage");
+    const inputMaxPage = document.getElementById("inputMaxPage");
+    const inputQtd = document.getElementById("inputQtd");
+    const btnSortear = document.getElementById("btnSortear");
+    const btnLimpar = document.getElementById("btnLimpar");
+    const errorMsg = document.getElementById("errorMsg");
+    const resultsWrapper = document.getElementById("resultsWrapper");
+    const resultsMeta = document.getElementById("resultsMeta");
+
+    let globalDrawCount = 0;
+
+    function validarEntradas() {
+      errorMsg.textContent = "";
+
+      const minPage = parseInt(inputMinPage.value, 10);
+      const maxPage = parseInt(inputMaxPage.value, 10);
+      const qtd = parseInt(inputQtd.value, 10);
+
+      if (isNaN(minPage) || isNaN(maxPage) || isNaN(qtd)) {
+        errorMsg.textContent = "Preencha todos os campos com números válidos.";
+        return null;
+      }
+
+      if (minPage < 1 || maxPage < 1) {
+        errorMsg.textContent = "Páginas devem ser maiores ou iguais a 1.";
+        return null;
+      }
+
+      if (minPage > maxPage) {
+        errorMsg.textContent = "Página inicial (x) não pode ser maior que a página final (y).";
+        return null;
+      }
+
+      if (qtd < 1) {
+        errorMsg.textContent = "A quantidade de sorteios deve ser pelo menos 1.";
+        return null;
+      }
+
+      // Se chegou aqui, está ok
+      return { minPage, maxPage, qtd };
+    }
+
+    function gerarTabelaResultados(resultados) {
+      if (!resultados || resultados.length === 0) {
+        resultsWrapper.innerHTML = '<div class="no-results">Nenhum resultado para mostrar.</div>';
+        return;
+      }
+
+      let html = '<table>';
+      html += '<thead><tr><th>#</th><th>Página</th><th>Item</th></tr></thead><tbody>';
+
+      for (let i = 0; i < resultados.length; i++) {
+        const r = resultados[i];
+        html += `
+          <tr>
+            <td>${r.index}</td>
+            <td><span class="badge badge-page">${r.page}</span></td>
+            <td><span class="badge badge-item">${r.item}</span></td>
+          </tr>
+        `;
+      }
+
+      html += '</tbody></table>';
+      resultsWrapper.innerHTML = html;
+    }
+
+    btnSortear.addEventListener("click", function () {
+      const dados = validarEntradas();
+      if (!dados) {
+        return;
+      }
+
+      const { minPage, maxPage, qtd } = dados;
+
+      const resultados = [];
+      for (let i = 0; i < qtd; i++) {
+        const page = getRandomIntInclusive(minPage, maxPage);
+        const item = getRandomIntInclusive(1, 4); // de 1 a 4
+        globalDrawCount += 1;
+        resultados.push({
+          index: globalDrawCount,
+          page,
+          item
+        });
+      }
+
+      // Se já existem resultados na tela, precisamos mesclar com os novos
+      const previousRows = resultsWrapper.querySelectorAll("tbody tr");
+      if (previousRows.length > 0) {
+        // Ler dados antigos para manter histórico
+        const merged = [];
+        // Pega dados antigos da tabela
+        previousRows.forEach(row => {
+          const cols = row.querySelectorAll("td");
+          if (cols.length === 3) {
+            const idx = parseInt(cols[0].textContent, 10);
+            const pageText = cols[1].textContent.trim();
+            const itemText = cols[2].textContent.trim();
+            const pageOld = parseInt(pageText, 10);
+            const itemOld = parseInt(itemText, 10);
+            if (!isNaN(idx) && !isNaN(pageOld) && !isNaN(itemOld)) {
+              merged.push({
+                index: idx,
+                page: pageOld,
+                item: itemOld
+              });
+            }
+          }
+        });
+        // Junta antigos com novos
+        const all = merged.concat(resultados);
+        gerarTabelaResultados(all);
+      } else {
+        gerarTabelaResultados(resultados);
+      }
+
+      resultsMeta.textContent = `Total de sorteios realizados nesta sessão: ${globalDrawCount}`;
+    });
+
+    btnLimpar.addEventListener("click", function () {
+      globalDrawCount = 0;
+      resultsWrapper.innerHTML = `
+        <div class="no-results">
+          Resultados limpos. Execute um novo sorteio.
+        </div>
+      `;
+      resultsMeta.textContent = "Nenhum sorteio realizado ainda";
+      errorMsg.textContent = "";
+    });
+  </script>
+</body>
+</html>

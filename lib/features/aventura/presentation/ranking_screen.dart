@@ -132,7 +132,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
 
   void _irParaHoje() {
     if (!mounted) return;
-    
+
     final agora = _rankingService.agora;
     setState(() {
       _dataAtual = DateTime(agora.year, agora.month, agora.day);
@@ -351,9 +351,9 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Indicador de progresso (acima da tabela)
               if (_carregando && _topJogadores.isNotEmpty)
                 AnimatedContainer(

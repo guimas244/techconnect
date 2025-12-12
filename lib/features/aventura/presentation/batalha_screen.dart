@@ -34,6 +34,7 @@ import '../../../core/config/score_config.dart';
 import 'modal_limite_score.dart';
 import 'modal_limite_score_tier11.dart';
 import '../services/mochila_service.dart';
+import '../services/auto_mode_service.dart';
 import 'modal_recompensas_batalha.dart';
 import 'modal_monstro_inimigo.dart';
 import 'modal_monstro_aventura.dart';
@@ -86,24 +87,28 @@ class _PacoteRecompensas {
   final List<MonstroAventura> timeAtualizado;
   final Mochila mochila;
   final String emailJogador;
+  final int tier;
 
   const _PacoteRecompensas({
     required this.recompensas,
     required this.timeAtualizado,
     required this.mochila,
     required this.emailJogador,
+    required this.tier,
   });
 }
 class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroAventura jogador;
   final MonstroInimigo inimigo;
   final List<MonstroAventura> equipeCompleta; // Lista completa da equipe para verificar passivas
+  final bool autoMode; // Modo automático - usa melhor habilidade e equipa itens automaticamente
 
   const BatalhaScreen({
     super.key,
     required this.jogador,
     required this.inimigo,
     this.equipeCompleta = const [],
+    this.autoMode = false,
   });
 
   @override
@@ -113,6 +118,7 @@ class BatalhaScreen extends ConsumerStatefulWidget {
 class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   final Random _random = Random();
   final TipagemRepository _tipagemRepository = TipagemRepository();
+  final AutoModeService _autoModeService = AutoModeService();
   
   // Estado da batalha
   EstadoBatalha? estadoAtual;
@@ -145,6 +151,18 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     super.initState();
     _inicializarBatalha();
     _verificarInicializacaoTipagem();
+
+    // Se em modo automático, inicia a batalha automaticamente após um frame
+    if (widget.autoMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted && !batalhaConcluida) {
+            print('🤖 [AutoMode] Iniciando batalha automática...');
+            _resumirBatalha();
+          }
+        });
+      });
+    }
   }
 
   void _verificarInicializacaoTipagem() async {
@@ -211,33 +229,15 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<void> _inicializarBatalha() async {
-    print('??? [BatalhaScreen] Inicializando batalha...');
+    print('🎮 [BatalhaScreen] Inicializando batalha...');
 
-<<<<<<< HEAD
-=======
     // ROUND 0: Carregar bônus de progressão
     await _carregarBonusProgressao();
-    
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
+
     // Estado inicial da batalha
     // Aplica bônus do item equipado do jogador
     final item = widget.jogador.itemEquipado;
 
-<<<<<<< HEAD
-    // Carrega bônus de progressão para o tipo do jogador
-    final bonusProgresso = ref.read(progressoBonusStateProvider);
-    final bonusTipo = bonusProgresso[widget.jogador.tipo] ?? {'HP': 0, 'ATK': 0, 'DEF': 0, 'SPD': 0};
-
-    print('?? [Progressão] Bônus para tipo ${widget.jogador.tipo.displayName}: HP+${bonusTipo['HP']} ATK+${bonusTipo['ATK']} DEF+${bonusTipo['DEF']} SPD+${bonusTipo['SPD']}');
-
-    // Aplica bônus do item + bônus de progressão
-    final ataqueComItem = widget.jogador.ataque + (item?.ataque ?? 0) + (bonusTipo['ATK'] ?? 0);
-    final defesaComItem = widget.jogador.defesa + (item?.defesa ?? 0) + (bonusTipo['DEF'] ?? 0);
-    final vidaComItem = widget.jogador.vida + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
-    final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + (bonusTipo['HP'] ?? 0);
-    final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
-    final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + (bonusTipo['SPD'] ?? 0);
-=======
     // ROUND 0: Aplica bônus de progressão + item
     final bonusHP = bonusProgressao['HP'] ?? 0;
     final bonusATK = bonusProgressao['ATK'] ?? 0;
@@ -250,7 +250,6 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     final vidaAtualComItem = widget.jogador.vidaAtual + (item?.vida ?? 0) + bonusHP;
     final energiaComItem = widget.jogador.energia + (item?.energia ?? 0);
     final agilidadeComItem = widget.jogador.agilidade + (item?.agilidade ?? 0) + bonusSPD;
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
 
     // Aplica bônus do item equipado do inimigo (sem multiplicadores - valores fixos do JSON)
     final itemInimigo = widget.inimigo.itemEquipado;
@@ -277,11 +276,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     jogadorComeca = agilidadeComItem >= agilidadeInimigoTotal;
     vezDoJogador = true; // Sempre inicia esperando ação do jogador (rodada completa)
 
-<<<<<<< HEAD
-    print('?? [Stats] Jogador: ATK=$ataqueComItem (base:${widget.jogador.ataque} item:${item?.ataque ?? 0} prog:${bonusTipo['ATK']}) DEF=$defesaComItem (base:${widget.jogador.defesa} item:${item?.defesa ?? 0} prog:${bonusTipo['DEF']}) HP=$vidaAtualComItem/$vidaComItem (base:${widget.jogador.vida} item:${item?.vida ?? 0} prog:${bonusTipo['HP']}) AGI=$agilidadeComItem (base:${widget.jogador.agilidade} item:${item?.agilidade ?? 0} prog:${bonusTipo['SPD']})');
-=======
-    print('?? [Stats] Jogador (COM BÔNUS): ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
->>>>>>> 447d16be7afd78210c8a845d6a39dfc3c596b819
+    print('📊 [Stats] Jogador (COM BÔNUS): ATK=$ataqueComItem DEF=$defesaComItem HP=$vidaAtualComItem/$vidaComItem AGI=$agilidadeComItem');
     print('?? [Stats] Inimigo Lv${widget.inimigo.level}: ATK=$ataqueInimigoTotal DEF=$defesaInimigoTotal HP=$vidaAtualInimigoTotal/$vidaInimigoTotal AGI=$agilidadeInimigoTotal');
     if (itemInimigo != null) {
       print('?? [Item] Inimigo equipado: ${itemInimigo.nome}');
@@ -551,21 +546,43 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
   
   Future<EstadoBatalha> _executarAtaqueJogador(EstadoBatalha estado) async {
-    // Seleciona habilidade aleatória do jogador que pode ser usada
+    // Seleciona habilidade do jogador que pode ser usada
     final habilidadesDisponiveis = widget.jogador.habilidades
-        .where((h) => (h.tipo == TipoHabilidade.ofensiva || 
+        .where((h) => (h.tipo == TipoHabilidade.ofensiva ||
                       !estado.habilidadesUsadasJogador.contains(h.nome)) &&
                      h.custoEnergia <= estado.energiaAtualJogador) // Verifica se tem energia
         .toList();
-    
+
     if (habilidadesDisponiveis.isEmpty) {
-      print('?? [Jogador] Sem energia para habilidades - usando ataque básico');
+      print('⚠️ [Jogador] Sem energia para habilidades - usando ataque básico');
       // Executa ataque básico quando não tem energia para habilidades
       return await _executarAtaqueBasico(estado, true); // true = é jogador
     }
-    
-    final habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
-    print('?? [Jogador] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+
+    Habilidade habilidade;
+
+    // Se em modo automático, usa a melhor habilidade de dano
+    if (widget.autoMode) {
+      final melhorHabilidade = await _autoModeService.selecionarMelhorHabilidadeDano(
+        habilidadesDisponiveis,
+        estado.energiaAtualJogador,
+        estado.habilidadesUsadasJogador,
+        widget.inimigo.tipo,
+      );
+
+      if (melhorHabilidade != null) {
+        habilidade = melhorHabilidade;
+        print('🤖 [AutoMode] Melhor habilidade selecionada: ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+      } else {
+        // Fallback para aleatória se não encontrar melhor
+        habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
+        print('🎲 [Jogador] Habilidade aleatória: ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+      }
+    } else {
+      // Modo manual - seleciona aleatoriamente
+      habilidade = habilidadesDisponiveis[_random.nextInt(habilidadesDisponiveis.length)];
+      print('🎲 [Jogador] Usando ${habilidade.nome} (custo: ${habilidade.custoEnergia})');
+    }
     
     // Aplica habilidade e desconta energia
     var novoEstado = await _aplicarHabilidade(estado, habilidade, true);
@@ -1021,6 +1038,10 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
               processandoDerrota = false; // Desativa o loading
               podeVoltarParaAventura = true;
             });
+            // Auto mode: volta automaticamente após derrota
+            if (widget.autoMode) {
+              _voltarAutomaticamente(false); // false = derrota
+            }
           }
         });
       });
@@ -1259,16 +1280,41 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
       // Mostra modal de vidinha utilizada
       if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => ModalVidinhaUtilizada(
-            monstro: widget.jogador,
-            onContinuar: () {
-              Navigator.of(context).pop();
+        // No auto mode, fecha automaticamente após 1.5 segundos
+        if (widget.autoMode) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              // Auto-fecha após delay
+              Future.delayed(const Duration(milliseconds: 1500), () {
+                if (mounted && Navigator.of(dialogContext).canPop()) {
+                  Navigator.of(dialogContext).pop();
+                }
+              });
+              return ModalVidinhaUtilizada(
+                monstro: widget.jogador,
+                onContinuar: () {
+                  Navigator.of(dialogContext).pop();
+                },
+              );
             },
-          ),
-        );
+          );
+          // Aguarda o tempo do auto-close
+          await Future.delayed(const Duration(milliseconds: 1600));
+        } else {
+          // Modo manual: aguarda usuário clicar
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => ModalVidinhaUtilizada(
+              monstro: widget.jogador,
+              onContinuar: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          );
+        }
       }
 
       return true;
@@ -1380,13 +1426,36 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
   }
 
   Future<void> _mostrarModalDesbloqueio() async {
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => ModalMonstroDesbloqueado(
-        monstroDesbloqueado: widget.inimigo,
-      ),
-    );
+    // No auto mode, fecha automaticamente após 2 segundos
+    if (widget.autoMode) {
+      print('🤖 [AutoMode] Modal monstro desbloqueado - fechando automaticamente em 2 segundos...');
+      final dialogNavigator = Navigator.of(context);
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          // Auto-fecha após 2 segundos
+          Future.delayed(const Duration(seconds: 2), () {
+            if (dialogNavigator.canPop()) {
+              dialogNavigator.pop();
+            }
+          });
+          return ModalMonstroDesbloqueado(
+            monstroDesbloqueado: widget.inimigo,
+          );
+        },
+      );
+      // Aguarda o tempo do auto-close
+      await Future.delayed(const Duration(seconds: 2, milliseconds: 100));
+    } else {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ModalMonstroDesbloqueado(
+          monstroDesbloqueado: widget.inimigo,
+        ),
+      );
+    }
   }
 
 
@@ -1414,6 +1483,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         return;
       }
 
+      // Se em modo automático, processa itens automaticamente
+      if (widget.autoMode) {
+        await _processarItensAutomaticamente(pacote);
+        return;
+      }
+
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -1438,6 +1513,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
                 slots,
                 moedaEvento: moedaEvento,
                 moedaChave: moedaChave,
+                tier: pacote.tier,
               ),
           onConcluir: _finalizarBatalhaComSalvamento,
         ),
@@ -1452,6 +1528,133 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       }
       await _finalizarBatalhaComSalvamento();
     }
+  }
+
+  /// Processa itens e magias automaticamente em modo auto
+  /// - Equipa itens melhores (ignorando energia)
+  /// - Equipa magias com maior dano (foco em dano puro)
+  /// - Descarta itens/magias piores
+  Future<void> _processarItensAutomaticamente(_PacoteRecompensas pacote) async {
+    print('🤖 [AutoMode] Processando recompensas automaticamente...');
+
+    // === PROCESSA ITENS ===
+    final todosItens = [
+      if (pacote.recompensas.itemRecebido != null) pacote.recompensas.itemRecebido!,
+      ...pacote.recompensas.itensRecebidos,
+    ];
+
+    for (final item in todosItens) {
+      // Encontra o melhor monstro para este item
+      final indiceMonstro = _autoModeService.selecionarMonstroParaItem(
+        pacote.timeAtualizado,
+        item,
+      );
+
+      if (indiceMonstro != null) {
+        final monstro = pacote.timeAtualizado[indiceMonstro];
+        await _equiparItemEMonstro(monstro, item);
+        print('🎁 [AutoMode] Item ${item.nome} equipado em ${monstro.tipo.displayName}');
+      } else {
+        print('🗑️ [AutoMode] Item ${item.nome} descartado (não é melhor que os atuais)');
+      }
+    }
+
+    // === PROCESSA MAGIAS ===
+    final todasMagias = [
+      if (pacote.recompensas.magiaRecebida != null) pacote.recompensas.magiaRecebida!,
+      ...pacote.recompensas.magiasRecebidas,
+    ];
+
+    for (final magia in todasMagias) {
+      // Encontra o melhor monstro para esta magia (usando sistema de roles)
+      final resultado = _autoModeService.selecionarMonstroParaMagia(
+        pacote.timeAtualizado,
+        magia.valor,
+        magia.level,
+        magia.tipo,
+        efeitoMagia: magia.efeito,
+      );
+
+      if (resultado != null) {
+        await _equiparMagiaEMonstro(resultado.monstro, magia, resultado.habilidade);
+        print('✨ [AutoMode] Magia ${magia.nome} equipada em ${resultado.monstro.tipo.displayName}');
+        print('   Substituiu: ${resultado.habilidade.nome}');
+      } else {
+        print('🗑️ [AutoMode] Magia ${magia.nome} descartada (não é melhor que as atuais)');
+      }
+    }
+
+    // === GUARDA CONSUMÍVEIS NA MOCHILA (COM GESTÃO INTELIGENTE) ===
+    final consumiveis = pacote.recompensas.itensConsumiveisRecebidos;
+    if (consumiveis.isNotEmpty || pacote.recompensas.moedaEvento > 0 || pacote.recompensas.moedaChave > 0) {
+      // Filtra consumíveis importantes (não poções comuns)
+      final consumiveisImportantes = consumiveis.where((c) =>
+        c.tipo != TipoItemConsumivel.pocao // Descarta poções no auto mode
+      ).toList();
+
+      final consumiveisPocoes = consumiveis.where((c) =>
+        c.tipo == TipoItemConsumivel.pocao
+      ).toList();
+
+      print('🎒 [AutoMode] Consumíveis recebidos: ${consumiveis.length} total');
+      print('   - Importantes (frutas, joias): ${consumiveisImportantes.length}');
+      print('   - Pocoes (descartadas): ${consumiveisPocoes.length}');
+
+      // Verifica espaço na mochila ANTES de adicionar
+      Mochila mochilaAtualizada = pacote.mochila;
+
+      // Conta slots livres (excluindo slots fixos: 24=ovo, 25=moeda evento, 26=ovo evento, 27=moeda chave)
+      int slotsLivres = 0;
+      for (int i = 0; i < mochilaAtualizada.slotsDesbloqueados && i < 24; i++) {
+        if (mochilaAtualizada.itens[i] == null) {
+          slotsLivres++;
+        }
+      }
+
+      // Se não tem espaço suficiente para itens importantes + 1 slot vazio,
+      // descarta poções antigas da mochila
+      final espacoNecessario = consumiveisImportantes.length + 1; // +1 para manter slot vazio
+      if (slotsLivres < espacoNecessario) {
+        print('⚠️ [AutoMode] Mochila quase cheia! Descartando poções para abrir espaço...');
+
+        // Encontra poções na mochila para descartar
+        final slotsParaLiberar = <int>{};
+        for (int i = 0; i < mochilaAtualizada.slotsDesbloqueados && i < 24; i++) {
+          final item = mochilaAtualizada.itens[i];
+          if (item != null && item.tipo == TipoItemConsumivel.pocao) {
+            slotsParaLiberar.add(i);
+            print('🗑️ [AutoMode] Marcando slot $i para liberar (${item.nome})');
+
+            // Libera até ter espaço suficiente
+            if (slotsLivres + slotsParaLiberar.length >= espacoNecessario) {
+              break;
+            }
+          }
+        }
+
+        // Libera os slots
+        for (final slot in slotsParaLiberar) {
+          mochilaAtualizada = mochilaAtualizada.removerItem(slot);
+        }
+        print('✅ [AutoMode] ${slotsParaLiberar.length} slot(s) liberado(s)');
+      }
+
+      // Agora guarda apenas os consumíveis importantes
+      if (consumiveisImportantes.isNotEmpty || pacote.recompensas.moedaEvento > 0 || pacote.recompensas.moedaChave > 0) {
+        await _guardarItensNaMochila(
+          pacote.emailJogador,
+          mochilaAtualizada,
+          consumiveisImportantes,
+          <int>{}, // Já liberamos os slots necessários
+          moedaEvento: pacote.recompensas.moedaEvento,
+          moedaChave: pacote.recompensas.moedaChave,
+          tier: pacote.tier,
+        );
+      }
+    }
+
+    print('🤖 [AutoMode] Processamento de recompensas concluído');
+    await _finalizarBatalhaComSalvamento();
   }
 
   Future<_PacoteRecompensas?> _montarRecompensasBatalha() async {
@@ -1500,6 +1703,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       timeAtualizado: historiaAtual.monstros,
       mochila: mochila,
       emailJogador: emailJogador,
+      tier: historiaAtual.tier,
     );
   }
 
@@ -1905,6 +2109,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
   /// Guarda os DROPS (consumíveis) na mochila comum
   /// Adiciona os drops nos primeiros slots vazios disponíveis
+  /// No tier 100+, o slot 3 (índice 2) é reservado apenas para poções
   Future<void> _guardarItensNaMochila(
     String emailJogador,
     Mochila mochilaBase,
@@ -1912,6 +2117,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     Set<int> slotsParaLiberar, {
     int moedaEvento = 0,
     int moedaChave = 0,
+    int tier = 0,
   }) async {
     print('[BatalhaScreen] 📦 Salvando drops na mochila: ${novosItens.length} itens + $moedaEvento moedas evento + $moedaChave moedas chave');
 
@@ -1922,6 +2128,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
 
     // Inicia com a mochila base
     Mochila mochila = mochilaBase;
+
+    // Tier 100+: Limpa slot 3 de itens que não são poções
+    if (tier >= 100) {
+      print('[BatalhaScreen] 🎯 Tier $tier: Reservando slot 3 para poções');
+      mochila = mochila.limparSlotReservadoNonPocao();
+    }
 
     // Adiciona moeda chave (slot 27 - 4º da linha 5)
     if (moedaChave > 0) {
@@ -1942,13 +2154,16 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     }
 
     // Agora adiciona os novos drops nos primeiros slots vazios
+    // No tier 100+, usa método que respeita reserva do slot 3 para poções
     for (final item in novosItens) {
       try {
         print('[BatalhaScreen] 🔄 Adicionando drop à mochila: ${item.nome} (iconPath: ${item.iconPath})');
 
-        final mochilaAtualizada = mochila.adicionarItem(item);
+        final mochilaAtualizada = tier >= 100
+            ? mochila.adicionarItemComReservaSlot(item, tier: tier)
+            : mochila.adicionarItem(item);
 
-        if (mochilaAtualizada != null) {
+        if (mochilaAtualizada != mochila) {
           mochila = mochilaAtualizada;
           print('[BatalhaScreen] ✅ Drop ${item.nome} adicionado à mochila!');
         } else {
@@ -2090,7 +2305,23 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         processandoVitoria = false; // Desativa o loading
         podeVoltarParaAventura = true;
       });
+      // Auto mode: volta automaticamente após vitória
+      if (widget.autoMode) {
+        _voltarAutomaticamente(true); // true = vitória
+      }
     }
+  }
+
+  /// Volta automaticamente para a aventura em modo auto
+  void _voltarAutomaticamente(bool vitoria) {
+    print('🤖 [AutoMode] Voltando automaticamente (vitória: $vitoria)...');
+
+    // Pequeno delay para o usuário ver o resultado
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(vitoria); // true = vitória, false = derrota
+      }
+    });
   }
 
   Future<void> _registrarKillNoProgresso() async {

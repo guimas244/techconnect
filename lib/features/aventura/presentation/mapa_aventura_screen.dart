@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import '../models/monstro_inimigo.dart';
+import '../models/monstro_aventura.dart';
 import '../models/historia_jogador.dart';
 import '../models/item.dart';
 import '../providers/aventura_provider.dart';
@@ -27,6 +28,16 @@ import '../presentation/progresso_screen.dart';
 import '../presentation/modal_tier11_transicao.dart';
 import '../../../core/config/score_config.dart';
 import '../../../core/config/version_config.dart';
+import '../services/auto_mode_service.dart';
+import '../services/mochila_service.dart';
+import '../services/magia_service.dart';
+import '../services/item_service.dart';
+import '../models/mochila.dart';
+import '../models/passiva.dart';
+import '../presentation/batalha_screen.dart';
+import '../../../shared/models/tipo_enum.dart';
+import '../../../shared/models/habilidade_enum.dart';
+import 'dart:math';
 
 class MapaAventuraScreen extends ConsumerStatefulWidget {
   final String mapaPath;
@@ -48,6 +59,12 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
   bool isLoading = true;
   bool isAdvancingTier = false;
   int _abaAtual = 0; // 0 = Equipe, 1 = Mapa, 2 = Mochila, 3 = Loja, 4 = Progresso
+
+  // Modo Automático
+  bool _modoAutoAtivo = false;
+  bool _autoModeEmExecucao = false;
+  final AutoModeService _autoModeService = AutoModeService();
+  Mochila? _mochilaAutoMode;
 
   // Filtro de drops - todas as raridades marcadas por padrão
   Map<RaridadeItem, bool> _filtroDrops = {
@@ -481,7 +498,61 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             ),
             // Pontos interativos do mapa (5 pontos fixos)
             ..._buildPontosMapa(),
-            
+
+            // Botão Modo Automático
+            Positioned(
+              top: 76,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _toggleModoAuto,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _modoAutoAtivo
+                          ? Colors.green.withOpacity(0.9)
+                          : Colors.blueGrey.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _modoAutoAtivo ? Colors.greenAccent : Colors.white,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _modoAutoAtivo
+                              ? Colors.green.withOpacity(0.5)
+                              : Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _modoAutoAtivo ? Icons.smart_toy : Icons.smart_toy_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _modoAutoAtivo ? 'AUTO ON' : 'AUTO',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
         // Overlay de loading quando avançando tier
         if (isAdvancingTier)
           Positioned.fill(
@@ -1510,7 +1581,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     );
   }
 
-    Future<void> _iniciarBatalha(MonstroInimigo monstroInimigo) async {
+  Future<void> _iniciarBatalha(MonstroInimigo monstroInimigo) async {
     // Verifica se a aventura expirou antes de iniciar batalha
     if (historiaAtual != null && historiaAtual!.aventuraExpirada) {
       print('[MapaAventura] Tentativa de batalhar com aventura expirada!');
@@ -1521,7 +1592,10 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     final retorno = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => SelecaoMonstroScreen(monstroInimigo: monstroInimigo),
+        builder: (context) => SelecaoMonstroScreen(
+          monstroInimigo: monstroInimigo,
+          autoMode: _modoAutoAtivo,
+        ),
       ),
     );
 
@@ -1529,7 +1603,1614 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
     if (retorno == true) {
       await _verificarAventuraIniciada();
+
+      // Se modo auto ativo, continua para próximo monstro automaticamente
+      if (_modoAutoAtivo && !_autoModeEmExecucao) {
+        _iniciarBatalhaAutomatica();
+      }
     }
+  }
+
+  /// Toggle do modo automático
+  void _toggleModoAuto() {
+    if (_modoAutoAtivo) {
+      // Desativar modo auto
+      setState(() {
+        _modoAutoAtivo = false;
+        _autoModeEmExecucao = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🤖 Modo Automático DESATIVADO'),
+          backgroundColor: Colors.blueGrey,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      print('🤖 [AutoMode] Modo automático DESATIVADO');
+    } else {
+      // Ativar modo auto e iniciar batalha automaticamente
+      setState(() {
+        _modoAutoAtivo = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🤖 Modo Automático ATIVADO - Iniciando...'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      print('🤖 [AutoMode] Modo automático ATIVADO - Iniciando batalha automática...');
+
+      // Inicia a primeira batalha automaticamente
+      _iniciarBatalhaAutomatica();
+    }
+  }
+
+  /// Inicia uma batalha automaticamente escolhendo o inimigo mais fácil
+  Future<void> _iniciarBatalhaAutomatica() async {
+    if (!_modoAutoAtivo || _autoModeEmExecucao) return;
+
+    setState(() {
+      _autoModeEmExecucao = true;
+    });
+
+    try {
+      // Verifica se há história carregada
+      if (historiaAtual == null) {
+        await _recarregarHistoria();
+      }
+
+      if (historiaAtual == null) {
+        print('❌ [AutoMode] Sem história carregada');
+        _pararModoAuto('Erro: história não encontrada');
+        return;
+      }
+
+      // Carrega mochila para usar consumíveis
+      await _carregarMochilaAutoMode();
+
+      // Usa consumíveis automaticamente antes da batalha
+      if (_mochilaAutoMode != null) {
+        await _usarConsumiveisAutoMode();
+      }
+
+      // Verifica se pode interagir com Ganandius (tiers 11, 21, 31, etc.)
+      await _interagirComGanandiusAutoMode();
+
+      // Verifica inimigos vivos primeiro
+      final inimigosVivos = monstrosParaExibir.where((i) => i.vidaAtual > 0).toList();
+
+      // Verifica monstros vivos do jogador
+      final monstrosVivos = historiaAtual!.monstros.where((m) => m.vidaAtual > 0).toList();
+
+      // Se todos os inimigos estão mortos, avança tier
+      if (inimigosVivos.isEmpty) {
+        print('✅ [AutoMode] Todos os inimigos derrotados!');
+
+        // No tier 10, executa compras automáticas ANTES de mostrar countdown
+        if (historiaAtual?.tier == 10) {
+          print('🛒 [AutoMode] Tier 10 detectado! Gastando score antes de avançar...');
+          await _executarComprasAutomaticasTier10();
+        }
+
+        // Mostra countdown para avançar tier (5 segundos)
+        await _mostrarCountdownAvancarTier();
+        return;
+      }
+
+      // Se todos os monstros estão mortos mas ainda há inimigos
+      if (monstrosVivos.isEmpty) {
+        print('💀 [AutoMode] Todos os monstros estão mortos! Verificando opções...');
+
+        // PRIMEIRO: Verifica se pode avançar tier mesmo com monstros mortos
+        final mortosNoTierMonstrosMortos = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
+        final podeAvancarTierMonstrosMortos = mortosNoTierMonstrosMortos >= 3;
+
+        if (podeAvancarTierMonstrosMortos) {
+          print('✅ [AutoMode] Pode avançar tier! Avançando...');
+          await _mostrarCountdownAvancarTier();
+          return;
+        }
+
+        // Se não pode avançar, tenta resolver a situação
+        print('💀 [AutoMode] Não pode avançar tier. Buscando solução...');
+        final resolvido = await _resolverMonstrosMortosAutoMode();
+        if (resolvido) {
+          // Conseguiu reviver algum monstro, continua batalha
+          if (mounted && _modoAutoAtivo) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            // Reseta o flag antes de chamar novamente
+            setState(() {
+              _autoModeEmExecucao = false;
+            });
+            _iniciarBatalhaAutomatica();
+          }
+          return;
+        }
+
+        // Não conseguiu resolver - para o auto mode
+        _pararModoAuto('Todos os seus monstros estão mortos e não há como reviver!');
+        return;
+      }
+
+      // === VERIFICA SE DEVE USAR REFRESH ===
+      // Só verifica no início do andar (quando pode fazer refresh)
+      if (_podeRefreshAndar()) {
+        final andarRuim = await _autoModeService.andarEhRuim(
+          historiaAtual!.monstros,
+          inimigosVivos,
+        );
+        if (andarRuim) {
+          print('🔄 [AutoMode] Andar ruim detectado! Usando refresh...');
+          await _refreshAndarAutoMode();
+          // Após refresh, continua a batalha
+          if (mounted && _modoAutoAtivo) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            // Reseta o flag antes de chamar novamente
+            setState(() {
+              _autoModeEmExecucao = false;
+            });
+            _iniciarBatalhaAutomatica();
+          }
+          return;
+        }
+      }
+
+      // === VERIFICA SE PODE AVANÇAR TIER ===
+      final mortosNoTier = monstrosParaExibir.where((m) => m.vidaAtual <= 0).length;
+      final podeAvancarTier = mortosNoTier >= 3;
+
+      // === VERIFICA SE HÁ INIMIGOS QUE VALE A PENA ATACAR ===
+      final temAlvo = await _autoModeService.temInimigoParaAtacar(
+        historiaAtual!.monstros,
+        inimigosVivos,
+      );
+
+      if (!temAlvo && podeAvancarTier) {
+        // Nenhum inimigo vale a pena atacar E pode avançar - avança tier
+        print('⚠️ [AutoMode] Nenhum inimigo atacável! Avançando tier...');
+        await _mostrarCountdownAvancarTier();
+        return;
+      }
+
+      // Encontra a melhor combinação COM VANTAGEM
+      var combinacao = await _autoModeService.selecionarMelhorCombinacaoComVantagem(
+        historiaAtual!.monstros,
+        inimigosVivos,
+      );
+
+      if ((combinacao == null || combinacao.inimigo == null || combinacao.monstro == null) && podeAvancarTier) {
+        // Não encontrou combinação boa MAS pode avançar - avança tier
+        print('⚠️ [AutoMode] Sem combinação vantajosa! Avançando tier...');
+        await _mostrarCountdownAvancarTier();
+        return;
+      }
+
+      // Se não tem vantagem MAS não pode avançar tier, força atacar a melhor opção disponível
+      if (combinacao == null || combinacao.inimigo == null || combinacao.monstro == null) {
+        print('⚠️ [AutoMode] Sem vantagem mas NÃO pode avançar tier! Atacando melhor opção...');
+        // Usa seleção normal (sem filtro de vantagem)
+        combinacao = await _autoModeService.selecionarMelhorCombinacao(
+          historiaAtual!.monstros,
+          inimigosVivos,
+        );
+
+        if (combinacao.inimigo == null || combinacao.monstro == null) {
+          print('❌ [AutoMode] Erro: não encontrou nenhuma combinação válida!');
+          _pararModoAuto('Nenhuma combinação disponível');
+          return;
+        }
+        print('🎯 [AutoMode] Forçando batalha mesmo sem vantagem...');
+      }
+
+      print('🤖 [AutoMode] Iniciando batalha:');
+      print('   Inimigo: ${combinacao.inimigo!.tipo.displayName}');
+      print('   Monstro: ${combinacao.monstro!.tipo.displayName}');
+
+      if (!mounted) return;
+
+      setState(() {
+        _autoModeEmExecucao = false;
+      });
+
+      // Vai direto para a batalha (sem passar pela tela de seleção)
+      final resultado = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BatalhaScreen(
+            jogador: combinacao!.monstro!,
+            inimigo: combinacao.inimigo!,
+            equipeCompleta: historiaAtual!.monstros,
+            autoMode: true,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+
+      // Recarrega história após batalha
+      await _recarregarHistoria();
+
+      // Reage ao resultado
+      if (resultado == true) {
+        // VITÓRIA - continua para próxima batalha
+        print('✅ [AutoMode] Vitória! Continuando...');
+
+        if (_modoAutoAtivo) {
+          // Pequeno delay antes da próxima batalha
+          await Future.delayed(const Duration(milliseconds: 800));
+
+          if (mounted && _modoAutoAtivo) {
+            _iniciarBatalhaAutomatica();
+          }
+        }
+      } else {
+        // DERROTA - NÃO para, tenta continuar com outro monstro ou renascer
+        print('❌ [AutoMode] Derrota! Verificando se pode continuar...');
+
+        if (_modoAutoAtivo && mounted) {
+          // Pequeno delay antes de tentar continuar
+          await Future.delayed(const Duration(milliseconds: 800));
+
+          if (mounted && _modoAutoAtivo) {
+            // Tenta continuar (vai verificar monstros vivos ou tentar renascer)
+            _continuarAposDerrota();
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ [AutoMode] Erro: $e');
+      _pararModoAuto('Erro: $e');
+    }
+  }
+
+  /// Continua o modo auto após uma derrota
+  /// Verifica se há monstros vivos ou tenta renascer um com vantagem
+  Future<void> _continuarAposDerrota() async {
+    if (!_modoAutoAtivo || historiaAtual == null) return;
+
+    // Verifica monstros vivos
+    final monstrosVivos = historiaAtual!.monstros.where((m) => m.vidaAtual > 0).toList();
+
+    if (monstrosVivos.isNotEmpty) {
+      // Ainda tem monstros vivos, continua normalmente
+      print('🤖 [AutoMode] Ainda há ${monstrosVivos.length} monstro(s) vivo(s), continuando...');
+      _iniciarBatalhaAutomatica();
+      return;
+    }
+
+    // Todos os monstros estão mortos - tenta renascer
+    print('💀 [AutoMode] Todos os monstros estão mortos! Tentando renascer...');
+
+    // Verifica inimigos restantes
+    final inimigosVivos = monstrosParaExibir.where((i) => i.vidaAtual > 0).toList();
+    if (inimigosVivos.isEmpty) {
+      _pararModoAuto('Todos os inimigos derrotados! Avance de tier.');
+      return;
+    }
+
+    // === PRIORIDADE 1: Tentar usar poção para renascer ===
+    await _carregarMochilaAutoMode();
+    if (_mochilaAutoMode != null) {
+      final usouPocao = await _usarPocaoParaRenascerAutoMode();
+      if (usouPocao) {
+        // Poção usada com sucesso, continua batalha
+        if (mounted && _modoAutoAtivo) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          _iniciarBatalhaAutomatica();
+        }
+        return;
+      }
+    }
+
+    // === PRIORIDADE 2: Pagar ouro para renascer ===
+    // Custo de cura (igual à Casa do Vigarista)
+    const int custoCura = 2;
+
+    // Verifica se tem score suficiente
+    if (historiaAtual!.score < custoCura) {
+      _pararModoAuto('Sem ouro para renascer (precisa $custoCura)');
+      return;
+    }
+
+    // Encontra o melhor monstro para renascer (com mais vantagem)
+    final melhorParaRenascer = await _encontrarMelhorMonstroParaRenascer(inimigosVivos);
+
+    if (melhorParaRenascer == null) {
+      _pararModoAuto('Nenhum monstro com vantagem para renascer');
+      return;
+    }
+
+    // Renasce o monstro (cura 100%)
+    print('💚 [AutoMode] Renascendo ${melhorParaRenascer.tipo.displayName} por $custoCura ouro...');
+
+    await _renascerMonstroAutoMode(melhorParaRenascer, custoCura);
+
+    // Continua a batalha
+    if (mounted && _modoAutoAtivo) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      _iniciarBatalhaAutomatica();
+    }
+  }
+
+  /// Encontra o melhor monstro para renascer baseado em vantagem contra inimigos
+  Future<MonstroAventura?> _encontrarMelhorMonstroParaRenascer(List<MonstroInimigo> inimigosVivos) async {
+    if (historiaAtual == null) return null;
+
+    MonstroAventura? melhorMonstro;
+    double melhorScoreTotal = double.negativeInfinity;
+
+    for (final monstro in historiaAtual!.monstros) {
+      double scoreTotal = 0.0;
+
+      // Calcula score médio contra todos os inimigos vivos
+      for (final inimigo in inimigosVivos) {
+        final score = await _autoModeService.calcularScoreVantagem(monstro, inimigo);
+        scoreTotal += score;
+      }
+
+      // Média de vantagem
+      final scoreMedia = scoreTotal / inimigosVivos.length;
+
+      print('📊 [AutoMode] ${monstro.tipo.displayName} score médio: $scoreMedia');
+
+      // Só considera se tiver vantagem positiva (score > 0)
+      if (scoreMedia > 0 && scoreMedia > melhorScoreTotal) {
+        melhorScoreTotal = scoreMedia;
+        melhorMonstro = monstro;
+      }
+    }
+
+    if (melhorMonstro != null) {
+      print('✅ [AutoMode] Melhor para renascer: ${melhorMonstro.tipo.displayName} (score: $melhorScoreTotal)');
+    } else {
+      print('❌ [AutoMode] Nenhum monstro com vantagem positiva');
+    }
+
+    return melhorMonstro;
+  }
+
+  /// Renasce um monstro no modo auto (cura 100% e desconta ouro)
+  Future<void> _renascerMonstroAutoMode(MonstroAventura monstro, int custo) async {
+    if (historiaAtual == null) return;
+
+    final repository = ref.read(aventuraRepositoryProvider);
+
+    // Atualiza o monstro com vida completa
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.tipoExtra == monstro.tipoExtra) {
+        return m.copyWith(vidaAtual: m.vida); // Cura 100%
+      }
+      return m;
+    }).toList();
+
+    // Desconta o custo
+    final historiaAtualizada = historiaAtual!.copyWith(
+      monstros: monstrosAtualizados,
+      score: historiaAtual!.score - custo,
+    );
+
+    // Salva
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💚 ${monstro.tipo.displayName} renasceu! (-$custo ouro)'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Para o modo automático e mostra mensagem
+  void _pararModoAuto(String mensagem) {
+    if (!mounted) return;
+
+    setState(() {
+      _modoAutoAtivo = false;
+      _autoModeEmExecucao = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('🤖 $mensagem'),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Mostra countdown de 5 segundos antes de avançar tier
+  /// Se o usuário não cancelar, avança automaticamente
+  Future<void> _mostrarCountdownAvancarTier() async {
+    if (!mounted || !_modoAutoAtivo) return;
+
+    bool cancelado = false;
+    int segundosRestantes = 5;
+
+    final avancar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Inicia o countdown
+            if (segundosRestantes > 0 && !cancelado) {
+              Future.delayed(const Duration(seconds: 1), () {
+                if (!cancelado && segundosRestantes > 0) {
+                  setDialogState(() {
+                    segundosRestantes--;
+                  });
+
+                  // Quando chegar a 0, fecha o dialog
+                  if (segundosRestantes == 0) {
+                    Navigator.of(dialogContext).pop(true); // true = avançar
+                  }
+                }
+              });
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              backgroundColor: Colors.grey.shade900,
+              title: Row(
+                children: [
+                  Icon(Icons.arrow_upward, color: Colors.green, size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Avançando Tier',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Todos os inimigos derrotados!\nAvançando para o próximo tier em:',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 20),
+                  // Countdown grande
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.green.withOpacity(0.2),
+                      border: Border.all(color: Colors.green, width: 3),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$segundosRestantes',
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tier ${historiaAtual?.tier ?? 0} → ${(historiaAtual?.tier ?? 0) + 1}',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    cancelado = true;
+                    Navigator.of(dialogContext).pop(false); // false = cancelar
+                  },
+                  child: const Text(
+                    'PARAR AUTO',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(true); // true = avançar agora
+                  },
+                  child: const Text('AVANÇAR AGORA'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    // Processa o resultado do dialog
+    if (avancar == true && mounted && _modoAutoAtivo) {
+      // Compras automáticas do tier 10 já foram executadas ANTES do countdown
+      // Avança o tier
+      await _avancarTier();
+
+      // Continua o auto mode após avançar
+      if (mounted && _modoAutoAtivo) {
+        await Future.delayed(const Duration(milliseconds: 1000));
+        print('🤖 [AutoMode] Continuando auto mode após avançar tier...');
+        // IMPORTANTE: Reseta o flag de execução antes de chamar novamente
+        setState(() {
+          _autoModeEmExecucao = false;
+        });
+        _iniciarBatalhaAutomatica();
+      }
+    } else if (avancar == false) {
+      // Usuário cancelou - para o auto mode
+      _pararModoAuto('Auto mode desativado pelo usuário');
+    } else {
+      // Dialog fechado sem escolha (null) - reseta o flag
+      setState(() {
+        _autoModeEmExecucao = false;
+      });
+    }
+  }
+
+  /// Faz refresh do andar automaticamente (sem mostrar dialog)
+  Future<void> _refreshAndarAutoMode() async {
+    if (historiaAtual == null || !_podeRefreshAndar()) return;
+
+    print('🔄 [AutoMode] Executando refresh automático...');
+
+    try {
+      final repository = ref.read(aventuraRepositoryProvider);
+      final emailJogador = ref.read(validUserEmailProvider);
+
+      // Gera novos monstros para o tier atual
+      final novosMonstros = await repository.gerarMonstrosInimigosPorTier(
+        historiaAtual!.tier,
+        emailJogador,
+      );
+
+      // Atualiza a história com novos monstros e decrementa refreshs
+      final historiaAtualizada = historiaAtual!.copyWith(
+        monstrosInimigos: novosMonstros,
+        refreshsRestantes: historiaAtual!.refreshsRestantes - 1,
+      );
+
+      // Salva localmente
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+      // Atualiza o estado local
+      if (mounted) {
+        setState(() {
+          historiaAtual = historiaAtualizada;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🔄 Andar resetado! Refreshs restantes: ${historiaAtualizada.refreshsRestantes}'),
+            backgroundColor: Colors.blue,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      print('✅ [AutoMode] Refresh automático concluído!');
+
+    } catch (e) {
+      print('❌ [AutoMode] Erro no refresh automático: $e');
+    }
+  }
+
+  /// Executa compras automáticas no tier 10 antes de avançar para o tier 11
+  /// Gasta TODO o score disponível: primeiro magias, depois itens, depois curas
+  Future<void> _executarComprasAutomaticasTier10() async {
+    if (historiaAtual == null || historiaAtual!.tier != 10) return;
+
+    print('🛒 [AutoMode] ========================================');
+    print('🛒 [AutoMode] TIER 10 - GASTANDO TODO O SCORE!');
+    print('🛒 [AutoMode] Score inicial: ${historiaAtual!.score}');
+    print('🛒 [AutoMode] ========================================');
+
+    final magiaService = MagiaService();
+    final itemService = ItemService();
+    final repository = ref.read(aventuraRepositoryProvider);
+
+    // Custo da biblioteca/feirão (3 para abrir + custo por item)
+    // No tier 10, o custo de cada magia/item é: 2 * tier = 20
+    final custoAbertura = 3;
+    final custoCompra = 2 * historiaAtual!.tier; // 20 no tier 10
+    final custoTotal = custoAbertura + custoCompra; // 23 por compra
+    final custoCura = 2; // Custo de cura na loja
+
+    int magiasPurchased = 0;
+    int itensPurchased = 0;
+    int curasPurchased = 0;
+
+    // FASE 1: Gastar em MAGIAS até não poder mais
+    print('📚 [AutoMode] FASE 1: Comprando MAGIAS...');
+    while (historiaAtual!.score >= custoTotal && magiasPurchased < 50) {
+      // Encontra o monstro com a magia mais fraca para melhorar
+      final monstroAlvo = _encontrarMonstroComMagiaMaisFraca();
+      if (monstroAlvo == null) {
+        print('⚠️ [AutoMode] Nenhum monstro disponível para magias');
+        break;
+      }
+
+      magiasPurchased++;
+      print('📚 [AutoMode] Magia #$magiasPurchased para ${monstroAlvo.tipo.displayName} (score: ${historiaAtual!.score})');
+
+      await _comprarMagiaAutomatica(magiaService, repository, monstroAlvo);
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    print('📚 [AutoMode] Total de magias compradas: $magiasPurchased');
+
+    // FASE 2: Gastar em ITENS até não poder mais
+    print('🎒 [AutoMode] FASE 2: Comprando ITENS...');
+    while (historiaAtual!.score >= custoTotal && itensPurchased < 50) {
+      // Encontra o monstro com item mais fraco
+      final monstroAlvo = _encontrarMonstroComItemMaisFraco();
+      if (monstroAlvo == null) {
+        print('⚠️ [AutoMode] Nenhum monstro disponível para itens');
+        break;
+      }
+
+      itensPurchased++;
+      print('🎒 [AutoMode] Item #$itensPurchased para ${monstroAlvo.tipo.displayName} (score: ${historiaAtual!.score})');
+
+      await _comprarItemAutomatico(itemService, repository, monstroAlvo);
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    print('🎒 [AutoMode] Total de itens comprados: $itensPurchased');
+
+    // FASE 3: Gastar o restante em CURAS
+    print('💚 [AutoMode] FASE 3: Curando o time...');
+    while (historiaAtual!.score >= custoCura && curasPurchased < 20) {
+      // Encontra monstro que precisa de cura
+      final monstroFerido = historiaAtual!.monstros.cast<MonstroAventura?>().firstWhere(
+        (m) => m != null && m.vidaAtual < m.vida,
+        orElse: () => null,
+      );
+
+      if (monstroFerido == null) {
+        print('✅ [AutoMode] Todos os monstros estão com vida cheia!');
+        break;
+      }
+
+      curasPurchased++;
+      print('💚 [AutoMode] Cura #$curasPurchased para ${monstroFerido.tipo.displayName} (Vida: ${monstroFerido.vidaAtual}/${monstroFerido.vida})');
+
+      await _comprarCuraParaMonstro(monstroFerido, repository);
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    print('💚 [AutoMode] Total de curas compradas: $curasPurchased');
+
+    print('🏁 [AutoMode] ========================================');
+    print('🏁 [AutoMode] COMPRAS FINALIZADAS!');
+    print('🏁 [AutoMode] Magias: $magiasPurchased | Itens: $itensPurchased | Curas: $curasPurchased');
+    print('🏁 [AutoMode] Score restante: ${historiaAtual!.score}');
+    print('🏁 [AutoMode] ========================================');
+  }
+
+  /// Encontra o monstro que mais precisa de magias baseado no sistema de roles
+  /// Ordem: Atacante (precisa de 4 dano) > Tank (precisa de 2 def + 1 vida + 1 atq) > Flex
+  MonstroAventura? _encontrarMonstroComMagiaMaisFraca() {
+    if (historiaAtual == null) return null;
+
+    final monstros = historiaAtual!.monstros.where((m) => m.vidaAtual > 0).toList();
+    if (monstros.isEmpty) return null;
+
+    // Verifica cada monstro baseado no role
+    for (int i = 0; i < monstros.length; i++) {
+      final monstro = monstros[i];
+      final role = _autoModeService.getRoleMonstro(monstros, monstro);
+
+      switch (role) {
+        case RoleMonstro.atacante:
+          // Atacante precisa de 4 magias de dano
+          final magiaDano = monstro.habilidades.where((h) =>
+            h.tipo == TipoHabilidade.ofensiva).length;
+          if (magiaDano < 4) {
+            print('🎯 [AutoMode/Role] Atacante ${monstro.tipo.displayName} precisa de dano ($magiaDano/4)');
+            return monstro;
+          }
+          // Verifica se alguma magia de dano é fraca
+          final magiaMaisFraca = _autoModeService.encontrarMagiaMaisFraca(monstro);
+          if (magiaMaisFraca != null && magiaMaisFraca.valorEfetivo < 400) {
+            print('🎯 [AutoMode/Role] Atacante ${monstro.tipo.displayName} tem magia fraca (${magiaMaisFraca.valorEfetivo})');
+            return monstro;
+          }
+          break;
+
+        case RoleMonstro.tank:
+          // Tank precisa de: 2 defesa + 1 aumentar vida + 1 aumentar dano
+          final defesas = monstro.habilidades.where((h) =>
+            h.efeito == EfeitoHabilidade.aumentarDefesa).length;
+          final aumentarVida = monstro.habilidades.where((h) =>
+            h.efeito == EfeitoHabilidade.aumentarVida).length;
+          final aumentarDano = monstro.habilidades.where((h) =>
+            h.efeito == EfeitoHabilidade.aumentarAtaque).length;
+
+          if (defesas < 2 || aumentarVida < 1 || aumentarDano < 1) {
+            print('🛡️ [AutoMode/Role] Tank ${monstro.tipo.displayName} precisa de suporte (def=$defesas/2, vida=$aumentarVida/1, atq=$aumentarDano/1)');
+            return monstro;
+          }
+          break;
+
+        case RoleMonstro.flex:
+          // Flex: verifica se tem magias fracas para substituir
+          final magiaMaisFracaFlex = monstro.habilidades
+            .where((h) => h.valorEfetivo < 350)
+            .toList();
+          if (magiaMaisFracaFlex.isNotEmpty) {
+            print('⚔️ [AutoMode/Role] Flex ${monstro.tipo.displayName} tem magia fraca');
+            return monstro;
+          }
+          break;
+      }
+    }
+
+    // Se todos estão bons, retorna o atacante para melhorar dano
+    return monstros.isNotEmpty ? monstros[0] : null;
+  }
+
+  /// Encontra o monstro com o item mais fraco ou sem item
+  MonstroAventura? _encontrarMonstroComItemMaisFraco() {
+    if (historiaAtual == null) return null;
+
+    MonstroAventura? piorMonstro;
+    int menorPoder = 999999;
+
+    for (final monstro in historiaAtual!.monstros) {
+      if (monstro.vidaAtual <= 0) continue; // Ignora mortos
+
+      // Verifica o poder do item equipado
+      if (monstro.itemEquipado == null) {
+        // Monstro sem item tem prioridade máxima
+        return monstro;
+      }
+
+      // Calcula o poder total do item
+      final item = monstro.itemEquipado!;
+      final poderTotal = item.ataque + item.defesa + item.agilidade + item.vida;
+
+      if (poderTotal < menorPoder) {
+        menorPoder = poderTotal;
+        piorMonstro = monstro;
+      }
+    }
+
+    return piorMonstro;
+  }
+
+  /// Compra cura para um monstro específico
+  Future<void> _comprarCuraParaMonstro(
+    MonstroAventura monstro,
+    dynamic repository,
+  ) async {
+    if (historiaAtual == null) return;
+
+    final custoCura = 2;
+    if (historiaAtual!.score < custoCura) return;
+
+    // Calcula quanto vida falta
+    final vidaFaltando = monstro.vida - monstro.vidaAtual;
+    if (vidaFaltando <= 0) return;
+
+    // Cura é 25% da vida máxima
+    final cura = (monstro.vida * 0.25).round();
+    final novaVida = (monstro.vidaAtual + cura).clamp(0, monstro.vida);
+
+    // Atualiza o monstro
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.level == monstro.level) {
+        return m.copyWith(vidaAtual: novaVida);
+      }
+      return m;
+    }).toList();
+
+    final historiaAtualizada = historiaAtual!.copyWith(
+      score: historiaAtual!.score - custoCura,
+      monstros: monstrosAtualizados,
+    );
+
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+    }
+
+    print('💚 [AutoMode] ${monstro.tipo.displayName} curado: $cura vida (${monstro.vidaAtual} → $novaVida)');
+  }
+
+  /// Compra uma magia automaticamente (biblioteca) usando sistema de roles
+  Future<void> _comprarMagiaAutomatica(
+    MagiaService magiaService,
+    dynamic repository,
+    MonstroAventura monstroAlvo,
+  ) async {
+    if (historiaAtual == null) return;
+
+    final custoAbertura = 3;
+    final custoMagia = 2 * historiaAtual!.tier;
+
+    // Verifica se tem score suficiente
+    if (historiaAtual!.score < custoAbertura + custoMagia) return;
+
+    // Debita custo de abertura
+    var historiaAtualizada = historiaAtual!.copyWith(
+      score: historiaAtual!.score - custoAbertura,
+    );
+
+    // Determina o role do monstro
+    final monstrosVivos = historiaAtual!.monstros.where((m) => m.vidaAtual > 0).toList();
+    final role = _autoModeService.getRoleMonstro(monstrosVivos, monstroAlvo);
+
+    // Gera 3 magias
+    final magias = <MagiaDrop>[];
+    for (int i = 0; i < 3; i++) {
+      magias.add(magiaService.gerarMagiaAleatoria(
+        tierAtual: historiaAtual!.tier,
+        isCompra: true,
+      ));
+    }
+
+    // Seleciona a melhor magia baseado no ROLE
+    MagiaDrop? melhorMagia;
+
+    switch (role) {
+      case RoleMonstro.atacante:
+        // Atacante: só aceita dano direto, maior pontos
+        int melhorPontos = 0;
+        for (final magia in magias) {
+          if (magia.tipo == TipoHabilidade.ofensiva &&
+              magia.efeito == EfeitoHabilidade.danoDirecto) {
+            if (magia.valorEfetivo > melhorPontos) {
+              melhorPontos = magia.valorEfetivo;
+              melhorMagia = magia;
+            }
+          }
+        }
+        print('🗡️ [AutoMode/Role] Atacante: selecionando dano (${melhorMagia?.valorEfetivo ?? 0} pts)');
+        break;
+
+      case RoleMonstro.tank:
+        // Tank: prioriza defesa > aumentar vida > aumentar ataque
+        final defesas = monstroAlvo.habilidades.where((h) =>
+          h.efeito == EfeitoHabilidade.aumentarDefesa).length;
+        final aumentarVida = monstroAlvo.habilidades.where((h) =>
+          h.efeito == EfeitoHabilidade.aumentarVida).length;
+        final aumentarDano = monstroAlvo.habilidades.where((h) =>
+          h.efeito == EfeitoHabilidade.aumentarAtaque).length;
+
+        // Prioridade: o que falta primeiro
+        EfeitoHabilidade? efeitoDesejado;
+        if (defesas < 2) {
+          efeitoDesejado = EfeitoHabilidade.aumentarDefesa;
+        } else if (aumentarVida < 1) {
+          efeitoDesejado = EfeitoHabilidade.aumentarVida;
+        } else if (aumentarDano < 1) {
+          efeitoDesejado = EfeitoHabilidade.aumentarAtaque;
+        }
+
+        if (efeitoDesejado != null) {
+          for (final magia in magias) {
+            if (magia.efeito == efeitoDesejado) {
+              melhorMagia = magia;
+              break;
+            }
+          }
+        }
+
+        // Se não encontrou o que precisa, pega qualquer suporte útil (não cura)
+        if (melhorMagia == null) {
+          for (final magia in magias) {
+            if (magia.tipo == TipoHabilidade.suporte &&
+                magia.efeito != EfeitoHabilidade.curarVida &&
+                magia.efeito != EfeitoHabilidade.aumentarEnergia) {
+              melhorMagia = magia;
+              break;
+            }
+          }
+        }
+        print('🛡️ [AutoMode/Role] Tank: selecionando ${melhorMagia?.efeito ?? 'qualquer'}');
+        break;
+
+      case RoleMonstro.flex:
+        // Flex: qualquer magia exceto curar vida/energia, maior pontos
+        int melhorPontos = 0;
+        for (final magia in magias) {
+          if (magia.efeito != EfeitoHabilidade.curarVida &&
+              magia.efeito != EfeitoHabilidade.aumentarEnergia) {
+            if (magia.valorEfetivo > melhorPontos) {
+              melhorPontos = magia.valorEfetivo;
+              melhorMagia = magia;
+            }
+          }
+        }
+        print('⚔️ [AutoMode/Role] Flex: selecionando qualquer (${melhorMagia?.valorEfetivo ?? 0} pts)');
+        break;
+    }
+
+    // Se não encontrou magia ideal, pega a primeira que não seja curar energia
+    if (melhorMagia == null) {
+      for (final magia in magias) {
+        if (magia.efeito != EfeitoHabilidade.aumentarEnergia) {
+          melhorMagia = magia;
+          break;
+        }
+      }
+      melhorMagia ??= magias[0]; // Último recurso
+    }
+
+    await _aplicarMagiaNoMonstro(melhorMagia, monstroAlvo, historiaAtualizada, custoMagia, repository);
+  }
+
+  /// Aplica uma magia no monstro alvo usando sistema de roles
+  Future<void> _aplicarMagiaNoMonstro(
+    MagiaDrop magia,
+    MonstroAventura monstroAlvo,
+    HistoriaJogador historia,
+    int custoMagia,
+    dynamic repository,
+  ) async {
+    // Debita custo da magia
+    var historiaAtualizada = historia.copyWith(
+      score: historia.score - custoMagia,
+    );
+
+    // Usa o sistema de roles para encontrar qual habilidade substituir
+    final monstrosVivos = historiaAtualizada.monstros.where((m) => m.vidaAtual > 0).toList();
+    final resultado = _autoModeService.selecionarMonstroParaMagia(
+      monstrosVivos,
+      magia.valor,
+      magia.level,
+      magia.tipo,
+      efeitoMagia: magia.efeito,
+    );
+
+    // Se o sistema de roles não encontrou match, usa fallback
+    final habilidadeParaSubstituir = resultado?.habilidade ??
+        _autoModeService.encontrarMagiaMaisFraca(monstroAlvo);
+
+    // Atualiza o monstro com a nova magia
+    final monstrosAtualizados = historiaAtualizada.monstros.map((m) {
+      if (m.tipo == monstroAlvo.tipo && m.level == monstroAlvo.level) {
+        // Remove a habilidade selecionada e adiciona a nova
+        final habilidadesAtualizadas = m.habilidades
+            .where((h) => habilidadeParaSubstituir == null || h != habilidadeParaSubstituir)
+            .toList();
+
+        // Escolhe o tipo elemental (50% cada tipo do monstro)
+        final tipos = [m.tipo, m.tipoExtra];
+        final tipoElemental = tipos[math.Random().nextInt(tipos.length)];
+
+        // Cria a nova habilidade
+        final novaHabilidade = Habilidade(
+          nome: magia.nome,
+          descricao: magia.descricao,
+          tipo: magia.tipo,
+          efeito: magia.efeito,
+          tipoElemental: tipoElemental,
+          valor: magia.valor,
+          custoEnergia: magia.custoEnergia,
+          level: magia.level,
+        );
+
+        habilidadesAtualizadas.add(novaHabilidade);
+        return m.copyWith(habilidades: habilidadesAtualizadas);
+      }
+      return m;
+    }).toList();
+
+    historiaAtualizada = historiaAtualizada.copyWith(monstros: monstrosAtualizados);
+
+    // Salva
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+    }
+
+    final substituida = habilidadeParaSubstituir?.nome ?? 'nenhuma';
+    print('✨ [AutoMode] Magia ${magia.nome} (${magia.valorEfetivo} pts) equipada em ${monstroAlvo.tipo.displayName}');
+    print('   Substituiu: $substituida');
+  }
+
+  /// Compra um item automaticamente (feirão)
+  Future<void> _comprarItemAutomatico(
+    ItemService itemService,
+    dynamic repository,
+    MonstroAventura monstroAlvo,
+  ) async {
+    if (historiaAtual == null) return;
+
+    final custoAbertura = 3;
+    final custoItem = 2 * historiaAtual!.tier;
+
+    // Verifica se tem score suficiente
+    if (historiaAtual!.score < custoAbertura + custoItem) return;
+
+    // Debita custo de abertura
+    var historiaAtualizada = historiaAtual!.copyWith(
+      score: historiaAtual!.score - custoAbertura,
+    );
+
+    // Gera 3 itens
+    final itens = <Item>[];
+    for (int i = 0; i < 3; i++) {
+      itens.add(itemService.gerarItemAleatorioLoja(tierAtual: historiaAtual!.tier));
+    }
+
+    // Seleciona o melhor item
+    final melhorIndex = _autoModeService.selecionarMelhorItem(itens);
+    final itemEscolhido = itens[melhorIndex];
+
+    // Debita custo do item
+    historiaAtualizada = historiaAtualizada.copyWith(
+      score: historiaAtualizada.score - custoItem,
+    );
+
+    // Verifica se o novo item é melhor que o atual
+    final itemAtual = monstroAlvo.itemEquipado;
+    if (itemAtual != null && itemEscolhido.totalAtributos <= itemAtual.totalAtributos) {
+      print('⏭️ [AutoMode] Item novo (${itemEscolhido.totalAtributos}) não é melhor que atual (${itemAtual.totalAtributos})');
+      // Salva apenas o débito do score
+      await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+      if (mounted) {
+        setState(() {
+          historiaAtual = historiaAtualizada;
+        });
+      }
+      return;
+    }
+
+    // Equipa o novo item no monstro
+    final monstrosAtualizados = historiaAtualizada.monstros.map((m) {
+      if (m.tipo == monstroAlvo.tipo && m.level == monstroAlvo.level) {
+        return m.copyWith(itemEquipado: itemEscolhido);
+      }
+      return m;
+    }).toList();
+
+    historiaAtualizada = historiaAtualizada.copyWith(monstros: monstrosAtualizados);
+
+    // Salva
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+    }
+
+    print('🎁 [AutoMode] Item ${itemEscolhido.nome} (${itemEscolhido.totalAtributos} attr) equipado em ${monstroAlvo.tipo.displayName}');
+  }
+
+  /// Tenta resolver quando todos os monstros estão mortos
+  /// Prioridades:
+  /// 1. Usar poção da mochila
+  /// 2. Comprar cura na loja
+  /// Retorna true se conseguiu reviver algum monstro
+  Future<bool> _resolverMonstrosMortosAutoMode() async {
+    if (historiaAtual == null) return false;
+
+    print('🔧 [AutoMode] Tentando resolver monstros mortos...');
+
+    // === PRIORIDADE 1: Tentar usar poção da mochila ===
+    await _carregarMochilaAutoMode();
+    if (_mochilaAutoMode != null) {
+      final usouPocao = await _usarPocaoParaRenascerAutoMode();
+      if (usouPocao) {
+        print('✅ [AutoMode] Monstro revivido com poção da mochila!');
+        return true;
+      }
+    }
+
+    // === PRIORIDADE 2: Comprar cura na loja ===
+    // Custo da cura: 2 score (ou 1 com Mercador)
+    final custoCura = 2;
+    if (historiaAtual!.score >= custoCura) {
+      print('💰 [AutoMode] Tentando comprar cura na loja (score: ${historiaAtual!.score})...');
+      final comprouCura = await _comprarCuraAutomatica();
+      if (comprouCura) {
+        print('✅ [AutoMode] Monstro curado com compra na loja!');
+        return true;
+      }
+    }
+
+    print('❌ [AutoMode] Não foi possível reviver monstros (sem poções e score insuficiente)');
+    return false;
+  }
+
+  /// Compra cura na loja automaticamente para reviver um monstro
+  Future<bool> _comprarCuraAutomatica() async {
+    if (historiaAtual == null) return false;
+
+    final repository = ref.read(aventuraRepositoryProvider);
+    final custoCura = 2; // Custo base da cura
+
+    // Verifica se tem score
+    if (historiaAtual!.score < custoCura) {
+      print('❌ [AutoMode] Score insuficiente para cura (${historiaAtual!.score} < $custoCura)');
+      return false;
+    }
+
+    // Encontra monstros mortos
+    final monstrosMortos = historiaAtual!.monstros.where((m) => m.vidaAtual <= 0).toList();
+    if (monstrosMortos.isEmpty) {
+      print('❌ [AutoMode] Nenhum monstro morto para curar');
+      return false;
+    }
+
+    // Gera porcentagem de cura aleatória (25-100%)
+    final random = Random();
+    final porcentagens = [25, 50, 75, 100];
+    final porcentagemCura = porcentagens[random.nextInt(porcentagens.length)];
+
+    // Escolhe o monstro com mais vantagem contra inimigos restantes
+    final inimigosVivos = monstrosParaExibir.where((i) => i.vidaAtual > 0).toList();
+    MonstroAventura? melhorMonstro;
+    double melhorScore = double.negativeInfinity;
+
+    for (final monstro in monstrosMortos) {
+      double scoreTotal = 0.0;
+      for (final inimigo in inimigosVivos) {
+        final score = await _autoModeService.calcularScoreVantagem(monstro, inimigo);
+        scoreTotal += score;
+      }
+      final scoreMedia = inimigosVivos.isNotEmpty ? scoreTotal / inimigosVivos.length : 0.0;
+
+      if (scoreMedia > melhorScore) {
+        melhorScore = scoreMedia;
+        melhorMonstro = monstro;
+      }
+    }
+
+    // Se não encontrou com vantagem, pega qualquer um morto
+    melhorMonstro ??= monstrosMortos.first;
+
+    // Calcula a vida a recuperar
+    final vidaRecuperada = (melhorMonstro.vida * porcentagemCura / 100).round();
+    final novaVida = vidaRecuperada.clamp(1, melhorMonstro.vida);
+
+    // Debita score e aplica cura
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == melhorMonstro!.tipo && m.level == melhorMonstro.level) {
+        return m.copyWith(vidaAtual: novaVida);
+      }
+      return m;
+    }).toList();
+
+    final historiaAtualizada = historiaAtual!.copyWith(
+      score: historiaAtual!.score - custoCura,
+      monstros: monstrosAtualizados,
+    );
+
+    // Salva
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💚 ${melhorMonstro.tipo.displayName} curado ($porcentagemCura%)! Score: ${historiaAtualizada.score}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    print('💚 [AutoMode] Comprou cura: ${melhorMonstro.tipo.displayName} +${novaVida} vida (${porcentagemCura}%)');
+    return true;
+  }
+
+  /// Carrega a mochila para uso no auto mode
+  Future<void> _carregarMochilaAutoMode() async {
+    final email = ref.read(validUserEmailProvider);
+    _mochilaAutoMode = await MochilaService.carregarMochila(context, email);
+    print('📦 [AutoMode] Mochila carregada: ${_mochilaAutoMode?.itensOcupados ?? 0} itens');
+  }
+
+  /// Salva a mochila após usar consumíveis
+  Future<void> _salvarMochilaAutoMode() async {
+    if (_mochilaAutoMode == null) return;
+
+    final email = ref.read(validUserEmailProvider);
+    await MochilaService.salvarMochila(context, email, _mochilaAutoMode!);
+  }
+
+  /// Usa consumíveis automaticamente antes da batalha
+  Future<void> _usarConsumiveisAutoMode() async {
+    if (_mochilaAutoMode == null || historiaAtual == null) return;
+
+    print('🎒 [AutoMode] Verificando consumíveis...');
+
+    // 1. Fruta Nuty (lendária) - usa no monstro level 1 mais fraco
+    final nuty = _autoModeService.selecionarMonstroParaNuty(
+      _mochilaAutoMode!,
+      historiaAtual!.monstros,
+    );
+    if (nuty != null) {
+      await _usarFrutaNutyAutoMode(nuty.indiceFruta, nuty.monstro);
+    }
+
+    // 2. Fruta Nuty Cristalizada - sempre usa no mais fraco
+    final cristalizada = _autoModeService.selecionarMonstroParaCristalizada(
+      _mochilaAutoMode!,
+      historiaAtual!.monstros,
+    );
+    if (cristalizada != null) {
+      await _usarFrutaCristalizadaAutoMode(cristalizada.indiceFruta, cristalizada.monstro);
+    }
+
+    // 3. Fruta Nuty Negra - sempre usa (+10 kills)
+    final indiceFrutaNegra = _autoModeService.encontrarFrutaNegra(_mochilaAutoMode!);
+    if (indiceFrutaNegra != null) {
+      await _usarFrutaNegraAutoMode(indiceFrutaNegra);
+    }
+
+    // 4. Joia de Reforço/Recriação - usa se item estiver 2+ tiers abaixo
+    final joia = _autoModeService.verificarItemParaJoia(
+      _mochilaAutoMode!,
+      historiaAtual!.monstros,
+      historiaAtual!.tier,
+    );
+    if (joia != null) {
+      await _usarJoiaAutoMode(joia.indiceJoia, joia.monstro, joia.isRecriacao);
+    }
+  }
+
+  /// Usa Fruta Nuty no monstro (maximiza todos os stats)
+  Future<void> _usarFrutaNutyAutoMode(int indiceFruta, MonstroAventura monstro) async {
+    if (_mochilaAutoMode == null || historiaAtual == null) return;
+
+    print('🥥 [AutoMode] Usando Fruta Nuty em ${monstro.tipo.displayName}');
+
+    // Maximiza todos os atributos do monstro
+    final monstroMaximizado = monstro.copyWith(
+      vida: 150,
+      vidaAtual: 150,
+      energia: 40,
+      agilidade: 20,
+      ataque: 20,
+      defesa: 60,
+    );
+
+    // Atualiza o monstro na lista
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+        return monstroMaximizado;
+      }
+      return m;
+    }).toList();
+
+    // Consome a fruta
+    final item = _mochilaAutoMode!.itens[indiceFruta]!;
+    if (item.quantidade > 1) {
+      _mochilaAutoMode = _mochilaAutoMode!.atualizarItem(
+        indiceFruta,
+        item.copyWith(quantidade: item.quantidade - 1),
+      );
+    } else {
+      _mochilaAutoMode = _mochilaAutoMode!.removerItem(indiceFruta);
+    }
+
+    // Salva tudo
+    final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+    final repository = ref.read(aventuraRepositoryProvider);
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+    await _salvarMochilaAutoMode();
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🥥 ${monstro.tipo.displayName} teve todos os stats maximizados!'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Usa Fruta Cristalizada no monstro (+10 em stat aleatório)
+  Future<void> _usarFrutaCristalizadaAutoMode(int indiceFruta, MonstroAventura monstro) async {
+    if (_mochilaAutoMode == null || historiaAtual == null) return;
+
+    print('💎 [AutoMode] Usando Fruta Cristalizada em ${monstro.tipo.displayName}');
+
+    // Sorteia um atributo aleatório para ganhar +10
+    final random = Random();
+    final atributos = ['vida', 'energia', 'agilidade', 'ataque', 'defesa'];
+    final atributoSorteado = atributos[random.nextInt(atributos.length)];
+
+    late final MonstroAventura monstroAprimorado;
+    late final String nomeAtributo;
+
+    switch (atributoSorteado) {
+      case 'vida':
+        monstroAprimorado = monstro.copyWith(
+          vida: monstro.vida + 10,
+          vidaAtual: monstro.vidaAtual + 10,
+        );
+        nomeAtributo = 'Vida';
+        break;
+      case 'energia':
+        monstroAprimorado = monstro.copyWith(energia: monstro.energia + 10);
+        nomeAtributo = 'Energia';
+        break;
+      case 'agilidade':
+        monstroAprimorado = monstro.copyWith(agilidade: monstro.agilidade + 10);
+        nomeAtributo = 'Agilidade';
+        break;
+      case 'ataque':
+        monstroAprimorado = monstro.copyWith(ataque: monstro.ataque + 10);
+        nomeAtributo = 'Ataque';
+        break;
+      case 'defesa':
+      default:
+        monstroAprimorado = monstro.copyWith(defesa: monstro.defesa + 10);
+        nomeAtributo = 'Defesa';
+        break;
+    }
+
+    // Atualiza o monstro na lista
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+        return monstroAprimorado;
+      }
+      return m;
+    }).toList();
+
+    // Consome a fruta
+    final item = _mochilaAutoMode!.itens[indiceFruta]!;
+    if (item.quantidade > 1) {
+      _mochilaAutoMode = _mochilaAutoMode!.atualizarItem(
+        indiceFruta,
+        item.copyWith(quantidade: item.quantidade - 1),
+      );
+    } else {
+      _mochilaAutoMode = _mochilaAutoMode!.removerItem(indiceFruta);
+    }
+
+    // Salva tudo
+    final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+    final repository = ref.read(aventuraRepositoryProvider);
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+    await _salvarMochilaAutoMode();
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💎 ${monstro.tipo.displayName} ganhou +10 de $nomeAtributo!'),
+          backgroundColor: Colors.purple,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Usa Fruta Negra (+10 kills de tipo aleatório)
+  Future<void> _usarFrutaNegraAutoMode(int indiceFruta) async {
+    if (_mochilaAutoMode == null) return;
+
+    print('🖤 [AutoMode] Usando Fruta Nuty Negra');
+
+    // Sorteia um tipo aleatório
+    final random = Random();
+    final tipos = Tipo.values.where((t) => t != Tipo.normal).toList();
+    final tipoSorteado = tipos[random.nextInt(tipos.length)];
+
+    // Adiciona kills (mesma lógica do mochila_screen.dart)
+    // Nota: A lógica de progresso diário já está no mochila_screen
+    // Por simplicidade, apenas consumimos a fruta e mostramos mensagem
+
+    // Consome a fruta
+    final item = _mochilaAutoMode!.itens[indiceFruta]!;
+    if (item.quantidade > 1) {
+      _mochilaAutoMode = _mochilaAutoMode!.atualizarItem(
+        indiceFruta,
+        item.copyWith(quantidade: item.quantidade - 1),
+      );
+    } else {
+      _mochilaAutoMode = _mochilaAutoMode!.removerItem(indiceFruta);
+    }
+
+    await _salvarMochilaAutoMode();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🖤 +10 kills de ${tipoSorteado.displayName}!'),
+          backgroundColor: Colors.grey.shade800,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Usa Joia de Reforço ou Recriação no item
+  Future<void> _usarJoiaAutoMode(int indiceJoia, MonstroAventura monstro, bool isRecriacao) async {
+    if (_mochilaAutoMode == null || historiaAtual == null) return;
+
+    final itemAtual = monstro.itemEquipado;
+    if (itemAtual == null) return;
+
+    print('💎 [AutoMode] Usando ${isRecriacao ? "Joia da Recriação" : "Joia de Reforço"} em ${monstro.tipo.displayName}');
+
+    late final Item itemNovo;
+
+    if (isRecriacao) {
+      // Recriação: gera novo item com mesma raridade mas tier atual
+      // Por simplicidade, apenas atualiza o tier (a lógica completa está no mochila_screen)
+      final atributosBase = <String, int>{};
+      itemAtual.atributos.forEach((atributo, valor) {
+        atributosBase[atributo] = (valor / itemAtual.tier).round();
+      });
+
+      final novosAtributos = <String, int>{};
+      atributosBase.forEach((atributo, valorBase) {
+        novosAtributos[atributo] = valorBase * historiaAtual!.tier;
+      });
+
+      itemNovo = itemAtual.copyWith(
+        atributos: novosAtributos,
+        tier: historiaAtual!.tier,
+      );
+    } else {
+      // Reforço: escala os atributos para o tier atual
+      final atributosBase = <String, int>{};
+      itemAtual.atributos.forEach((atributo, valor) {
+        atributosBase[atributo] = (valor / itemAtual.tier).round();
+      });
+
+      final novosAtributos = <String, int>{};
+      atributosBase.forEach((atributo, valorBase) {
+        novosAtributos[atributo] = valorBase * historiaAtual!.tier;
+      });
+
+      itemNovo = itemAtual.copyWith(
+        atributos: novosAtributos,
+        tier: historiaAtual!.tier,
+      );
+    }
+
+    // Atualiza o monstro com o item novo
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+        return m.copyWith(itemEquipado: itemNovo);
+      }
+      return m;
+    }).toList();
+
+    // Consome a joia
+    final item = _mochilaAutoMode!.itens[indiceJoia]!;
+    if (item.quantidade > 1) {
+      _mochilaAutoMode = _mochilaAutoMode!.atualizarItem(
+        indiceJoia,
+        item.copyWith(quantidade: item.quantidade - 1),
+      );
+    } else {
+      _mochilaAutoMode = _mochilaAutoMode!.removerItem(indiceJoia);
+    }
+
+    // Salva tudo
+    final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+    final repository = ref.read(aventuraRepositoryProvider);
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+    await _salvarMochilaAutoMode();
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💎 ${itemAtual.nome} reforçado de Tier ${itemAtual.tier} para Tier ${itemNovo.tier}!'),
+          backgroundColor: Colors.blue,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Usa poção para renascer monstro morto com vantagem
+  Future<bool> _usarPocaoParaRenascerAutoMode() async {
+    if (_mochilaAutoMode == null || historiaAtual == null) return false;
+
+    final inimigosVivos = monstrosParaExibir.where((i) => i.vidaAtual > 0).toList();
+    if (inimigosVivos.isEmpty) return false;
+
+    final resultado = await _autoModeService.selecionarPocaoParaRenascer(
+      _mochilaAutoMode!,
+      historiaAtual!.monstros,
+      inimigosVivos,
+    );
+
+    if (resultado == null) return false;
+
+    print('🧪 [AutoMode] Usando poção para renascer ${resultado.monstro.tipo.displayName}');
+
+    // Calcula cura
+    final monstro = resultado.monstro;
+    final curaTotal = (monstro.vida * resultado.porcentagemCura / 100).round();
+    final novaVidaAtual = curaTotal.clamp(1, monstro.vida); // Mínimo 1 de vida
+
+    // Atualiza o monstro
+    final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+      if (m.tipo == monstro.tipo && m.level == monstro.level && m.tipoExtra == monstro.tipoExtra) {
+        return m.copyWith(vidaAtual: novaVidaAtual);
+      }
+      return m;
+    }).toList();
+
+    // Consome a poção
+    final item = _mochilaAutoMode!.itens[resultado.indicePocao]!;
+    if (item.quantidade > 1) {
+      _mochilaAutoMode = _mochilaAutoMode!.atualizarItem(
+        resultado.indicePocao,
+        item.copyWith(quantidade: item.quantidade - 1),
+      );
+    } else {
+      _mochilaAutoMode = _mochilaAutoMode!.removerItem(resultado.indicePocao);
+    }
+
+    // Salva tudo
+    final historiaAtualizada = historiaAtual!.copyWith(monstros: monstrosAtualizados);
+    final repository = ref.read(aventuraRepositoryProvider);
+    await repository.salvarHistoricoJogadorLocal(historiaAtualizada);
+    await _salvarMochilaAutoMode();
+
+    if (mounted) {
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('🧪 ${monstro.tipo.displayName} renasceu com ${resultado.porcentagemCura}% de vida!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    return true;
   }
 
   Future<void> _avancarTier() async {
@@ -1636,19 +3317,42 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       print('🏯 [MapaAventura] Tier avançado! Novo tier: ${historiaAtualizada.tier}, Score: ${historiaAtualizada.score}');
 
       // Mostra modal de transição tier 11 se aplicável
+      // Aguarda o usuário fechar o dialog antes de continuar (para não interromper auto mode)
       if (estaTransitandoParaTier11 && mounted) {
         print('📢 [MapaAventura] Mostrando modal de transição para tier ${ScoreConfig.SCORE_TIER_TRANSICAO}');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: false, // Usuário deve ler a mensagem
-              builder: (context) => ModalTier11Transicao(
+
+        // No auto mode, fecha automaticamente após 3 segundos
+        if (_modoAutoAtivo) {
+          print('🤖 [AutoMode] Modal tier 11 - fechando automaticamente em 3 segundos...');
+          final dialogNavigator = Navigator.of(context);
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              // Auto-fecha após 3 segundos
+              Future.delayed(const Duration(seconds: 3), () {
+                if (dialogNavigator.canPop()) {
+                  dialogNavigator.pop();
+                }
+              });
+              return ModalTier11Transicao(
                 scoreAtual: scoreAntesDaTransicao,
-              ),
-            );
-          }
-        });
+              );
+            },
+          );
+          // Aguarda o tempo do auto-close
+          await Future.delayed(const Duration(seconds: 3, milliseconds: 100));
+        } else {
+          // Modo manual - aguarda o usuário clicar
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => ModalTier11Transicao(
+              scoreAtual: scoreAntesDaTransicao,
+            ),
+          );
+        }
+        print('📢 [MapaAventura] Modal tier 11 fechado, continuando...');
       }
 
     } catch (e) {
@@ -1696,9 +3400,187 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       final chavePassivas = 'ganandius_passivas_sorteadas_tier_$tier';
       await prefs.remove(chavePassivas);
 
+      // Remove flag de auto mode usado
+      final chaveAutoModeUsado = 'ganandius_automode_usado_${emailJogador}_tier_$tier';
+      await prefs.remove(chaveAutoModeUsado);
+
       print('🧹 [GANANDIUS] Dados do tier 11 limpos - despertar gratuito disponível novamente!');
     } catch (e) {
       print('❌ [GANANDIUS] Erro ao limpar dados do tier 11: $e');
+    }
+  }
+
+  /// Verifica se o tier atual tem o NPC Ganandius (11, 21, 31, 41, etc.)
+  bool _tierTemGanandius() {
+    final tierAtual = historiaAtual?.tier ?? 1;
+    return tierAtual >= 11 && (tierAtual - 11) % 10 == 0;
+  }
+
+  /// Interação automática com Ganandius no auto mode
+  /// Prioridade das passivas: crítico > sortudo > mercador > esquiva
+  Future<void> _interagirComGanandiusAutoMode() async {
+    if (historiaAtual == null) return;
+
+    // Verifica se estamos em um tier com Ganandius
+    if (!_tierTemGanandius()) {
+      return;
+    }
+
+    print('🔮 [AutoMode/Ganandius] Tier ${historiaAtual!.tier} tem Ganandius!');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final emailJogador = ref.read(validUserEmailProvider);
+      final tierAtual = historiaAtual!.tier;
+
+      // Verifica se já usou o Ganandius neste tier (no auto mode)
+      final chaveAutoModeUsado = 'ganandius_automode_usado_${emailJogador}_tier_$tierAtual';
+      final jaUsouAutoMode = prefs.getBool(chaveAutoModeUsado) ?? false;
+
+      if (jaUsouAutoMode) {
+        print('🔮 [AutoMode/Ganandius] Já usou Ganandius neste tier no auto mode');
+        return;
+      }
+
+      // Conta quantas passivas a equipe já tem
+      final totalPassivas = historiaAtual!.monstros
+          .where((m) => m.passiva != null)
+          .length;
+
+      // Se já tem 3 passivas (1 por monstro), não usa mais Ganandius
+      if (totalPassivas >= 3) {
+        print('🔮 [AutoMode/Ganandius] Equipe já tem $totalPassivas passivas (máximo atingido)');
+        await prefs.setBool(chaveAutoModeUsado, true);
+        return;
+      }
+
+      // Verifica se tem algum monstro sem passiva
+      final monstrosSemPassiva = historiaAtual!.monstros
+          .where((m) => m.passiva == null)
+          .toList();
+
+      if (monstrosSemPassiva.isEmpty) {
+        print('🔮 [AutoMode/Ganandius] Todos os monstros já têm passiva');
+        await prefs.setBool(chaveAutoModeUsado, true);
+        return;
+      }
+
+      print('🔮 [AutoMode/Ganandius] ${monstrosSemPassiva.length} monstro(s) sem passiva ($totalPassivas/3 passivas)');
+
+      // IMPORTANTE: No auto mode, só usa Ganandius GRATUITO (tier 11)
+      // Não gasta score em compras pagas (tier 21+)
+      final chaveGratuito = 'ganandius_gratuito_${emailJogador}_tier_$tierAtual';
+      final jaPegouGratuito = prefs.getBool(chaveGratuito) ?? false;
+
+      // Tier 11: gratuito (apenas uma vez)
+      if (tierAtual == 11 && !jaPegouGratuito) {
+        print('🔮 [AutoMode/Ganandius] Tier 11 - usando despertar GRATUITO');
+        // Continua para aplicar passiva
+      } else {
+        // Tier 11 já usou gratuito OU tier 21+ (pago)
+        // Auto mode NÃO gasta score em Ganandius
+        print('🔮 [AutoMode/Ganandius] Tier ${tierAtual} - despertar PAGO, pulando (auto mode não gasta score)');
+        await prefs.setBool(chaveAutoModeUsado, true);
+        return;
+      }
+
+      final custoDespertar = 0; // Só usa gratuito no auto mode
+
+      print('🔮 [AutoMode/Ganandius] Custo: $custoDespertar, Score: ${historiaAtual!.score}');
+
+      // Busca passivas já equipadas na equipe
+      final passivasEquipadas = historiaAtual!.monstros
+          .where((m) => m.passiva != null)
+          .map((m) => m.passiva!.tipo)
+          .toSet();
+
+      // Prioridade: crítico > sortudo > mercador > esquiva
+      // (curaDeBatalha não está na lista de prioridade do usuário)
+      final prioridadePassivas = [
+        TipoPassiva.critico,
+        TipoPassiva.sortudo,
+        TipoPassiva.mercador,
+        TipoPassiva.esquiva,
+        TipoPassiva.curaDeBatalha, // Menor prioridade
+      ];
+
+      // Encontra a melhor passiva disponível (não equipada)
+      TipoPassiva? melhorPassiva;
+      for (final passiva in prioridadePassivas) {
+        if (!passivasEquipadas.contains(passiva)) {
+          melhorPassiva = passiva;
+          break;
+        }
+      }
+
+      if (melhorPassiva == null) {
+        print('🔮 [AutoMode/Ganandius] Todas as passivas prioritárias já estão equipadas');
+        await prefs.setBool(chaveAutoModeUsado, true);
+        return;
+      }
+
+      print('🔮 [AutoMode/Ganandius] Melhor passiva disponível: ${melhorPassiva.nome}');
+
+      // Escolhe o primeiro monstro sem passiva
+      final monstroAlvo = monstrosSemPassiva.first;
+      print('🔮 [AutoMode/Ganandius] Monstro alvo: ${monstroAlvo.nome}');
+
+      // Aplica a passiva
+      final novaPassiva = Passiva(tipo: melhorPassiva);
+      final novoScore = historiaAtual!.score - custoDespertar;
+
+      // Atualiza o monstro com a nova passiva
+      final monstrosAtualizados = historiaAtual!.monstros.map((m) {
+        if (m.tipo == monstroAlvo.tipo && m.level == monstroAlvo.level && m.passiva == null) {
+          return m.copyWith(passiva: novaPassiva);
+        }
+        return m;
+      }).toList();
+
+      // Atualiza a história
+      final historiaAtualizada = historiaAtual!.copyWith(
+        score: novoScore,
+        monstros: monstrosAtualizados,
+      );
+
+      // Salva no repositório
+      final repository = ref.read(aventuraRepositoryProvider);
+      await repository.salvarHistoricoJogador(historiaAtualizada);
+
+      // Atualiza estado local
+      setState(() {
+        historiaAtual = historiaAtualizada;
+      });
+
+      // Atualiza flags
+      if (tierAtual == 11 && !jaPegouGratuito) {
+        await prefs.setBool(chaveGratuito, true);
+      } else if (tierAtual >= 21) {
+        final runId = historiaAtual!.runId;
+        final chaveCompras = 'ganandius_compras_${emailJogador}_run_$runId';
+        final comprasRealizadas = prefs.getInt(chaveCompras) ?? 0;
+        await prefs.setInt(chaveCompras, comprasRealizadas + 1);
+      }
+
+      // Marca que usou no auto mode neste tier
+      await prefs.setBool(chaveAutoModeUsado, true);
+
+      print('✅ [AutoMode/Ganandius] ${monstroAlvo.nome} recebeu passiva "${melhorPassiva.nome}"!');
+      print('✅ [AutoMode/Ganandius] Score: $novoScore (gastou $custoDespertar)');
+
+      // Mostra notificação
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🔮 ${monstroAlvo.nome} despertou "${melhorPassiva.nome}"!'),
+            backgroundColor: Colors.deepPurple,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+    } catch (e) {
+      print('❌ [AutoMode/Ganandius] Erro: $e');
     }
   }
 

@@ -256,6 +256,14 @@ class GoogleDriveService {
   /// Verifica se está conectado ao Drive
   bool get isConectado => _isConnected && _driveService != null;
 
+  /// Getter público para acessar o DriveService diretamente (quando necessário)
+  DriveService get driveService {
+    if (_driveService == null) {
+      throw Exception('DriveService não inicializado. Chame inicializarConexao() primeiro.');
+    }
+    return _driveService!;
+  }
+
   /// Desconecta do Drive
   Future<void> desconectar() async {
     _driveService = null;
