@@ -1,20 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/item_consumivel.dart';
 
-class ModalItemConsumivel extends StatelessWidget {
+class ModalItemConsumivel extends StatefulWidget {
   final ItemConsumivel item;
   final VoidCallback? onUsar;
+  final void Function(int quantidade)? onUsarComQuantidade;
   final VoidCallback? onDescartar;
 
   const ModalItemConsumivel({
     super.key,
     required this.item,
     this.onUsar,
+    this.onUsarComQuantidade,
     this.onDescartar,
   });
 
   @override
+  State<ModalItemConsumivel> createState() => _ModalItemConsumivelState();
+}
+
+class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
+  int _quantidadeSelecionada = 1;
+  final TextEditingController _quantidadeController = TextEditingController(text: '1');
+
+  bool get _mostrarSeletorQuantidade =>
+      widget.item.tipo == TipoItemConsumivel.ovoEvento ||
+      widget.item.tipo == TipoItemConsumivel.moedaChave;
+
+  @override
+  void dispose() {
+    _quantidadeController.dispose();
+    super.dispose();
+  }
+
+  void _atualizarQuantidade(int novaQuantidade) {
+    final max = widget.item.quantidade;
+    final valorFinal = novaQuantidade.clamp(1, max);
+    setState(() {
+      _quantidadeSelecionada = valorFinal;
+      _quantidadeController.text = valorFinal.toString();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     return Dialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
@@ -203,6 +234,125 @@ class ModalItemConsumivel extends StatelessWidget {
               ),
             ),
 
+            // Seletor de quantidade (para ovo de evento e moeda chave)
+            if (_mostrarSeletorQuantidade && item.quantidade > 1) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  border: Border(
+                    top: BorderSide(color: Colors.amber.shade200, width: 1),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Quantidade a usar (máx: ${item.quantidade})',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Botão diminuir
+                        IconButton(
+                          onPressed: _quantidadeSelecionada > 1
+                              ? () => _atualizarQuantidade(_quantidadeSelecionada - 1)
+                              : null,
+                          icon: const Icon(Icons.remove_circle),
+                          color: Colors.amber.shade700,
+                          iconSize: 32,
+                        ),
+                        const SizedBox(width: 8),
+                        // Campo de texto para quantidade
+                        SizedBox(
+                          width: 70,
+                          child: TextField(
+                            controller: _quantidadeController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 10,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.amber.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.amber.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.amber.shade700, width: 2),
+                              ),
+                            ),
+                            onChanged: (value) {
+                              final parsed = int.tryParse(value);
+                              if (parsed != null) {
+                                _atualizarQuantidade(parsed);
+                              }
+                            },
+                            onSubmitted: (value) {
+                              final parsed = int.tryParse(value);
+                              if (parsed != null) {
+                                _atualizarQuantidade(parsed);
+                              } else {
+                                _atualizarQuantidade(1);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Botão aumentar
+                        IconButton(
+                          onPressed: _quantidadeSelecionada < item.quantidade
+                              ? () => _atualizarQuantidade(_quantidadeSelecionada + 1)
+                              : null,
+                          icon: const Icon(Icons.add_circle),
+                          color: Colors.amber.shade700,
+                          iconSize: 32,
+                        ),
+                        const SizedBox(width: 8),
+                        // Botão MAX
+                        ElevatedButton(
+                          onPressed: () => _atualizarQuantidade(item.quantidade),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'MAX',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Botões de ação
             Container(
               padding: const EdgeInsets.all(20),
@@ -215,11 +365,11 @@ class ModalItemConsumivel extends StatelessWidget {
               child: Row(
                 children: [
                   // Botão Descartar (apenas ícone)
-                  if (onDescartar != null)
+                  if (widget.onDescartar != null)
                     IconButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        onDescartar?.call();
+                        widget.onDescartar?.call();
                       },
                       icon: const Icon(Icons.delete_outline),
                       color: Colors.red,
@@ -234,16 +384,20 @@ class ModalItemConsumivel extends StatelessWidget {
                       ),
                     ),
 
-                  if (onDescartar != null && onUsar != null)
+                  if (widget.onDescartar != null && (widget.onUsar != null || widget.onUsarComQuantidade != null))
                     const SizedBox(width: 12),
 
-                  // Botão Usar
-                  if (onUsar != null)
+                  // Botão Usar (com quantidade se aplicável)
+                  if (widget.onUsar != null || widget.onUsarComQuantidade != null)
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          onUsar?.call();
+                          if (_mostrarSeletorQuantidade && widget.onUsarComQuantidade != null) {
+                            widget.onUsarComQuantidade!(_quantidadeSelecionada);
+                          } else {
+                            widget.onUsar?.call();
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: item.raridade.cor,
@@ -254,9 +408,11 @@ class ModalItemConsumivel extends StatelessWidget {
                           ),
                           elevation: 2,
                         ),
-                        child: const Text(
-                          'USAR',
-                          style: TextStyle(
+                        child: Text(
+                          _mostrarSeletorQuantidade && item.quantidade > 1
+                              ? 'USAR $_quantidadeSelecionada'
+                              : 'USAR',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -265,7 +421,7 @@ class ModalItemConsumivel extends StatelessWidget {
                     ),
 
                   // Botão Fechar (se não tem ações)
-                  if (onUsar == null && onDescartar == null)
+                  if (widget.onUsar == null && widget.onUsarComQuantidade == null && widget.onDescartar == null)
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),

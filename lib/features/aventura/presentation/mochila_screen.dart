@@ -130,15 +130,26 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     // Verifica se é item permanente de evento (não pode ser descartado)
     final podeDescartar = item.tipo != TipoItemConsumivel.ovoEvento &&
                           item.tipo != TipoItemConsumivel.moedaEvento;
-    // Moeda de evento não pode ser usada, apenas ovos (se quantidade > 0)
+    // Moeda de evento não pode ser usada, apenas ovos e chaves (se quantidade > 0)
     final podeUsar = item.tipo != TipoItemConsumivel.moedaEvento && item.quantidade > 0;
+
+    // Verifica se é item que usa seletor de quantidade
+    final usaSeletorQuantidade = item.tipo == TipoItemConsumivel.ovoEvento ||
+                                  item.tipo == TipoItemConsumivel.moedaChave;
 
     showDialog(
       context: context,
       builder: (context) => ModalItemConsumivel(
         item: item,
-        onUsar: podeUsar ? () {
+        onUsar: podeUsar && !usaSeletorQuantidade ? () {
           _usarItem(index);
+        } : null,
+        onUsarComQuantidade: podeUsar && usaSeletorQuantidade ? (quantidade) {
+          if (item.tipo == TipoItemConsumivel.ovoEvento) {
+            _usarOvoEvento(quantidade);
+          } else if (item.tipo == TipoItemConsumivel.moedaChave) {
+            _usarMoedaChave(quantidade);
+          }
         } : null,
         onDescartar: podeDescartar ? () {
           _descartarItem(index);
@@ -192,7 +203,13 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
 
     if (item.tipo == TipoItemConsumivel.ovoEvento) {
       print('🥚 [MochilaScreen] Item é OVO EVENTO');
-      await _usarOvoEvento();
+      await _usarOvoEvento(1);
+      return;
+    }
+
+    if (item.tipo == TipoItemConsumivel.moedaChave) {
+      print('🔑 [MochilaScreen] Item é MOEDA CHAVE');
+      await _usarMoedaChave(1);
       return;
     }
 
@@ -200,14 +217,14 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     await _consumirItem(index, item, mensagem: '${item.nome} usado!');
   }
 
-  Future<void> _usarOvoEvento() async {
+  Future<void> _usarOvoEvento(int quantidade) async {
     if (mochila == null) return;
 
     final user = ref.read(currentUserProvider);
     if (user == null || user.email == null) return;
 
-    // Remove 1 ovo
-    final mochilaAtualizada = mochila!.removerOvoEvento(1);
+    // Remove a quantidade de ovos
+    final mochilaAtualizada = mochila!.removerOvoEvento(quantidade);
     if (mochilaAtualizada == null) {
       _mostrarSnack('Você não tem ovos suficientes!', erro: true);
       return;
@@ -221,7 +238,45 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
 
     // TODO: Adicionar aqui a lógica de usar o ovo (abrir surpresa, etc)
-    _mostrarSnack('Ovo do Evento usado! (Em breve: surpresa)');
+    final plural = quantidade > 1 ? 'Ovos do Evento usados' : 'Ovo do Evento usado';
+    _mostrarSnack('$plural ($quantidade)! (Em breve: surpresa)');
+  }
+
+  Future<void> _usarMoedaChave(int quantidade) async {
+    if (mochila == null) return;
+
+    final user = ref.read(currentUserProvider);
+    if (user == null || user.email == null) return;
+
+    // Verifica se tem moedas chave suficientes
+    final moedaChaveAtual = mochila!.itens[Mochila.slotMoedaChave];
+    if (moedaChaveAtual == null || moedaChaveAtual.quantidade < quantidade) {
+      _mostrarSnack('Você não tem moedas chave suficientes!', erro: true);
+      return;
+    }
+
+    // Remove a quantidade de moedas chave
+    final novaQuantidade = moedaChaveAtual.quantidade - quantidade;
+    final novosItens = List<ItemConsumivel?>.from(mochila!.itens);
+
+    if (novaQuantidade <= 0) {
+      novosItens[Mochila.slotMoedaChave] = null;
+    } else {
+      novosItens[Mochila.slotMoedaChave] = moedaChaveAtual.copyWith(quantidade: novaQuantidade);
+    }
+
+    final mochilaAtualizada = mochila!.copyWith(itens: novosItens);
+
+    // Salva mochila
+    setState(() {
+      mochila = mochilaAtualizada;
+    });
+
+    await MochilaService.salvarMochila(context, user.email!, mochilaAtualizada);
+
+    // TODO: Adicionar aqui a lógica de usar a moeda chave
+    final plural = quantidade > 1 ? 'Moedas Chave usadas' : 'Moeda Chave usada';
+    _mostrarSnack('$plural ($quantidade)! (Em breve: recompensa)');
   }
 
   Future<void> _usarPocao(int index, ItemConsumivel item) async {
