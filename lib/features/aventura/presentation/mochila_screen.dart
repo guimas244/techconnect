@@ -336,8 +336,7 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
     if (user == null || user.email == null) return;
 
     // Verifica se tem jaulinha
-    final jaulinhaAtual = mochila!.itens[Mochila.slotJaulinha];
-    if (jaulinhaAtual == null || jaulinhaAtual.quantidade < 1) {
+    if (mochila!.quantidadeJaulinha < 1) {
       _mostrarSnack('Você não tem Jaulinhas!', erro: true);
       return;
     }
@@ -1567,135 +1566,7 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
       );
     }
 
-    // Slot de jaulinha (index 29 - 6º da linha 5) - sempre visível, clicável para detalhes
-    if (index == Mochila.slotJaulinha) {
-      final jaulinha = item;
-      final quantidade = jaulinha?.quantidade ?? 0;
-
-      // Cria item temporário se não existir (para permitir clique mesmo com quantidade 0)
-      final jaulinhaParaMostrar = jaulinha ?? ItemConsumivel(
-        id: 'jaulinha',
-        nome: 'Jaulinha',
-        descricao: 'Permite mudar o tipo principal de um monstro. Selecione um monstro e escolha seu novo tipo!',
-        tipo: TipoItemConsumivel.jaulinha,
-        iconPath: 'assets/eventos/halloween/jaulinha.png',
-        quantidade: 0,
-        raridade: RaridadeConsumivel.impossivel,
-      );
-
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _mostrarDetalhesItem(jaulinhaParaMostrar, index),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFFD32F2F), // Vermelho para a jaulinha (impossível)
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD32F2F).withOpacity(0.3),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // Imagem da jaulinha
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Image.asset(
-                      'assets/eventos/halloween/jaulinha.png',
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.pets,
-                          size: 30,
-                          color: Color(0xFFD32F2F),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Badge de quantidade estilo estrela de level
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFD32F2F),
-                          const Color(0xFFE57373),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: const Color(0xFFFFCDD2),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
-                          blurRadius: 4,
-                          offset: const Offset(1, 1),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '$quantidade',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black,
-                            offset: Offset(1, 1),
-                            blurRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Ícone de permanente (canto superior esquerdo)
-                Positioned(
-                  left: 4,
-                  top: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.lock,
-                      size: 12,
-                      color: Color(0xFFD32F2F),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    // Jaulinha agora usa slot comum - não tem mais slot fixo
 
     // Slot bloqueado
     if (isBloqueado) {
@@ -1891,6 +1762,8 @@ class _MochilaScreenState extends ConsumerState<MochilaScreen> {
         return Icons.vpn_key;
       case TipoItemConsumivel.jaulinha:
         return Icons.pets;
+      case TipoItemConsumivel.nuty:
+        return Icons.monetization_on;
     }
   }
 }
@@ -1921,10 +1794,8 @@ class _ModalJaulinhaState extends State<_ModalJaulinha> {
   // Índice atual de imagem para cada tipo (para animação de alternância)
   final Map<Tipo, int> _indiceImagemPorTipo = {};
 
-  // Lista de tipos disponíveis (exclui alguns tipos especiais)
-  final List<Tipo> _tiposDisponiveis = Tipo.values.where((t) =>
-    t != Tipo.desconhecido && t != Tipo.deus
-  ).toList();
+  // Lista de tipos disponíveis (todos os 30 tipos)
+  final List<Tipo> _tiposDisponiveis = Tipo.values.toList();
 
   @override
   void initState() {

@@ -23,6 +23,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _connectionStatus = 'Não conectado ao Google Drive';
   final GoogleDriveService _driveService = GoogleDriveService();
   final GameConfigService _gameConfigService = GameConfigService();
+  GameConfig? _gameConfig;
   double _multiplicadorDrop = 1.0;
   bool _carregandoConfig = false;
 
@@ -41,6 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final config = await _gameConfigService.carregarConfiguracao();
       if (mounted) {
         setState(() {
+          _gameConfig = config;
           _multiplicadorDrop = config.multiplicadorDrop;
           _carregandoConfig = false;
         });
@@ -51,6 +53,216 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         setState(() => _carregandoConfig = false);
       }
     }
+  }
+
+  void _mostrarModalDrops() {
+    final config = _gameConfig ?? GameConfig.padrao();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Colors.amber.shade600),
+            const SizedBox(width: 8),
+            const Text('Chances de Drop'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Multiplicador atual
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _multiplicadorDrop > 1
+                      ? Colors.amber.shade50
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _multiplicadorDrop > 1
+                        ? Colors.amber.shade300
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Multiplicador Atual:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${_multiplicadorDrop.toStringAsFixed(_multiplicadorDrop % 1 == 0 ? 0 : 1)}x',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _multiplicadorDrop > 1
+                            ? Colors.amber.shade800
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Base -> Atual',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const Divider(),
+              // Lista de drops (ativos e inativos)
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: config.drops.map((drop) {
+                      final chanceBase = drop.chance;
+                      final estaAtivo = drop.ativo;
+                      final chanceAtual = estaAtivo ? chanceBase * _multiplicadorDrop : 0.0;
+                      final corCategoria = _corCategoria(drop.categoria);
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Opacity(
+                          opacity: estaAtivo ? 1.0 : 0.5,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: estaAtivo ? corCategoria : Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  drop.nome,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    decoration: estaAtivo ? null : TextDecoration.lineThrough,
+                                    color: estaAtivo ? null : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${_formatarChance(chanceBase)}%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward,
+                                size: 12,
+                                color: estaAtivo
+                                    ? (_multiplicadorDrop > 1
+                                        ? Colors.amber.shade600
+                                        : Colors.grey.shade400)
+                                    : Colors.red.shade300,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                estaAtivo
+                                    ? '${_formatarChance(chanceAtual)}%'
+                                    : '0%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: estaAtivo
+                                      ? (_multiplicadorDrop > 1
+                                          ? Colors.amber.shade700
+                                          : Colors.grey.shade700)
+                                      : Colors.red.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Legenda
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  _buildLegendaItem('Drop', Colors.blue),
+                  _buildLegendaItem('Evento', Colors.purple),
+                  _buildLegendaItem('Andar', Colors.green),
+                  _buildLegendaItem('Inativo', Colors.grey, isInativo: true),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _corCategoria(String categoria) {
+    switch (categoria) {
+      case 'drop':
+        return Colors.blue;
+      case 'evento':
+        return Colors.purple;
+      case 'andar':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatarChance(double chance) {
+    if (chance >= 1) {
+      return chance.toStringAsFixed(chance % 1 == 0 ? 0 : 1);
+    } else {
+      return chance.toStringAsFixed(2);
+    }
+  }
+
+  Widget _buildLegendaItem(String label, Color cor, {bool isInativo = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: cor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey.shade600,
+            decoration: isInativo ? TextDecoration.lineThrough : null,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _checkDriveConnection() async {
@@ -390,75 +602,84 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Colors.grey.shade300,
                       margin: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    // Coluna 2: Info de drops
+                    // Coluna 2: Info de drops (clicável)
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: _multiplicadorDrop > 1 ? Colors.amber.shade600 : Colors.grey.shade500,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'DROP',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2D3748),
-                                  letterSpacing: 1,
+                      child: GestureDetector(
+                        onTap: _mostrarModalDrops,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: _multiplicadorDrop > 1 ? Colors.amber.shade600 : Colors.grey.shade500,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'DROP',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2D3748),
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _multiplicadorDrop > 1
+                                    ? Colors.amber.shade100
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _multiplicadorDrop > 1
+                                      ? Colors.amber.shade400
+                                      : Colors.grey.shade400,
+                                  width: 1.5,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _multiplicadorDrop > 1
-                                  ? Colors.amber.shade100
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
+                              child: _carregandoConfig
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      '${_multiplicadorDrop.toStringAsFixed(_multiplicadorDrop % 1 == 0 ? 0 : 1)}x',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: _multiplicadorDrop > 1
+                                            ? Colors.amber.shade800
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _multiplicadorDrop > 1 ? 'Bônus ativo!' : 'Toque para ver',
+                              style: TextStyle(
+                                fontSize: 10,
                                 color: _multiplicadorDrop > 1
-                                    ? Colors.amber.shade400
-                                    : Colors.grey.shade400,
-                                width: 1.5,
+                                    ? Colors.amber.shade700
+                                    : Colors.grey.shade500,
+                                fontWeight: _multiplicadorDrop > 1 ? FontWeight.bold : FontWeight.normal,
                               ),
                             ),
-                            child: _carregandoConfig
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : Text(
-                                    '${_multiplicadorDrop.toStringAsFixed(_multiplicadorDrop % 1 == 0 ? 0 : 1)}x',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: _multiplicadorDrop > 1
-                                          ? Colors.amber.shade800
-                                          : Colors.grey.shade700,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _multiplicadorDrop > 1 ? 'Bônus ativo!' : 'Normal',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: _multiplicadorDrop > 1
-                                  ? Colors.amber.shade700
-                                  : Colors.grey.shade500,
-                              fontWeight: _multiplicadorDrop > 1 ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],

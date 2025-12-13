@@ -7,7 +7,7 @@ import '../models/item_consumivel.dart';
 class MochilaService {
   static const String _boxName = 'mochila_box';
   static const String _migrationBoxName = 'app_migration';
-  static const String _currentVersion = '2.3.2';
+  static const String _currentVersion = '2.4.1';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
@@ -22,7 +22,7 @@ class MochilaService {
 
       if (conteudo == null) {
         print('📭 [MochilaService] Mochila não encontrada, criando nova');
-        final mochilaNova = Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto().inicializarJaulinha();
+        final mochilaNova = Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto();
         // Salva a mochila vazia
         await _salvarNoHive(emailLimpo, mochilaNova);
         return mochilaNova;
@@ -42,7 +42,7 @@ class MochilaService {
         mochila = Mochila.fromJson(Map<String, dynamic>.from(conteudo));
       } else {
         print('⚠️ [MochilaService] Formato desconhecido, criando nova mochila');
-        return Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto().inicializarJaulinha();
+        return Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto();
       }
 
       // Aplica migrações se necessário
@@ -51,7 +51,7 @@ class MochilaService {
     } catch (e, stack) {
       print('❌ [MochilaService] Erro ao carregar mochila: $e');
       print(stack);
-      return Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto().inicializarJaulinha();
+      return Mochila().inicializarOvoEvento().inicializarMoedaChave().inicializarChaveAuto();
     }
   }
 
@@ -136,8 +136,7 @@ class MochilaService {
     // Migração 2.4.0: Inicializa slot da Chave Auto
     mochilaAtual = await _aplicarMigracao2_4_0(emailLimpo, mochilaAtual);
 
-    // Migração 2.5.0: Inicializa slot da Jaulinha (3 para teste)
-    mochilaAtual = await _aplicarMigracao2_5_0(emailLimpo, mochilaAtual);
+    // Jaulinha não precisa de migração - dropa normalmente no jogo
 
     return mochilaAtual;
   }
@@ -272,39 +271,4 @@ class MochilaService {
     }
   }
 
-  /// Migração 2.5.0: Inicializa slot da Jaulinha (3 para teste)
-  static Future<Mochila> _aplicarMigracao2_5_0(String emailLimpo, Mochila mochila) async {
-    try {
-      final migrationBox = await Hive.openBox(_migrationBoxName);
-      final chave = 'migrated_2_5_0_$emailLimpo';
-
-      // Verifica se já foi migrado
-      final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
-
-      if (jaMigrado) {
-        print('✅ [MochilaService] Migração 2.5.0 já foi aplicada anteriormente');
-        return mochila;
-      }
-
-      print('🔄 [MochilaService] Aplicando migração 2.5.0: Inicializando slot da Jaulinha');
-
-      // Inicializa o slot da Jaulinha (com 3 para teste)
-      final mochilaMigrada = mochila.inicializarJaulinha();
-
-      // Salva a mochila migrada
-      await _salvarNoHive(emailLimpo, mochilaMigrada);
-
-      // Marca como migrado
-      await migrationBox.put(chave, true);
-
-      print('✅ [MochilaService] Migração 2.5.0 concluída com sucesso');
-      return mochilaMigrada;
-
-    } catch (e, stack) {
-      print('❌ [MochilaService] Erro na migração 2.5.0: $e');
-      print(stack);
-      // Em caso de erro, retorna a mochila original
-      return mochila;
-    }
-  }
 }

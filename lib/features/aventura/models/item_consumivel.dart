@@ -85,6 +85,7 @@ enum TipoItemConsumivel {
   moedaChave, // Moeda Chave (começa a dropar em 01/11)
   chaveAuto, // Chave Auto - ativa auto mode por 2 andares
   jaulinha, // Jaulinha - permite mudar o tipo principal de um monstro
+  nuty, // Nuty - moeda especial do Ganandius ganha a cada 30 andares
 }
 
 enum RaridadeConsumivel {

@@ -449,6 +449,8 @@ class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
         return Icons.vpn_key;
       case TipoItemConsumivel.jaulinha:
         return Icons.pets;
+      case TipoItemConsumivel.nuty:
+        return Icons.monetization_on;
     }
   }
 
@@ -540,6 +542,8 @@ class _ModalItemConsumivelState extends State<ModalItemConsumivel> {
         return 'Chave Auto';
       case TipoItemConsumivel.jaulinha:
         return 'Jaulinha';
+      case TipoItemConsumivel.nuty:
+        return 'Nuty';
     }
   }
 }

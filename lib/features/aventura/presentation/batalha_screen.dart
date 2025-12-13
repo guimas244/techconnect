@@ -2155,7 +2155,7 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
       print('[BatalhaScreen] ✅ Moeda chave adicionada! Total: ${mochila.quantidadeMoedaChave}');
     }
 
-    // Adiciona jaulinha (slot 29 - 6º da linha 5)
+    // Adiciona jaulinha (usa slot comum da mochila)
     if (jaulinha > 0) {
       print('[BatalhaScreen] 🐾 Adicionando $jaulinha jaulinha(s) à mochila');
       mochila = mochila.adicionarJaulinha(jaulinha);
@@ -2357,9 +2357,12 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
         final progressoData = jsonDecode(progressoJson) as Map<String, dynamic>;
         final progressoSalvo = ProgressoDiario.fromJson(progressoData);
 
-        // Se é de outro dia, cria novo
+        // Se é de outro dia, finaliza o dia anterior (move kills para histórico) e cria novo
         if (progressoSalvo.data != hoje) {
-          progresso = ProgressoDiario(data: hoje);
+          progresso = progressoSalvo.finalizarDia(hoje);
+          // Salva o progresso atualizado com histórico preservado
+          await prefs.setString('progresso_diario', jsonEncode(progresso.toJson()));
+          print('📊 [Progresso] Dia finalizado, kills movidas para histórico');
         } else {
           progresso = progressoSalvo;
         }

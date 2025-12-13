@@ -3436,6 +3436,8 @@ class _ModalRecompensasBatalhaState extends State<ModalRecompensasBatalha> {
         return Icons.vpn_key;
       case TipoItemConsumivel.jaulinha:
         return Icons.pets;
+      case TipoItemConsumivel.nuty:
+        return Icons.monetization_on;
     }
   }
 

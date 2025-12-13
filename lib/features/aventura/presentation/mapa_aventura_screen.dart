@@ -165,6 +165,16 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
 
         // Verifica se a aventura expirou
         if (historia.aventuraExpirada) {
+          // SALVA NO RANKING ANTES DE REMOVER (para não perder kills/score)
+          if (historia.runId.isNotEmpty && historia.score > 0) {
+            print('🏆 [MapaAventura] Salvando run expirada no ranking antes de remover...');
+            try {
+              await repository.atualizarRankingPorScore(historia);
+              print('✅ [MapaAventura] Run expirada salva no ranking com sucesso!');
+            } catch (e) {
+              print('⚠️ [MapaAventura] Erro ao salvar run expirada no ranking: $e');
+            }
+          }
           print('ÃƒÂ¢Ã‚ÂÃ‚Â° [MapaAventura] Aventura expirada ao carregar mapa!');
           setState(() {
             isLoading = false;
@@ -2196,7 +2206,9 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
     if (!mounted || !_modoAutoAtivo) return;
 
     bool cancelado = false;
+    bool dialogFechado = false;
     int segundosRestantes = 5;
+    bool timerAtivo = false;
 
     final avancar = await showDialog<bool>(
       context: context,
@@ -2204,16 +2216,24 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // Inicia o countdown
-            if (segundosRestantes > 0 && !cancelado) {
+            // Inicia o countdown apenas uma vez por valor de segundosRestantes
+            if (segundosRestantes > 0 && !cancelado && !dialogFechado && !timerAtivo) {
+              timerAtivo = true;
               Future.delayed(const Duration(seconds: 1), () {
-                if (!cancelado && segundosRestantes > 0) {
-                  setDialogState(() {
-                    segundosRestantes--;
-                  });
+                timerAtivo = false;
+                if (!cancelado && !dialogFechado && segundosRestantes > 0) {
+                  try {
+                    setDialogState(() {
+                      segundosRestantes--;
+                    });
+                  } catch (e) {
+                    // Dialog já foi fechado, ignora
+                    return;
+                  }
 
                   // Quando chegar a 0, fecha o dialog
-                  if (segundosRestantes == 0) {
+                  if (segundosRestantes == 0 && !dialogFechado) {
+                    dialogFechado = true;
                     Navigator.of(dialogContext).pop(true); // true = avançar
                   }
                 }
@@ -2284,6 +2304,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                 TextButton(
                   onPressed: () {
                     cancelado = true;
+                    dialogFechado = true;
                     Navigator.of(dialogContext).pop(false); // false = cancelar
                   },
                   child: const Text(
@@ -2296,6 +2317,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
                     backgroundColor: Colors.green,
                   ),
                   onPressed: () {
+                    dialogFechado = true;
                     Navigator.of(dialogContext).pop(true); // true = avançar agora
                   },
                   child: const Text('AVANÇAR AGORA'),
@@ -4150,8 +4172,43 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         mochila = mochila.adicionarChaveAuto(premio.quantidade);
         break;
       case TipoPremio.nuty:
-        // TODO: Implementar slot de Nuty quando necessário
-        // Por enquanto, não faz nada pois ainda não temos o slot de Nuty
+        // Verifica slots livres antes de adicionar
+        final slotsLivres = mochila.slotsLivres;
+        final quantidadeDesejada = premio.quantidade;
+
+        if (slotsLivres == 0) {
+          // Não tem espaço nenhum
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Mochila cheia! Você perdeu a Nuty.'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+
+        if (slotsLivres < quantidadeDesejada) {
+          // Tem espaço parcial - avisa que vai perder algumas
+          final perdidas = quantidadeDesejada - slotsLivres;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Mochila quase cheia! Você ganhou $slotsLivres Nuty(s) mas perdeu $perdidas por falta de espaço.'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+
+        // Adiciona o que couber
+        final mochilaAtualizada = mochila.adicionarNuty(quantidadeDesejada);
+        if (mochilaAtualizada != null) {
+          mochila = mochilaAtualizada;
+        }
         break;
     }
 

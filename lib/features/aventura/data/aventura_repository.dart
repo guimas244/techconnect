@@ -1109,8 +1109,9 @@ class AventuraRepository {
   Future<void> atualizarRankingPorScore(HistoriaJogador historia) async {
     try {
       // Calcula o total de kills (batalhas onde o jogador venceu)
+      // vencedor é 'jogador' quando o jogador vence, 'inimigo' quando perde
       final killsTotais = historia.historicoBatalhas
-          .where((batalha) => batalha.vencedor == batalha.jogadorNome)
+          .where((batalha) => batalha.vencedor == 'jogador')
           .length;
 
       print('🏆 [Repository] Atualizando ranking para: ${historia.email} - Score: ${historia.score} - RunId: ${historia.runId} - Kills: $killsTotais');

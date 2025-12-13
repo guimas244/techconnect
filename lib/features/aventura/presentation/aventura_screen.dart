@@ -121,7 +121,20 @@ class _AventuraScreenState extends ConsumerState<AventuraScreen> {
         if (historia != null) {
           // Verifica se a aventura expirou
           if (historia.aventuraExpirada) {
-            debugPrint('⏰ [AventuraScreen] Aventura expirada, removendo do Hive...');
+            debugPrint('⏰ [AventuraScreen] Aventura expirada!');
+
+            // SALVA NO RANKING ANTES DE REMOVER (para não perder kills/score)
+            if (historia.runId.isNotEmpty && historia.score > 0) {
+              debugPrint('🏆 [AventuraScreen] Salvando run expirada no ranking antes de remover...');
+              try {
+                await repository.atualizarRankingPorScore(historia);
+                debugPrint('✅ [AventuraScreen] Run expirada salva no ranking com sucesso!');
+              } catch (e) {
+                debugPrint('⚠️ [AventuraScreen] Erro ao salvar run expirada no ranking: $e');
+              }
+            }
+
+            debugPrint('🗑️ [AventuraScreen] Removendo aventura expirada do Hive...');
             await repository.removerHistoricoJogador(emailJogador);
 
             if (mounted) {

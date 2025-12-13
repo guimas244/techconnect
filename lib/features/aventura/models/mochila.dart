@@ -1,4 +1,17 @@
+import 'dart:math';
+
 import 'item_consumivel.dart';
+
+/// Imagens disponíveis para Nuty (escolhida aleatoriamente)
+const List<String> _imagensNuty = [
+  'assets/drops/drop_fruta_nuty.png',
+  'assets/drops/drop_fruta_nuty_cristalizada.png',
+  'assets/drops/drop_fruta_nuty_negra.png',
+];
+
+String _getImagemNutyAleatoria() {
+  return _imagensNuty[Random().nextInt(_imagensNuty.length)];
+}
 
 class Mochila {
   final List<ItemConsumivel?> itens; // 30 slots (6x5)
@@ -10,7 +23,7 @@ class Mochila {
   static const int slotOvoEvento = 24; // 1º slot da linha 5 (índice 24) - Ovo de Halloween
   static const int slotMoedaChave = 27; // 4º slot da linha 5 (índice 27) - Moeda Chave
   static const int slotChaveAuto = 28; // 5º slot da linha 5 (índice 28) - Chave Auto
-  static const int slotJaulinha = 29; // 6º slot da linha 5 (índice 29) - Jaulinha
+  // Jaulinha e Nuty não tem slot fixo - usam slots normais da mochila
   // Slots antigos mantidos para compatibilidade de migração
   static const int slotMoedaEventoAntigo = 3; // Slot antigo da moeda de Halloween (será convertido em ovo)
   static const int slotOvoEventoAntigo = 4; // Slot antigo do ovo de Halloween
@@ -315,58 +328,177 @@ class Mochila {
     return copyWith(itens: novosItens);
   }
 
-  // Inicializa chave auto com 1 se não existir (todo jogador começa com 1)
+  // Inicializa chave auto com 0 se não existir (ganha apenas jogando)
   Mochila inicializarChaveAuto() {
     if (itens[slotChaveAuto] == null) {
-      return adicionarChaveAuto(1);
+      return adicionarChaveAuto(0);
     }
     return this;
   }
 
-  // ==================== JAULINHA ====================
+  // ==================== NUTY ====================
+  // Nuty usa slots normais da mochila (cada Nuty ocupa 1 slot)
 
-  // Obtém quantidade de jaulinhas
-  int get quantidadeJaulinha {
-    final jaulinha = itens[slotJaulinha];
-    if (jaulinha != null && jaulinha.tipo == TipoItemConsumivel.jaulinha) {
-      return jaulinha.quantidade;
+  // Conta slots livres na mochila
+  int get slotsLivres {
+    int count = 0;
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      if (itens[i] == null) count++;
     }
-    return 0;
+    return count;
   }
 
-  // Adiciona jaulinhas
-  Mochila adicionarJaulinha(int quantidade) {
+  // Adiciona 1 Nuty em slot livre (retorna null se não tiver espaço)
+  Mochila? adicionarNuty(int quantidade) {
     final novosItens = List<ItemConsumivel?>.from(itens);
-    final jaulinhaAtual = novosItens[slotJaulinha];
+    int adicionados = 0;
 
-    if (jaulinhaAtual != null && jaulinhaAtual.tipo == TipoItemConsumivel.jaulinha) {
-      // Atualiza quantidade existente
-      novosItens[slotJaulinha] = jaulinhaAtual.copyWith(
-        quantidade: jaulinhaAtual.quantidade + quantidade,
+    for (int q = 0; q < quantidade; q++) {
+      // Procura primeiro slot livre
+      int? slotLivre;
+      for (int i = 0; i < slotsDesbloqueados; i++) {
+        if (novosItens[i] == null) {
+          slotLivre = i;
+          break;
+        }
+      }
+
+      if (slotLivre == null) {
+        // Não tem mais espaço
+        break;
+      }
+
+      // Adiciona 1 Nuty no slot livre
+      novosItens[slotLivre] = ItemConsumivel(
+        id: 'nuty_${DateTime.now().millisecondsSinceEpoch}_$q',
+        nome: 'Nuty',
+        descricao: 'Moeda especial do Ganandius! Ganha 1 a cada 30 andares.',
+        tipo: TipoItemConsumivel.nuty,
+        iconPath: _getImagemNutyAleatoria(),
+        quantidade: 1,
+        raridade: RaridadeConsumivel.lendario,
       );
-    } else {
-      // Cria nova jaulinha
-      novosItens[slotJaulinha] = ItemConsumivel(
-        id: 'jaulinha',
-        nome: 'Jaulinha',
-        descricao: 'Permite mudar o tipo principal de um monstro. Selecione um monstro e escolha seu novo tipo!',
-        tipo: TipoItemConsumivel.jaulinha,
-        iconPath: 'assets/eventos/halloween/jaulinha.png',
-        quantidade: quantidade,
-        raridade: RaridadeConsumivel.impossivel,
-      );
+      adicionados++;
+    }
+
+    if (adicionados == 0) {
+      return null; // Não conseguiu adicionar nenhuma
     }
 
     return copyWith(itens: novosItens);
   }
 
+  // Conta quantas Nutys tem na mochila
+  int get quantidadeNuty {
+    int count = 0;
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      final item = itens[i];
+      if (item != null && item.tipo == TipoItemConsumivel.nuty) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // Remove 1 Nuty da mochila (retorna null se não tiver)
+  Mochila? removerNuty(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    int removidos = 0;
+
+    for (int q = 0; q < quantidade; q++) {
+      // Procura primeira Nuty
+      int? slotNuty;
+      for (int i = 0; i < slotsDesbloqueados; i++) {
+        final item = novosItens[i];
+        if (item != null && item.tipo == TipoItemConsumivel.nuty) {
+          slotNuty = i;
+          break;
+        }
+      }
+
+      if (slotNuty == null) {
+        // Não tem mais Nuty
+        break;
+      }
+
+      // Remove a Nuty
+      novosItens[slotNuty] = null;
+      removidos++;
+    }
+
+    if (removidos < quantidade) {
+      return null; // Não tinha Nutys suficientes
+    }
+
+    return copyWith(itens: novosItens);
+  }
+
+  // ==================== JAULINHA ====================
+  // Jaulinha não tem slot fixo - dropa normalmente e usa slots regulares
+
+  // Encontra o índice do slot que contém jaulinha (ou -1 se não existir)
+  int get _slotJaulinha {
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      final item = itens[i];
+      if (item != null && item.tipo == TipoItemConsumivel.jaulinha) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // Obtém quantidade de jaulinhas
+  int get quantidadeJaulinha {
+    final slotIndex = _slotJaulinha;
+    if (slotIndex >= 0) {
+      return itens[slotIndex]!.quantidade;
+    }
+    return 0;
+  }
+
+  // Adiciona jaulinhas (em slot existente ou novo slot livre)
+  Mochila adicionarJaulinha(int quantidade) {
+    final novosItens = List<ItemConsumivel?>.from(itens);
+    final slotIndex = _slotJaulinha;
+
+    if (slotIndex >= 0) {
+      // Atualiza quantidade existente
+      final jaulinhaAtual = novosItens[slotIndex]!;
+      novosItens[slotIndex] = jaulinhaAtual.copyWith(
+        quantidade: jaulinhaAtual.quantidade + quantidade,
+      );
+      return copyWith(itens: novosItens);
+    }
+
+    // Procura primeiro slot livre nos slots desbloqueados
+    for (int i = 0; i < slotsDesbloqueados; i++) {
+      if (novosItens[i] == null) {
+        novosItens[i] = ItemConsumivel(
+          id: 'jaulinha',
+          nome: 'Jaulinha',
+          descricao: 'Permite mudar o tipo principal de um monstro. Selecione um monstro e escolha seu novo tipo!',
+          tipo: TipoItemConsumivel.jaulinha,
+          iconPath: 'assets/eventos/halloween/jaulinha.png',
+          quantidade: quantidade,
+          raridade: RaridadeConsumivel.impossivel,
+        );
+        return copyWith(itens: novosItens);
+      }
+    }
+
+    // Mochila cheia, não adiciona
+    return this;
+  }
+
   // Remove jaulinhas (retorna null se não tiver jaulinhas suficientes)
   Mochila? removerJaulinha(int quantidade) {
-    final jaulinhaAtual = itens[slotJaulinha];
+    final slotIndex = _slotJaulinha;
 
-    if (jaulinhaAtual == null || jaulinhaAtual.tipo != TipoItemConsumivel.jaulinha) {
+    if (slotIndex < 0) {
       return null; // Não tem jaulinha
     }
+
+    final jaulinhaAtual = itens[slotIndex]!;
 
     if (jaulinhaAtual.quantidade < quantidade) {
       return null; // Não tem jaulinhas suficientes
@@ -375,18 +507,14 @@ class Mochila {
     final novosItens = List<ItemConsumivel?>.from(itens);
     final novaQuantidade = jaulinhaAtual.quantidade - quantidade;
 
-    // Mantém a jaulinha mesmo com 0 quantidade
-    novosItens[slotJaulinha] = jaulinhaAtual.copyWith(quantidade: novaQuantidade);
+    if (novaQuantidade <= 0) {
+      // Remove o item completamente se quantidade for 0 ou menos
+      novosItens[slotIndex] = null;
+    } else {
+      novosItens[slotIndex] = jaulinhaAtual.copyWith(quantidade: novaQuantidade);
+    }
 
     return copyWith(itens: novosItens);
-  }
-
-  // Inicializa jaulinha com 3 para teste (será alterado para 0 em produção)
-  Mochila inicializarJaulinha() {
-    if (itens[slotJaulinha] == null) {
-      return adicionarJaulinha(3); // 3 para teste
-    }
-    return this;
   }
 
   /// Migra itens de evento dos slots antigos (3, 4, 5) para os novos slots (24, 27)

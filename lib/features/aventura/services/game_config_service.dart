@@ -159,8 +159,21 @@ class GameConfig {
           chance: 0.5,
           categoria: 'drop',
         ),
+        const DropChanceConfig(
+          id: 'jaulinha',
+          nome: 'Jaulinha',
+          chance: 0.2,
+          categoria: 'drop',
+        ),
 
         // === CONSUMÍVEIS DE EVENTO ===
+        const DropChanceConfig(
+          id: 'moedaEvento',
+          nome: 'Moeda de Evento (Halloween)',
+          chance: 5.0,
+          categoria: 'evento',
+          ativo: false, // Evento inativo
+        ),
         const DropChanceConfig(
           id: 'ovoEvento',
           nome: 'Ovo de Evento',

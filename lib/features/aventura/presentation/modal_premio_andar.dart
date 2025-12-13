@@ -1,4 +1,17 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+
+/// Imagens disponíveis para Nuty (escolhida aleatoriamente)
+const List<String> _imagensNuty = [
+  'assets/drops/drop_fruta_nuty.png',
+  'assets/drops/drop_fruta_nuty_cristalizada.png',
+  'assets/drops/drop_fruta_nuty_negra.png',
+];
+
+String _getImagemNutyAleatoria() {
+  return _imagensNuty[Random().nextInt(_imagensNuty.length)];
+}
 
 /// Tipo de recompensa disponível
 enum TipoPremio {
@@ -39,8 +52,8 @@ class InfoPremio {
   factory InfoPremio.nuty(int andar) => InfoPremio(
         tipo: TipoPremio.nuty,
         nome: 'Nuty',
-        descricao: 'Moeda especial do Ganandius!',
-        iconPath: 'assets/eventos/halloween/nuty.png',
+        descricao: 'Moeda especial do Ganandius! Ganha 1 a cada 30 andares.',
+        iconPath: _getImagemNutyAleatoria(),
         cor: Colors.amber,
         quantidade: 1,
         andarGanho: andar,
