@@ -19,6 +19,7 @@ migrate_working_dir/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+nul
 
 # macOS
 .DS_Store
