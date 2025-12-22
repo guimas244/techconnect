@@ -7,7 +7,7 @@ import '../models/item_consumivel.dart';
 class MochilaService {
   static const String _boxName = 'mochila_box';
   static const String _migrationBoxName = 'app_migration';
-  static const String _currentVersion = '2.4.1';
+  static const String _currentVersion = '2.5.1';
 
   /// Carrega a mochila do Hive
   static Future<Mochila?> carregarMochila(BuildContext context, String email) async {
@@ -136,7 +136,11 @@ class MochilaService {
     // Migração 2.4.0: Inicializa slot da Chave Auto
     mochilaAtual = await _aplicarMigracao2_4_0(emailLimpo, mochilaAtual);
 
-    // Jaulinha não precisa de migração - dropa normalmente no jogo
+    // Migração 2.5.0: Limpa toda a mochila (reset para versão 2.5)
+    mochilaAtual = await _aplicarMigracao2_5_0(emailLimpo, mochilaAtual);
+
+    // Migração 2.5.1: Limpa toda a mochila novamente (força reset)
+    mochilaAtual = await _aplicarMigracao2_5_1(emailLimpo, mochilaAtual);
 
     return mochilaAtual;
   }
@@ -265,6 +269,97 @@ class MochilaService {
 
     } catch (e, stack) {
       print('❌ [MochilaService] Erro na migração 2.4.0: $e');
+      print(stack);
+      // Em caso de erro, retorna a mochila original
+      return mochila;
+    }
+  }
+
+  /// Migração 2.5.0: Limpa toda a mochila (reset completo)
+  /// Remove todos os itens para usuários que tinham versões anteriores
+  static Future<Mochila> _aplicarMigracao2_5_0(String emailLimpo, Mochila mochila) async {
+    try {
+      final migrationBox = await Hive.openBox(_migrationBoxName);
+      final chave = 'migrated_2_5_0_$emailLimpo';
+
+      // Verifica se já foi migrado
+      final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
+
+      if (jaMigrado) {
+        print('✅ [MochilaService] Migração 2.5.0 já foi aplicada anteriormente');
+        return mochila;
+      }
+
+      print('🔄 [MochilaService] Aplicando migração 2.5.0: Limpando toda a mochila');
+
+      // Cria uma lista de itens vazia, mantendo apenas os slots fixos de evento zerados
+      final itensLimpos = List<ItemConsumivel?>.filled(Mochila.totalSlots, null);
+
+      // Cria mochila limpa mantendo slots desbloqueados
+      final mochilaLimpa = mochila.copyWith(itens: itensLimpos);
+
+      // Reinicializa os slots fixos de evento com quantidade 0
+      final mochilaReinicializada = mochilaLimpa
+          .inicializarOvoEvento()
+          .inicializarMoedaChave()
+          .inicializarChaveAuto();
+
+      // Salva a mochila limpa
+      await _salvarNoHive(emailLimpo, mochilaReinicializada);
+
+      // Marca como migrado
+      await migrationBox.put(chave, true);
+
+      print('✅ [MochilaService] Migração 2.5.0 concluída - Mochila limpa!');
+      return mochilaReinicializada;
+
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro na migração 2.5.0: $e');
+      print(stack);
+      // Em caso de erro, retorna a mochila original
+      return mochila;
+    }
+  }
+
+  /// Migração 2.5.1: Limpa toda a mochila novamente (força reset)
+  static Future<Mochila> _aplicarMigracao2_5_1(String emailLimpo, Mochila mochila) async {
+    try {
+      final migrationBox = await Hive.openBox(_migrationBoxName);
+      final chave = 'migrated_2_5_1_$emailLimpo';
+
+      // Verifica se já foi migrado
+      final jaMigrado = migrationBox.get(chave, defaultValue: false) as bool;
+
+      if (jaMigrado) {
+        print('✅ [MochilaService] Migração 2.5.1 já foi aplicada anteriormente');
+        return mochila;
+      }
+
+      print('🔄 [MochilaService] Aplicando migração 2.5.1: Limpando toda a mochila (FORÇA RESET)');
+
+      // Cria uma lista de itens completamente vazia
+      final itensLimpos = List<ItemConsumivel?>.filled(Mochila.totalSlots, null);
+
+      // Cria mochila limpa mantendo slots desbloqueados
+      final mochilaLimpa = mochila.copyWith(itens: itensLimpos);
+
+      // Reinicializa os slots fixos de evento com quantidade 0
+      final mochilaReinicializada = mochilaLimpa
+          .inicializarOvoEvento()
+          .inicializarMoedaChave()
+          .inicializarChaveAuto();
+
+      // Salva a mochila limpa
+      await _salvarNoHive(emailLimpo, mochilaReinicializada);
+
+      // Marca como migrado
+      await migrationBox.put(chave, true);
+
+      print('✅ [MochilaService] Migração 2.5.1 concluída - Mochila LIMPA!');
+      return mochilaReinicializada;
+
+    } catch (e, stack) {
+      print('❌ [MochilaService] Erro na migração 2.5.1: $e');
       print(stack);
       // Em caso de erro, retorna a mochila original
       return mochila;
