@@ -12,7 +12,17 @@ class AppConstants {
   static const String tipagemRoute = '/admin/tipagem';
   static const String monstrosRoute = '/admin/monstros';
   static const String regrasRoute = '/admin/regras';
-  
+
+  // Novos modos de jogo
+  static const String modoSelecaoRoute = '/modo-selecao';
+  static const String unlockRoute = '/unlock';
+  static const String exploradorRoute = '/explorador';
+  static const String exploradorEquipeRoute = '/explorador/equipe';
+  static const String exploradorMapaRoute = '/explorador/mapa';
+  static const String exploradorBatalhaRoute = '/explorador/batalha';
+  static const String exploradorLojaRoute = '/explorador/loja';
+  static const String killsPermanentesRoute = '/kills-permanentes';
+
   // Storage Keys
   static const String userBoxKey = 'user_box';
   static const String tipagemBoxKey = 'tipagem_box';

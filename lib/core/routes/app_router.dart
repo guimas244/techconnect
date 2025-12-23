@@ -9,6 +9,7 @@ import '../../features/aventura/presentation/admin_drops_screen.dart';
 import '../../features/aventura/presentation/mapa_aventura_screen.dart';
 import '../../features/aventura/presentation/ranking_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/presentation/modo_selecao_screen.dart';
 import '../../features/jogador/presentation/colecao_screen.dart';
 import '../../features/jogador/presentation/jogador_screen.dart';
 import '../../features/jogador/presentation/vantagens_screen.dart';
@@ -16,6 +17,13 @@ import '../../features/monstros/monstros_menu_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/tipagem/presentation/tipagem_dano_screen.dart';
 import '../../features/tipagem/presentation/tipagem_screen.dart';
+import '../../features/unlock/presentation/unlock_screen.dart';
+import '../../features/explorador/presentation/explorador_home_screen.dart';
+import '../../features/explorador/presentation/selecao_equipe_screen.dart';
+import '../../features/explorador/presentation/selecao_mapa_screen.dart';
+import '../../features/explorador/presentation/batalha_explorador_screen.dart';
+import '../../features/explorador/presentation/loja_explorador_screen.dart';
+import '../../features/aventura/presentation/kills_permanentes_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 import '../constants/app_constants.dart';
 
@@ -98,6 +106,39 @@ class AppRouter {
             builder: (context, state) => const VantagensScreen(),
           ),
         ],
+      ),
+      // Novos modos de jogo
+      GoRoute(
+        path: AppConstants.modoSelecaoRoute,
+        builder: (context, state) => const ModoSelecaoScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.unlockRoute,
+        builder: (context, state) => const UnlockScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorRoute,
+        builder: (context, state) => const ExploradorHomeScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorEquipeRoute,
+        builder: (context, state) => const SelecaoEquipeScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorMapaRoute,
+        builder: (context, state) => const SelecaoMapaScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorBatalhaRoute,
+        builder: (context, state) => const BatalhaExploradorScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorLojaRoute,
+        builder: (context, state) => const LojaExploradorScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.killsPermanentesRoute,
+        builder: (context, state) => const KillsPermanentesScreen(),
       ),
     ],
   );

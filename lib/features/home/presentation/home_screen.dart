@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/services/google_drive_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
-import '../../aventura/providers/aventura_provider.dart';
 import '../../tipagem/data/tipagem_repository.dart';
 import '../../../shared/models/tipo_enum.dart';
 import '../../../core/config/version_config.dart';
@@ -741,28 +740,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         icon: Icons.explore,
                         label: 'Aventura',
                         color: _isDriveConnected ? const Color(0xFF3182CE) : Colors.grey,
-                        onTap: _isDriveConnected ? () async {
-                          try {
-                            final podeAcessar = await ref.read(podeAcessarAventuraProvider.future);
-                            if (podeAcessar) {
-                              context.go('/aventura');
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('É necessário baixar os tipos dos monstros primeiro.\nAcesse Administrador > Tipagem para baixar.'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Erro: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        } : null,
+                        onTap: _isDriveConnected ? () => context.go('/modo-selecao') : null,
                       ),
                       _buildMenuCard(
                         icon: Icons.leaderboard,

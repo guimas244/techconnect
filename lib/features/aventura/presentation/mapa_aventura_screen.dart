@@ -256,7 +256,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black87,
-          title: const Text('Mapa de Aventura'),
+          title: const Text('Modo Unlock'),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -264,7 +264,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go('/home');
+                context.go('/modo-selecao');
               }
             },
           ),
@@ -291,7 +291,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black87,
-        title: const Text('Aventura'),
+        title: const Text('Modo Unlock'),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -299,7 +299,7 @@ class _MapaAventuraScreenState extends ConsumerState<MapaAventuraScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/home');
+              context.go('/modo-selecao');
             }
           },
         ),
