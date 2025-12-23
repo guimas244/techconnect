@@ -6,14 +6,18 @@ import '../../../shared/models/tipo_enum.dart';
 import '../../../shared/models/habilidade_enum.dart';
 import '../../aventura/models/habilidade.dart';
 import '../models/monstro_explorador.dart';
+import '../models/mapa_explorador.dart';
 import '../providers/equipe_explorador_provider.dart';
-import '../../aventura/providers/kills_permanentes_provider.dart';
+import '../providers/mapas_explorador_provider.dart';
 
 /// Tela de batalha manual do Modo Explorador
 ///
 /// Combate por turnos onde o jogador escolhe as acoes
 class BatalhaExploradorScreen extends ConsumerStatefulWidget {
-  const BatalhaExploradorScreen({super.key});
+  /// Mapa selecionado para a batalha (opcional, pode usar provider)
+  final MapaExplorador? mapa;
+
+  const BatalhaExploradorScreen({super.key, this.mapa});
 
   @override
   ConsumerState<BatalhaExploradorScreen> createState() =>
@@ -25,6 +29,9 @@ class _BatalhaExploradorScreenState
   // Estado da batalha
   MonstroExplorador? _monstroAtivo;
   _InimigoExplorador? _inimigo;
+  MapaExplorador? _mapaAtual;
+  int _batalhaAtual = 1; // 1, 2 ou 3
+  int _totalBatalhas = 3;
   bool _turnoJogador = true;
   bool _batalhaEmAndamento = true;
   String _mensagemBatalha = 'Preparando batalha...';
@@ -69,26 +76,68 @@ class _BatalhaExploradorScreenState
       return;
     }
 
+    // Usa mapa passado como parametro ou gera um aleatorio
+    _mapaAtual = widget.mapa;
+    _totalBatalhas = _mapaAtual?.raridade.isBoss == true ? 1 : 3;
+
     setState(() {
       _monstroAtivo = equipe.monstrosAtivos.first;
       _inimigo = _gerarInimigo(equipe.tierAtual);
-      _mensagemBatalha = 'Escolha sua acao!';
+      _mensagemBatalha = 'Batalha $_batalhaAtual/$_totalBatalhas - Escolha sua acao!';
     });
   }
 
   _InimigoExplorador _gerarInimigo(int tier) {
     final random = Random();
-    final tipo = Tipo.values[random.nextInt(Tipo.values.length)];
-    final multiplicador = 1.0 + (tier - 1) * 0.15;
+
+    // Usa tipo do mapa se disponivel, senao aleatorio
+    Tipo tipo;
+    bool isNativo = false;
+    if (_mapaAtual != null && _mapaAtual!.tiposEncontrados.isNotEmpty) {
+      // Pega o tipo baseado na batalha atual (ou cicla se tiver menos tipos)
+      final index = (_batalhaAtual - 1) % _mapaAtual!.tiposEncontrados.length;
+      tipo = _mapaAtual!.tiposEncontrados[index];
+      isNativo = _mapaAtual!.tipoNativo(tipo);
+    } else {
+      tipo = Tipo.values[random.nextInt(Tipo.values.length)];
+    }
+
+    final tierEfetivo = _mapaAtual?.tierDestino ?? tier;
+    final multiplicador = 1.0 + (tierEfetivo - 1) * 0.15;
+
+    // Bonus de HP para tipos nativos (+25%)
+    final bonusNativo = isNativo ? 1.25 : 1.0;
+
+    // Bonus para elite e boss
+    double bonusRaridade = 1.0;
+    bool isBoss = false;
+    if (_mapaAtual != null) {
+      if (_mapaAtual!.raridade.isBoss) {
+        bonusRaridade = 10.0; // Boss tem 10x mais HP
+        isBoss = true;
+      } else if (_mapaAtual!.raridade.todosSaoElite) {
+        bonusRaridade = 2.0;
+      } else if (_mapaAtual!.raridade.temElite && _batalhaAtual == 2) {
+        // Elite aparece na segunda batalha
+        bonusRaridade = 2.0;
+      }
+    }
+
+    final vidaBase = (80 * multiplicador * bonusNativo * bonusRaridade).round();
 
     return _InimigoExplorador(
-      nome: '${tipo.monsterName} Selvagem',
+      nome: isBoss
+          ? '${tipo.monsterName} BOSS'
+          : (bonusRaridade > 1.0 ? '${tipo.monsterName} Elite' : '${tipo.monsterName} Selvagem'),
       tipo: tipo,
-      vidaMax: (80 * multiplicador).round(),
-      vidaAtual: (80 * multiplicador).round(),
-      ataque: (15 * multiplicador).round(),
-      defesa: (10 * multiplicador).round(),
-      tier: tier,
+      vidaMax: vidaBase,
+      vidaAtual: vidaBase,
+      ataque: (15 * multiplicador * (bonusRaridade > 1.0 ? 1.5 : 1.0)).round(),
+      defesa: (10 * multiplicador * (bonusRaridade > 1.0 ? 1.3 : 1.0)).round(),
+      tier: tierEfetivo,
+      isNativo: isNativo,
+      isBoss: isBoss,
+      vidasBoss: isBoss ? 3 : 0,
     );
   }
 
@@ -151,6 +200,24 @@ class _BatalhaExploradorScreenState
             label: const Text('Fugir', style: TextStyle(color: Colors.red)),
           ),
           const Spacer(),
+          // Nome do mapa e contador de batalhas
+          if (_mapaAtual != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: _mapaAtual!.tipoPrincipal.cor.withAlpha(80),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$_batalhaAtual/$_totalBatalhas',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -183,12 +250,38 @@ class _BatalhaExploradorScreenState
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.withAlpha(30),
+          color: _inimigo!.isBoss
+              ? Colors.orange.withAlpha(40)
+              : Colors.red.withAlpha(30),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.red.withAlpha(100)),
+          border: Border.all(
+            color: _inimigo!.isBoss
+                ? Colors.orange.withAlpha(150)
+                : Colors.red.withAlpha(100),
+            width: _inimigo!.isBoss ? 2 : 1,
+          ),
         ),
         child: Column(
           children: [
+            // Vidas do boss (coracoes)
+            if (_inimigo!.isBoss)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (index) {
+                    final temVida = index < _inimigo!.vidasBoss;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        temVida ? Icons.favorite : Icons.favorite_border,
+                        color: temVida ? Colors.red : Colors.grey,
+                        size: 24,
+                      ),
+                    );
+                  }),
+                ),
+              ),
             Row(
               children: [
                 Icon(_inimigo!.tipo.icone, color: _inimigo!.tipo.cor, size: 24),
@@ -196,13 +289,24 @@ class _BatalhaExploradorScreenState
                 Expanded(
                   child: Text(
                     _inimigo!.nome,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _inimigo!.isBoss ? Colors.orange : Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: _inimigo!.isBoss ? 18 : 16,
                     ),
                   ),
                 ),
+                // Indicador de tipo nativo
+                if (_inimigo!.isNativo)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withAlpha(100),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.star, color: Colors.red, size: 12),
+                  ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -220,7 +324,7 @@ class _BatalhaExploradorScreenState
             _buildBarraVida(
               atual: _inimigo!.vidaAtual,
               max: _inimigo!.vidaMax,
-              cor: Colors.red,
+              cor: _inimigo!.isBoss ? Colors.orange : Colors.red,
             ),
           ],
         ),
@@ -504,10 +608,33 @@ class _BatalhaExploradorScreenState
 
   void _verificarFimBatalha() {
     if (_inimigo!.vidaAtual <= 0) {
-      _vitoria();
+      // Verifica se e boss com vidas restantes
+      if (_inimigo!.isBoss && _inimigo!.vidasBoss > 1) {
+        // Boss perde uma vida mas continua
+        setState(() {
+          _inimigo!.perderVidaBoss();
+          _mensagemBatalha = 'O Boss perdeu uma vida! Restam ${_inimigo!.vidasBoss} vidas!';
+        });
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            setState(() {
+              _turnoJogador = true;
+              _processandoAcao = false;
+              _mensagemBatalha = 'Batalha $_batalhaAtual/$_totalBatalhas - Escolha sua acao!';
+            });
+          }
+        });
+      } else {
+        _vitoria();
+      }
     } else if (_monstroAtivo!.vidaAtual <= 0) {
       _derrota();
     } else {
+      // Boss regenera 15% HP apos sobreviver ataque
+      if (_inimigo!.isBoss) {
+        final cura = (_inimigo!.vidaMax * 0.15).round();
+        _inimigo!.vidaAtual = (_inimigo!.vidaAtual + cura).clamp(0, _inimigo!.vidaMax);
+      }
       _turnoInimigo();
     }
   }
@@ -543,14 +670,20 @@ class _BatalhaExploradorScreenState
   }
 
   void _vitoria() async {
-    setState(() {
-      _batalhaEmAndamento = false;
-      _mensagemBatalha = 'Vitoria!';
-    });
+    // Calcula XP baseado no mapa (nao ganha kills neste modo)
+    int xpGanho;
 
-    await Future.delayed(const Duration(seconds: 1));
-    final xpGanho = _inimigo!.tier * 25;
-    final killsGanho = (_inimigo!.tier / 2).ceil() + 1;
+    if (_mapaAtual != null) {
+      // Usa valores do mapa (dividido por total de batalhas)
+      xpGanho = (_mapaAtual!.xpBase / _totalBatalhas).ceil();
+
+      // Bonus para boss
+      if (_mapaAtual!.raridade.isBoss) {
+        xpGanho = _mapaAtual!.xpBase * 5;
+      }
+    } else {
+      xpGanho = _inimigo!.tier * 25;
+    }
 
     // Salva levels atuais para comparar depois
     final equipeAntes = ref.read(equipeExploradorProvider);
@@ -562,7 +695,6 @@ class _BatalhaExploradorScreenState
     }
 
     await ref.read(equipeExploradorProvider.notifier).distribuirXp(xpGanho);
-    await ref.read(killsPermanentesProvider.notifier).adicionarKills(_inimigo!.tipo, killsGanho);
     await ref.read(equipeExploradorProvider.notifier).registrarBatalha(vitoria: true);
 
     // Verifica quem subiu de level
@@ -577,7 +709,52 @@ class _BatalhaExploradorScreenState
       }
     }
 
-    if (mounted) _mostrarResultado(vitoria: true, xpGanho: xpGanho, killsGanho: killsGanho, levelUps: monstrosQueSubiram);
+    // Verifica se tem mais batalhas
+    if (_batalhaAtual < _totalBatalhas) {
+      // Mostra resultado parcial e inicia proxima batalha
+      setState(() {
+        _mensagemBatalha = 'Vitoria! +$xpGanho XP';
+      });
+
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (mounted) {
+        setState(() {
+          _batalhaAtual++;
+          _inimigo = _gerarInimigo(_mapaAtual?.tierDestino ?? _inimigo!.tier);
+          // Recupera um pouco de energia entre batalhas
+          _monstroAtivo = _monstroAtivo!.copyWith(
+            energiaAtual: (_monstroAtivo!.energiaAtual + 5).clamp(0, _monstroAtivo!.energiaTotal),
+          );
+          _turnoJogador = true;
+          _processandoAcao = false;
+          _mensagemBatalha = 'Batalha $_batalhaAtual/$_totalBatalhas - Escolha sua acao!';
+        });
+      }
+    } else {
+      // Fim do mapa - mostra resultado final
+      setState(() {
+        _batalhaEmAndamento = false;
+        _mensagemBatalha = 'Vitoria!';
+      });
+
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Atualiza tier se veio de um mapa
+      if (_mapaAtual != null) {
+        await ref.read(equipeExploradorProvider.notifier).mudarTier(_mapaAtual!.tierDestino);
+        // Limpa mapas para gerar novos
+        ref.read(mapasExploradorProvider.notifier).limparMapas();
+      }
+
+      if (mounted) {
+        _mostrarResultado(
+          vitoria: true,
+          xpGanho: _mapaAtual?.xpBase ?? xpGanho,
+          levelUps: monstrosQueSubiram,
+        );
+      }
+    }
   }
 
   void _derrota() async {
@@ -591,7 +768,7 @@ class _BatalhaExploradorScreenState
     if (mounted) _mostrarResultado(vitoria: false);
   }
 
-  void _mostrarResultado({required bool vitoria, int xpGanho = 0, int killsGanho = 0, List<String> levelUps = const []}) {
+  void _mostrarResultado({required bool vitoria, int xpGanho = 0, List<String> levelUps = const []}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -609,8 +786,6 @@ class _BatalhaExploradorScreenState
           children: vitoria
               ? [
                   _buildRecompensaItem(Icons.auto_awesome, '+$xpGanho XP', Colors.purple),
-                  const SizedBox(height: 8),
-                  _buildRecompensaItem(Icons.stars, '+$killsGanho Kills', Colors.teal),
                   // Level ups
                   if (levelUps.isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -639,8 +814,8 @@ class _BatalhaExploradorScreenState
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
             onPressed: () {
-              Navigator.pop(context);
-              context.go('/explorador');
+              Navigator.pop(context); // Fecha o dialog
+              Navigator.pop(context); // Volta para seleção de mapas
             },
             child: const Text('Continuar'),
           ),
@@ -666,17 +841,17 @@ class _BatalhaExploradorScreenState
   void _confirmarFuga() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.grey.shade900,
         title: const Text('Fugir?', style: TextStyle(color: Colors.white)),
         content: const Text('Voce perdera o progresso desta batalha.', style: TextStyle(color: Colors.white70)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () {
-              Navigator.pop(context);
-              context.go('/explorador');
+              Navigator.pop(dialogContext); // Fecha o dialog
+              Navigator.pop(context); // Volta para seleção de mapas
             },
             child: const Text('Fugir'),
           ),
@@ -694,6 +869,9 @@ class _InimigoExplorador {
   final int ataque;
   final int defesa;
   final int tier;
+  final bool isNativo;
+  final bool isBoss;
+  int vidasBoss;
 
   _InimigoExplorador({
     required this.nome,
@@ -703,5 +881,21 @@ class _InimigoExplorador {
     required this.ataque,
     required this.defesa,
     required this.tier,
+    this.isNativo = false,
+    this.isBoss = false,
+    this.vidasBoss = 0,
   });
+
+  /// Verifica se o boss ainda tem vidas
+  bool get bossVivo => !isBoss || vidasBoss > 0;
+
+  /// Perde uma vida do boss (retorna true se morreu de vez)
+  bool perderVidaBoss() {
+    if (!isBoss) return true;
+    vidasBoss--;
+    if (vidasBoss <= 0) return true;
+    // Reseta HP para 100%
+    vidaAtual = vidaMax;
+    return false;
+  }
 }

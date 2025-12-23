@@ -343,12 +343,22 @@ class EquipeExploradorNotifier extends StateNotifier<EquipeExplorador?> {
     return await _salvar();
   }
 
-  /// Distribui XP apos batalha
+  /// Distribui XP apos batalha (versao simples)
   Future<bool> distribuirXp(int xpBatalha) async {
     if (state == null) return false;
 
     state = state!.distribuirXp(xpBatalha);
     return await _salvar();
+  }
+
+  /// Distribui XP apos batalha e retorna resultado com info de quem ganhou
+  Future<XpDistribuicaoResult?> distribuirXpComResultado(int xpBatalha) async {
+    if (state == null) return null;
+
+    final resultado = state!.distribuirXpComResultado(xpBatalha);
+    state = resultado.novaEquipe;
+    await _salvar();
+    return resultado;
   }
 
   /// Cura toda a equipe

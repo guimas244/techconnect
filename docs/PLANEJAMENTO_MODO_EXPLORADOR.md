@@ -1170,25 +1170,45 @@ class EquipamentoService {
 // Braços: Bracelete, Luva, Manopla, Algema, Punho, etc
 ```
 
-#### 8.2.4 Criar Tela de Equipamentos
-**Arquivo:** `lib/features/explorador/presentation/equipamentos_screen.dart` (NOVO)
+#### 8.2.4 Criar Modal de Detalhes do Monstro (com 3 Equipamentos)
+**Arquivo:** `lib/features/explorador/presentation/modal_detalhe_monstro_explorador.dart` (NOVO)
+
+**REFERÊNCIA:** Usar como base o modal do modo aventura:
+- `lib/features/aventura/presentation/modal_detalhe_item_equipado.dart`
+
+**Adaptações para o Modo Explorador:**
+- Cores do tema explorador (teal/amber ao invés de cores claras)
+- Fundo escuro (grey.shade900) ao invés de gradiente claro
+- Mostrar os 3 slots de equipamento (cabeça, peito, braços)
+- Mostrar XP e level do monstro
+- Mostrar stats base + bônus de equipamentos
+- Durabilidade de cada equipamento
 
 ```dart
 // Layout:
 // ┌─────────────────────────────────────┐
-// │  EQUIPAMENTOS - [Monstro Fogo]      │
+// │  [Imagem]  NOME DO MONSTRO          │
+// │            Tipo: Fogo  Lv.5         │
+// │            XP: ████████░░ 80/100    │
 // ├─────────────────────────────────────┤
+// │  STATS:                             │
+// │  ❤️ Vida: 120 (+20)                 │
+// │  ⚔️ Ataque: 45 (+10)                │
+// │  🛡️ Defesa: 60 (+15)                │
+// │  ⚡ Agilidade: 30 (+5)              │
+// ├─────────────────────────────────────┤
+// │  EQUIPAMENTOS (3 slots):            │
 // │  ┌──────┐  [Elmo de Fogo]           │
 // │  │Cabeça│  +10 Vida, +5 Defesa      │
 // │  └──────┘  Durabilidade: 8/10       │
-// ├─────────────────────────────────────┤
 // │  ┌──────┐  [Armadura Flamejante]    │
 // │  │Peito │  +20 Vida, +10 Defesa     │
 // │  └──────┘  Durabilidade: 5/15       │
-// ├─────────────────────────────────────┤
 // │  ┌──────┐  (Vazio)                  │
 // │  │Braços│  [Equipar]                │
 // │  └──────┘                           │
+// ├─────────────────────────────────────┤
+// │  [MOVER] [REMOVER] [FECHAR]         │
 // └─────────────────────────────────────┘
 ```
 
@@ -2224,6 +2244,75 @@ TECHTERRA/
 2. Começar pela Fase 1 (Infraestrutura)
 3. Testar cada fase antes de prosseguir
 4. Iterar baseado em feedback
+
+---
+
+## CHANGELOG / IMPLEMENTAÇÕES REALIZADAS
+
+### 2025-12-23 - Sessão 2
+
+#### Correções
+- **Kills removidos do Modo Explorador**: Este modo NÃO ganha pontos de kill. Removidas todas as referências a kills em:
+  - `mapa_explorador_screen.dart`
+  - `batalha_explorador_screen.dart`
+
+#### Animação de XP
+- **Animação de XP ganho após batalha**: Implementada animação visual quando monstro ganha XP
+  - Imagem do monstro em círculo (estilo da tela de mapas)
+  - **XP ganho**: borda verde, texto "+X XP" em verde
+  - **Level up**: borda âmbar, ícone ✨ (auto_awesome) + "Lv.X" em amarelo
+  - Animação sobe ~150px e desaparece (1.8s)
+  - Monstro ativo (esquerda) e banco (direita) animam simultaneamente
+
+#### Sistema de Distribuição de XP
+- **XpDistribuicaoResult**: Nova classe que retorna informações detalhadas sobre a distribuição de XP:
+  - Qual monstro ativo recebeu XP
+  - Qual monstro do banco recebeu XP
+  - Se algum subiu de level
+  - Novo level (se subiu)
+- **Sorteio individual**: XP vai para apenas 1 monstro ativo aleatório (não divide entre todos)
+- Mesmo comportamento para monstros do banco (1 aleatório recebe)
+
+### 2025-12-22/23 - Sessão 1
+
+#### Tela de Mapa do Explorador
+- **Seleção de monstro antes da batalha**: Modal para escolher qual monstro usar (se tiver mais de 1)
+  - Mostra imagem, nome, level, tipos (ícones), barras de vida e energia
+- **Ícones de tipo**: Adicionados ícones de tipo primário e secundário na seleção de monstro
+- **Caveirinha de resultado**:
+  - Vermelho = jogador venceu (derrotou o monstro)
+  - Verde = jogador perdeu (monstro fugiu)
+  - Posição: top: -6, right: -2
+- **Botão voltar**: Retorna para home do explorador sem consequências (progresso é salvo)
+- **Botão desistir**: Separado do voltar, com confirmação
+
+#### Arquivos Modificados/Criados
+```
+lib/features/explorador/
+├── models/
+│   ├── equipe_explorador.dart      # XpDistribuicaoResult, distribuirXpComResultado()
+│   ├── mapa_explorador.dart
+│   └── monstro_explorador.dart
+├── presentation/
+│   ├── mapa_explorador_screen.dart # Animação XP, seleção monstro, caveirinhas
+│   ├── selecao_mapa_screen.dart    # Estado mapas desistidos
+│   └── batalha_explorador_screen.dart
+├── providers/
+│   ├── equipe_explorador_provider.dart  # distribuirXpComResultado()
+│   └── mapas_explorador_provider.dart   # Estado mapas desistidos
+└── services/
+    └── batalha_explorador_service.dart
+```
+
+#### Regras Confirmadas do Modo Explorador
+| Aspecto | Comportamento |
+|---------|---------------|
+| **Kills** | NÃO ganha pontos de kill |
+| **XP** | Apenas 1 monstro ativo aleatório recebe |
+| **XP Banco** | Apenas 1 monstro do banco aleatório recebe |
+| **Voltar** | Livre, sem perder progresso |
+| **Desistir** | Marca mapa como indisponível |
+| **Progresso** | Salvo automaticamente |
 
 ---
 

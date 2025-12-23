@@ -104,6 +104,7 @@ class BatalhaScreen extends ConsumerStatefulWidget {
   final MonstroInimigo inimigo;
   final List<MonstroAventura> equipeCompleta; // Lista completa da equipe para verificar passivas
   final bool autoMode; // Modo automático - usa melhor habilidade e equipa itens automaticamente
+  final bool modoExplorador; // Modo explorador - permite fugir da batalha
 
   const BatalhaScreen({
     super.key,
@@ -111,6 +112,7 @@ class BatalhaScreen extends ConsumerStatefulWidget {
     required this.inimigo,
     this.equipeCompleta = const [],
     this.autoMode = false,
+    this.modoExplorador = false,
   });
 
   @override
@@ -1009,6 +1011,35 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
     );
 
     return novoEstado;
+  }
+
+  /// Confirma se o jogador quer fugir da batalha (apenas modo explorador)
+  void _confirmarFuga() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.grey.shade900,
+        title: const Text('Fugir?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Voce perdera esta batalha.\nDeseja fugir?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(dialogContext); // Fecha o dialog
+              Navigator.pop(context, false); // Retorna false (derrota/fuga)
+            },
+            child: const Text('Fugir'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _finalizarBatalha(String vencedorBatalha) {
@@ -2762,6 +2793,13 @@ class _BatalhaScreenState extends ConsumerState<BatalhaScreen> {
           centerTitle: true,
           elevation: 2,
           automaticallyImplyLeading: false, // Remove seta de voltar
+          leading: widget.modoExplorador && !batalhaConcluida
+              ? IconButton(
+                  icon: const Icon(Icons.directions_run, color: Colors.red),
+                  tooltip: 'Fugir',
+                  onPressed: _confirmarFuga,
+                )
+              : null,
         ),
         body: Stack(
           children: [

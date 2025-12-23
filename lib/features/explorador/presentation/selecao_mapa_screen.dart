@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/mapa_explorador.dart';
 import '../providers/equipe_explorador_provider.dart';
 import '../providers/mapas_explorador_provider.dart';
-import '../services/batalha_explorador_service.dart';
-import '../../aventura/presentation/batalha_screen.dart';
-import '../../aventura/providers/kills_permanentes_provider.dart';
+import './mapa_explorador_screen.dart';
 import '../../../shared/models/tipo_enum.dart';
 
 /// Tela de selecao de mapa do Modo Explorador
@@ -34,10 +32,16 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
     ref.read(mapasExploradorProvider.notifier).gerarNovosMapas();
   }
 
+  /// Verifica se o mapa esta desabilitado (jogador desistiu)
+  bool _mapaDesabilitado(int index) {
+    return ref.read(mapasExploradorProvider.notifier).isDesistido(index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final equipe = ref.watch(equipeExploradorProvider);
-    final mapasDisponiveis = ref.watch(mapasExploradorProvider);
+    final mapasState = ref.watch(mapasExploradorProvider);
+    final mapasDisponiveis = mapasState.mapas;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -179,7 +183,7 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
                         padding: const EdgeInsets.all(16),
                         itemCount: mapasDisponiveis.length,
                         itemBuilder: (context, index) {
-                          return _buildMapaCard(mapasDisponiveis[index], equipe);
+                          return _buildMapaCard(mapasDisponiveis[index], equipe, index);
                         },
                       ),
               ),
@@ -211,8 +215,9 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
     }
   }
 
-  Widget _buildMapaCard(MapaExplorador mapa, dynamic equipe) {
-    final podeJogar = equipe != null && equipe.monstrosAtivos.isNotEmpty;
+  Widget _buildMapaCard(MapaExplorador mapa, dynamic equipe, int index) {
+    final desistiu = _mapaDesabilitado(index);
+    final podeJogar = equipe != null && equipe.monstrosAtivos.isNotEmpty && !desistiu;
 
     Color corTendencia;
     IconData iconeTendencia;
@@ -233,7 +238,7 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
     }
 
     return GestureDetector(
-      onTap: podeJogar ? () => _selecionarMapa(mapa) : null,
+      onTap: podeJogar ? () => _selecionarMapa(mapa, index) : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
@@ -246,208 +251,248 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
             width: 2,
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            // Imagem do mapa
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              child: Stack(
-                children: [
-                  Image.asset(
-                    mapa.imagem,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      color: mapa.tipoPrincipal.cor.withAlpha(50),
-                      child: Center(
-                        child: Icon(
-                          mapa.tipoPrincipal.icone,
-                          size: 48,
-                          color: mapa.tipoPrincipal.cor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Overlay com gradiente
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withAlpha(200),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Nome do mapa
-                  Positioned(
-                    left: 12,
-                    bottom: 8,
-                    child: Text(
-                      mapa.nome,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        shadows: [
-                          Shadow(blurRadius: 4, color: Colors.black),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Badge de tendencia
-                  Positioned(
-                    right: 12,
-                    top: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: corTendencia.withAlpha(200),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+            // Conteudo do card
+            Column(
+              children: [
+                // Imagem do mapa
+                ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                      child: Stack(
                         children: [
-                          Icon(iconeTendencia, size: 14, color: Colors.white),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Tier ${mapa.tierDestino}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                          Image.asset(
+                            mapa.imagem,
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 120,
+                              color: mapa.tipoPrincipal.cor.withAlpha(50),
+                              child: Center(
+                                child: Icon(
+                                  mapa.tipoPrincipal.icone,
+                                  size: 48,
+                                  color: mapa.tipoPrincipal.cor,
+                                ),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Info do mapa
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  // Icones de tipos que serao encontrados (1 para boss, 3 para outros)
-                  Row(
-                    children: [
-                      // Container com os tipos sorteados
-                      Expanded(
-                        child: Row(
-                          children: mapa.tiposEncontrados.map((tipo) {
-                            // Verifica se este tipo e nativo (tem vantagem +25% HP)
-                            final isNativo = mapa.tipoNativo(tipo);
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Image.asset(
-                                    _getIconeTipo(tipo),
-                                    width: 32,
-                                    height: 32,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      tipo.icone,
-                                      size: 28,
-                                      color: tipo.cor,
-                                    ),
-                                  ),
-                                  // Estrela vermelha apenas para tipos nativos (+25% HP)
-                                  if (isNativo)
-                                    Positioned(
-                                      right: -4,
-                                      top: -4,
-                                      child: Container(
-                                        decoration: const BoxDecoration(
-                                          color: Colors.black,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        padding: const EdgeInsets.all(1),
-                                        child: const Icon(
-                                          Icons.star,
-                                          size: 12,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ),
+                          // Overlay com gradiente
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withAlpha(200),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Nome do mapa
+                          Positioned(
+                            left: 12,
+                            bottom: 8,
+                            child: Text(
+                              mapa.nome,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                shadows: [
+                                  Shadow(blurRadius: 4, color: Colors.black),
                                 ],
                               ),
-                            );
-                          }).toList(),
-                        ),
+                            ),
+                          ),
+                          // Badge de tendencia
+                          Positioned(
+                            right: 12,
+                            top: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: corTendencia.withAlpha(200),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(iconeTendencia, size: 14, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Tier ${mapa.tierDestino}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      // Raridade em estrelas
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    ),
+                    // Info do mapa
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
                         children: [
+                          // Icones de tipos que serao encontrados (1 para boss, 3 para outros)
                           Row(
-                            children: List.generate(5, (i) {
-                              return Icon(
-                                i < mapa.raridade.estrelas ? Icons.star : Icons.star_border,
-                                size: 16,
-                                color: _getCorRaridade(mapa.raridade),
-                              );
-                            }),
+                            children: [
+                              // Container com os tipos sorteados
+                              Expanded(
+                                child: Row(
+                                  children: mapa.tiposEncontrados.map((tipo) {
+                                    // Verifica se este tipo e nativo (tem vantagem +25% HP)
+                                    final isNativo = mapa.tipoNativo(tipo);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Image.asset(
+                                            _getIconeTipo(tipo),
+                                            width: 32,
+                                            height: 32,
+                                            errorBuilder: (_, __, ___) => Icon(
+                                              tipo.icone,
+                                              size: 28,
+                                              color: tipo.cor,
+                                            ),
+                                          ),
+                                          // Estrela vermelha apenas para tipos nativos (+25% HP)
+                                          if (isNativo)
+                                            Positioned(
+                                              right: -4,
+                                              top: -4,
+                                              child: Container(
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.black,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                padding: const EdgeInsets.all(1),
+                                                child: const Icon(
+                                                  Icons.star,
+                                                  size: 12,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              // Raridade em estrelas
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Row(
+                                    children: List.generate(5, (i) {
+                                      return Icon(
+                                        i < mapa.raridade.estrelas ? Icons.star : Icons.star_border,
+                                        size: 16,
+                                        color: _getCorRaridade(mapa.raridade),
+                                      );
+                                    }),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    mapa.raridade.descricao,
+                                    style: TextStyle(
+                                      color: _getCorRaridade(mapa.raridade),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            mapa.raridade.descricao,
-                            style: TextStyle(
-                              color: _getCorRaridade(mapa.raridade),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          const SizedBox(height: 12),
+                          // Recompensas esperadas
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              // XP: Equipe + Banco
+                              Column(
+                                children: [
+                                  const Icon(Icons.auto_awesome, color: Colors.purple, size: 20),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${mapa.xpBase} + ${mapa.xpBase}',
+                                    style: const TextStyle(
+                                      color: Colors.purple,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _buildRecompensa(
+                                iconeTendencia,
+                                mapa.tendencia.displayName,
+                                corTendencia,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+            // Badge "Desistiu" sobre o card
+            if (desistiu)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(150),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Recompensas esperadas
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // XP: Equipe + Banco
-                      Column(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade900,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade300, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(150),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.auto_awesome, color: Colors.purple, size: 20),
-                          const SizedBox(height: 4),
+                          Icon(Icons.block, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
                           Text(
-                            '${mapa.xpBase} + ${mapa.xpBase}',
-                            style: const TextStyle(
-                              color: Colors.purple,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                            'DESISTIU',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: 1,
                             ),
                           ),
                         ],
                       ),
-                      _buildRecompensa(
-                        Icons.stars,
-                        '${mapa.killsBase} Kills',
-                        Colors.teal,
-                      ),
-                      _buildRecompensa(
-                        iconeTendencia,
-                        mapa.tendencia.displayName,
-                        corTendencia,
-                      ),
-                    ],
+                    ),
                   ),
-                ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -471,7 +516,7 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
     );
   }
 
-  void _selecionarMapa(MapaExplorador mapa) {
+  void _selecionarMapa(MapaExplorador mapa, int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -600,7 +645,7 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              _iniciarBatalha(mapa);
+              _iniciarBatalha(mapa, index);
             },
             child: const Text('Batalhar!'),
           ),
@@ -609,82 +654,29 @@ class _SelecaoMapaScreenState extends ConsumerState<SelecaoMapaScreen> {
     );
   }
 
-  /// Inicia a batalha usando o sistema de batalha do Aventura
-  Future<void> _iniciarBatalha(MapaExplorador mapa) async {
+  /// Inicia a exploracao do mapa selecionado
+  Future<void> _iniciarBatalha(MapaExplorador mapa, int index) async {
     final equipe = ref.read(equipeExploradorProvider);
     if (equipe == null || equipe.monstrosAtivos.isEmpty) return;
 
-    // Atualiza o tier
-    await ref.read(equipeExploradorProvider.notifier).mudarTier(mapa.tierDestino);
-
-    // Pega o primeiro monstro ativo
-    final monstroExplorador = equipe.monstrosAtivos.first;
-
-    // Converte para formato da batalha (com bonus de +25% HP se tipo nativo)
-    final jogador = BatalhaExploradorService.converterParaAventura(
-      monstroExplorador,
-      mapa: mapa,
-    );
-    final inimigo = BatalhaExploradorService.gerarInimigo(
-      mapa: mapa,
-      tier: mapa.tierDestino,
-    );
-
-    // Converte toda a equipe para passivas compartilhadas (com bonus de tipo nativo)
-    final equipeCompleta = equipe.monstrosAtivos
-        .map((m) => BatalhaExploradorService.converterParaAventura(m, mapa: mapa))
-        .toList();
-
-    // Navega para a batalha
+    // Navega para a tela de mapa com monstros
     if (!mounted) return;
-    final resultado = await Navigator.push<bool>(
+    final resultado = await Navigator.push<ResultadoMapa>(
       context,
       MaterialPageRoute(
-        builder: (context) => BatalhaScreen(
-          jogador: jogador,
-          inimigo: inimigo,
-          equipeCompleta: equipeCompleta,
-        ),
+        builder: (context) => MapaExploradorScreen(mapa: mapa),
       ),
     );
 
-    // Processa resultado da batalha
-    if (resultado == true) {
-      // Vitoria - da XP e kills (considera raridade para bonus)
-      final xpGanho = BatalhaExploradorService.calcularXpGanho(mapa.tierDestino, mapa.raridade);
-      final killsGanho = BatalhaExploradorService.calcularKillsGanho(mapa.tierDestino, mapa.raridade);
+    if (!mounted) return;
 
-      await ref.read(equipeExploradorProvider.notifier).distribuirXp(xpGanho);
-      await ref.read(killsPermanentesProvider.notifier).adicionarKills(
-        inimigo.tipo,
-        killsGanho,
-      );
-      await ref.read(equipeExploradorProvider.notifier).registrarBatalha(vitoria: true);
-
-      // Mostra resultado
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Vitoria! +$xpGanho XP, +$killsGanho Kills'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } else {
-      // Derrota
-      await ref.read(equipeExploradorProvider.notifier).registrarBatalha(vitoria: false);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Derrota... Tente novamente!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (resultado == ResultadoMapa.completado) {
+      // Jogador completou o mapa - gera novos mapas (limpa desistidos automaticamente)
+      ref.read(mapasExploradorProvider.notifier).gerarNovosMapas();
+    } else if (resultado == ResultadoMapa.desistiu) {
+      // Jogador desistiu - marca o mapa como desabilitado no provider
+      ref.read(mapasExploradorProvider.notifier).marcarDesistido(index);
     }
-
-    // Limpa os mapas para gerar novos na proxima vez
-    ref.read(mapasExploradorProvider.notifier).limparMapas();
+    // Se resultado for null (voltou sem acao), nao faz nada
   }
 }

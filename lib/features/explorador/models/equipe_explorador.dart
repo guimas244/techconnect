@@ -1,6 +1,29 @@
 import 'dart:math';
 import 'monstro_explorador.dart';
 
+/// Resultado da distribuicao de XP
+class XpDistribuicaoResult {
+  final EquipeExplorador novaEquipe;
+  final MonstroExplorador? monstroAtivoPremiado;
+  final MonstroExplorador? monstroBancoPremiado;
+  final int xpGanho;
+  final bool ativoSubiuLevel;
+  final bool bancoSubiuLevel;
+  final int? novoLevelAtivo;
+  final int? novoLevelBanco;
+
+  const XpDistribuicaoResult({
+    required this.novaEquipe,
+    this.monstroAtivoPremiado,
+    this.monstroBancoPremiado,
+    required this.xpGanho,
+    this.ativoSubiuLevel = false,
+    this.bancoSubiuLevel = false,
+    this.novoLevelAtivo,
+    this.novoLevelBanco,
+  });
+}
+
 /// Equipe do Modo Explorador
 ///
 /// Composicao:
@@ -174,32 +197,84 @@ class EquipeExplorador {
     );
   }
 
-  /// Adiciona XP a todos os monstros apos batalha
-  /// Monstros ativos recebem XP completo
+  /// Adiciona XP a 1 monstro aleatorio apos batalha
+  /// 1 monstro ativo aleatorio recebe o XP completo (sorteio)
   /// 1 monstro aleatorio do banco recebe o XP completo (sorteio)
-  EquipeExplorador distribuirXp(int xpBatalha) {
-    final novosAtivos = monstrosAtivos.map((m) {
-      return m.adicionarXp(xpBatalha);
-    }).toList();
+  /// Retorna resultado com info de quem ganhou XP e se subiu level
+  XpDistribuicaoResult distribuirXpComResultado(int xpBatalha) {
+    final random = Random();
 
-    // Se tem monstros no banco, sorteia 1 para receber o XP completo
-    var novosBanco = monstrosBanco.toList();
-    if (novosBanco.isNotEmpty) {
-      final random = Random();
-      final indiceSorteado = random.nextInt(novosBanco.length);
-      novosBanco = novosBanco.asMap().entries.map((entry) {
-        if (entry.key == indiceSorteado) {
-          // Este monstro foi sorteado, recebe o XP completo
+    MonstroExplorador? monstroAtivoPremiado;
+    MonstroExplorador? monstroBancoPremiado;
+    bool ativoSubiuLevel = false;
+    bool bancoSubiuLevel = false;
+    int? novoLevelAtivo;
+    int? novoLevelBanco;
+
+    // Sorteia 1 monstro ativo para receber o XP
+    var novosAtivos = monstrosAtivos.toList();
+    int? indiceAtivoSorteado;
+    if (novosAtivos.isNotEmpty) {
+      indiceAtivoSorteado = random.nextInt(novosAtivos.length);
+      final monstroAntes = novosAtivos[indiceAtivoSorteado];
+      final levelAntes = monstroAntes.level;
+
+      novosAtivos = novosAtivos.asMap().entries.map((entry) {
+        if (entry.key == indiceAtivoSorteado) {
           return entry.value.adicionarXp(xpBatalha);
         }
         return entry.value;
       }).toList();
+
+      monstroAtivoPremiado = novosAtivos[indiceAtivoSorteado];
+      if (monstroAtivoPremiado.level > levelAntes) {
+        ativoSubiuLevel = true;
+        novoLevelAtivo = monstroAtivoPremiado.level;
+      }
     }
 
-    return copyWith(
+    // Sorteia 1 monstro do banco para receber o XP
+    var novosBanco = monstrosBanco.toList();
+    int? indiceBancoSorteado;
+    if (novosBanco.isNotEmpty) {
+      indiceBancoSorteado = random.nextInt(novosBanco.length);
+      final monstroAntes = novosBanco[indiceBancoSorteado];
+      final levelAntes = monstroAntes.level;
+
+      novosBanco = novosBanco.asMap().entries.map((entry) {
+        if (entry.key == indiceBancoSorteado) {
+          return entry.value.adicionarXp(xpBatalha);
+        }
+        return entry.value;
+      }).toList();
+
+      monstroBancoPremiado = novosBanco[indiceBancoSorteado];
+      if (monstroBancoPremiado.level > levelAntes) {
+        bancoSubiuLevel = true;
+        novoLevelBanco = monstroBancoPremiado.level;
+      }
+    }
+
+    final novaEquipe = copyWith(
       monstrosAtivos: novosAtivos,
       monstrosBanco: novosBanco,
     );
+
+    return XpDistribuicaoResult(
+      novaEquipe: novaEquipe,
+      monstroAtivoPremiado: monstroAtivoPremiado,
+      monstroBancoPremiado: monstroBancoPremiado,
+      xpGanho: xpBatalha,
+      ativoSubiuLevel: ativoSubiuLevel,
+      bancoSubiuLevel: bancoSubiuLevel,
+      novoLevelAtivo: novoLevelAtivo,
+      novoLevelBanco: novoLevelBanco,
+    );
+  }
+
+  /// Versao simplificada que so retorna a equipe atualizada
+  EquipeExplorador distribuirXp(int xpBatalha) {
+    return distribuirXpComResultado(xpBatalha).novaEquipe;
   }
 
   /// Cura todos os monstros da equipe
