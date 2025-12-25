@@ -23,6 +23,7 @@ import '../../features/explorador/presentation/selecao_equipe_screen.dart';
 import '../../features/explorador/presentation/selecao_mapa_screen.dart';
 import '../../features/explorador/presentation/batalha_explorador_screen.dart';
 import '../../features/explorador/presentation/loja_explorador_screen.dart';
+import '../../features/explorador/presentation/fortuna_screen.dart';
 import '../../features/aventura/presentation/kills_permanentes_screen.dart';
 import '../../shared/models/tipo_enum.dart';
 import '../constants/app_constants.dart';
@@ -135,6 +136,10 @@ class AppRouter {
       GoRoute(
         path: AppConstants.exploradorLojaRoute,
         builder: (context, state) => const LojaExploradorScreen(),
+      ),
+      GoRoute(
+        path: AppConstants.exploradorFortunaRoute,
+        builder: (context, state) => const FortunaScreen(),
       ),
       GoRoute(
         path: AppConstants.killsPermanentesRoute,

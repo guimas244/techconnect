@@ -182,9 +182,9 @@ class _ExploradorHomeScreenState extends ConsumerState<ExploradorHomeScreen> {
                     ),
                     _buildActionButton(
                       icon: Icons.stars,
-                      label: 'Kills',
-                      subtitle: '$totalKills disponíveis',
-                      onTap: () => context.go('/kills-permanentes'),
+                      label: 'Fortuna',
+                      subtitle: '$totalKills kills',
+                      onTap: () => context.go('/explorador/fortuna'),
                     ),
                   ],
                 ),

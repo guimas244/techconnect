@@ -21,6 +21,7 @@ class AppConstants {
   static const String exploradorMapaRoute = '/explorador/mapa';
   static const String exploradorBatalhaRoute = '/explorador/batalha';
   static const String exploradorLojaRoute = '/explorador/loja';
+  static const String exploradorFortunaRoute = '/explorador/fortuna';
   static const String killsPermanentesRoute = '/kills-permanentes';
 
   // Storage Keys

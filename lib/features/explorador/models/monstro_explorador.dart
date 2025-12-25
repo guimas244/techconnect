@@ -67,46 +67,140 @@ class MonstroExplorador {
        energiaAtual = energiaAtual ?? energiaBase;
 
   // Getters para stats totais (base * multiplicador de level + equipamentos)
+  // IMPORTANTE: Usa stats ATIVOS dos equipamentos (0 se quebrado)
   double get multiplicadorLevel => 1.0 + (level - 1) * 0.1; // +10% por level
 
   int get vidaTotal {
     final baseComLevel = (vidaBase * multiplicadorLevel).round();
-    final bonusEquip = (equipamentoCabeca?.vida ?? 0) +
-                       (equipamentoPeito?.vida ?? 0) +
-                       (equipamentoBracos?.vida ?? 0);
+    final bonusEquip = (equipamentoCabeca?.vidaAtiva ?? 0) +
+                       (equipamentoPeito?.vidaAtiva ?? 0) +
+                       (equipamentoBracos?.vidaAtiva ?? 0);
     return baseComLevel + bonusEquip;
   }
 
   int get energiaTotal {
     final baseComLevel = (energiaBase * multiplicadorLevel).round();
-    final bonusEquip = (equipamentoCabeca?.energia ?? 0) +
-                       (equipamentoPeito?.energia ?? 0) +
-                       (equipamentoBracos?.energia ?? 0);
+    final bonusEquip = (equipamentoCabeca?.energiaAtiva ?? 0) +
+                       (equipamentoPeito?.energiaAtiva ?? 0) +
+                       (equipamentoBracos?.energiaAtiva ?? 0);
     return baseComLevel + bonusEquip;
   }
 
   int get ataqueTotal {
     final baseComLevel = (ataqueBase * multiplicadorLevel).round();
-    final bonusEquip = (equipamentoCabeca?.ataque ?? 0) +
-                       (equipamentoPeito?.ataque ?? 0) +
-                       (equipamentoBracos?.ataque ?? 0);
+    final bonusEquip = (equipamentoCabeca?.ataqueAtivo ?? 0) +
+                       (equipamentoPeito?.ataqueAtivo ?? 0) +
+                       (equipamentoBracos?.ataqueAtivo ?? 0);
     return baseComLevel + bonusEquip;
   }
 
   int get defesaTotal {
     final baseComLevel = (defesaBase * multiplicadorLevel).round();
-    final bonusEquip = (equipamentoCabeca?.defesa ?? 0) +
-                       (equipamentoPeito?.defesa ?? 0) +
-                       (equipamentoBracos?.defesa ?? 0);
+    final bonusEquip = (equipamentoCabeca?.defesaAtiva ?? 0) +
+                       (equipamentoPeito?.defesaAtiva ?? 0) +
+                       (equipamentoBracos?.defesaAtiva ?? 0);
     return baseComLevel + bonusEquip;
   }
 
   int get agilidadeTotal {
     final baseComLevel = (agilidadeBase * multiplicadorLevel).round();
-    final bonusEquip = (equipamentoCabeca?.agilidade ?? 0) +
-                       (equipamentoPeito?.agilidade ?? 0) +
-                       (equipamentoBracos?.agilidade ?? 0);
+    final bonusEquip = (equipamentoCabeca?.agilidadeAtiva ?? 0) +
+                       (equipamentoPeito?.agilidadeAtiva ?? 0) +
+                       (equipamentoBracos?.agilidadeAtiva ?? 0);
     return baseComLevel + bonusEquip;
+  }
+
+  /// Lista de todos os equipamentos equipados
+  List<EquipamentoExplorador> get equipamentosEquipados {
+    return [
+      if (equipamentoCabeca != null) equipamentoCabeca!,
+      if (equipamentoPeito != null) equipamentoPeito!,
+      if (equipamentoBracos != null) equipamentoBracos!,
+    ];
+  }
+
+  /// Verifica se tem algum equipamento quebrado
+  bool get temEquipamentoQuebrado {
+    return equipamentosEquipados.any((e) => e.estaQuebrado);
+  }
+
+  /// Conta quantos equipamentos estao quebrados
+  int get quantidadeEquipamentosQuebrados {
+    return equipamentosEquipados.where((e) => e.estaQuebrado).length;
+  }
+
+  /// Obtem equipamento por slot
+  EquipamentoExplorador? getEquipamento(SlotEquipamento slot) {
+    switch (slot) {
+      case SlotEquipamento.cabeca:
+        return equipamentoCabeca;
+      case SlotEquipamento.peito:
+        return equipamentoPeito;
+      case SlotEquipamento.bracos:
+        return equipamentoBracos;
+    }
+  }
+
+  /// Verifica se o equipamento e compativel com o monstro
+  bool equipamentoCompativel(EquipamentoExplorador equipamento) {
+    return equipamento.tipoRequerido == tipo || equipamento.tipoRequerido == tipoExtra;
+  }
+
+  /// Equipa um equipamento no slot correspondente
+  /// Retorna null se o equipamento nao for compativel
+  MonstroExplorador? equipar(EquipamentoExplorador equipamento) {
+    if (!equipamentoCompativel(equipamento)) return null;
+
+    switch (equipamento.slot) {
+      case SlotEquipamento.cabeca:
+        return copyWith(equipamentoCabeca: equipamento);
+      case SlotEquipamento.peito:
+        return copyWith(equipamentoPeito: equipamento);
+      case SlotEquipamento.bracos:
+        return copyWith(equipamentoBracos: equipamento);
+    }
+  }
+
+  /// Desequipa um slot
+  MonstroExplorador desequipar(SlotEquipamento slot) {
+    switch (slot) {
+      case SlotEquipamento.cabeca:
+        return copyWith(removerCabeca: true);
+      case SlotEquipamento.peito:
+        return copyWith(removerPeito: true);
+      case SlotEquipamento.bracos:
+        return copyWith(removerBracos: true);
+    }
+  }
+
+  /// Usa todos os equipamentos em batalha (diminui durabilidade)
+  MonstroExplorador usarEquipamentosEmBatalha() {
+    return copyWith(
+      equipamentoCabeca: equipamentoCabeca?.usarEmBatalha(),
+      equipamentoPeito: equipamentoPeito?.usarEmBatalha(),
+      equipamentoBracos: equipamentoBracos?.usarEmBatalha(),
+    );
+  }
+
+  /// Repara todos os equipamentos
+  MonstroExplorador repararTodosEquipamentos() {
+    return copyWith(
+      equipamentoCabeca: equipamentoCabeca?.reparar(),
+      equipamentoPeito: equipamentoPeito?.reparar(),
+      equipamentoBracos: equipamentoBracos?.reparar(),
+    );
+  }
+
+  /// Repara um equipamento especifico
+  MonstroExplorador repararEquipamento(SlotEquipamento slot) {
+    switch (slot) {
+      case SlotEquipamento.cabeca:
+        return copyWith(equipamentoCabeca: equipamentoCabeca?.reparar());
+      case SlotEquipamento.peito:
+        return copyWith(equipamentoPeito: equipamentoPeito?.reparar());
+      case SlotEquipamento.bracos:
+        return copyWith(equipamentoBracos: equipamentoBracos?.reparar());
+    }
   }
 
   /// Calcula XP necessario para o proximo level
@@ -293,11 +387,121 @@ enum SlotEquipamento {
   String get displayName {
     switch (this) {
       case SlotEquipamento.cabeca:
-        return 'Cabeca';
+        return 'Cabeça';
       case SlotEquipamento.peito:
         return 'Peito';
       case SlotEquipamento.bracos:
-        return 'Bracos';
+        return 'Braços';
+    }
+  }
+
+  /// Icone do slot (path do asset)
+  String get iconeAsset {
+    switch (this) {
+      case SlotEquipamento.cabeca:
+        return 'assets/icons_gerais/slot_cabeca.png';
+      case SlotEquipamento.peito:
+        return 'assets/icons_gerais/slot_peito.png';
+      case SlotEquipamento.bracos:
+        return 'assets/icons_gerais/slot_bracos.png';
+    }
+  }
+
+  /// Icone padrao (IconData) para fallback
+  int get iconeCodePoint {
+    switch (this) {
+      case SlotEquipamento.cabeca:
+        return 0xe3c9; // Icons.face
+      case SlotEquipamento.peito:
+        return 0xe8e8; // Icons.shield
+      case SlotEquipamento.bracos:
+        return 0xe263; // Icons.front_hand
+    }
+  }
+}
+
+/// Raridade do equipamento
+enum RaridadeEquipamento {
+  inferior(1, 'Inferior', 0xFF757575, 5),   // Cinza - 5 batalhas
+  normal(2, 'Normal', 0xFF424242, 8),       // Cinza escuro - 8 batalhas
+  raro(3, 'Raro', 0xFF388E3C, 12),          // Verde - 12 batalhas
+  epico(4, 'Épico', 0xFF7B1FA2, 18),        // Roxo - 18 batalhas
+  lendario(5, 'Lendário', 0xFFF57C00, 25),  // Laranja - 25 batalhas
+  impossivel(6, 'Impossível', 0xFFD32F2F, 40); // Vermelho - 40 batalhas
+
+  const RaridadeEquipamento(this.nivel, this.nome, this.corHex, this.durabilidadeBase);
+
+  final int nivel;
+  final String nome;
+  final int corHex;
+  final int durabilidadeBase;
+
+  /// Retorna o caminho do icone de dorso baseado na raridade (legado, use iconeArmaduraPorSlot)
+  String get iconeArmadura => iconeArmaduraDorso;
+
+  /// Retorna o caminho do icone de dorso (peito) baseado na raridade
+  String get iconeArmaduraDorso {
+    switch (this) {
+      case RaridadeEquipamento.inferior:
+        return 'assets/armaduras/armadura_dorso_inferior.png';
+      case RaridadeEquipamento.normal:
+        return 'assets/armaduras/armadura_dorso_normal.png';
+      case RaridadeEquipamento.raro:
+        return 'assets/armaduras/armadura_dorso_rara.png';
+      case RaridadeEquipamento.epico:
+        return 'assets/armaduras/armadura_dorso_epica.png';
+      case RaridadeEquipamento.lendario:
+        return 'assets/armaduras/armadura_dorso_lendaria.png';
+      case RaridadeEquipamento.impossivel:
+        return 'assets/armaduras/armadura_dorso_impossivel.png';
+    }
+  }
+
+  /// Retorna o caminho do icone de capacete (cabeca) baseado na raridade
+  String get iconeArmaduraCapacete {
+    switch (this) {
+      case RaridadeEquipamento.inferior:
+        return 'assets/armaduras/armadura_capacete_inferior.png';
+      case RaridadeEquipamento.normal:
+        return 'assets/armaduras/armadura_capacete_normal.png';
+      case RaridadeEquipamento.raro:
+        return 'assets/armaduras/armadura_capacete_rara.png';
+      case RaridadeEquipamento.epico:
+        return 'assets/armaduras/armadura_dorso_epica.png'; // Fallback para dorso
+      case RaridadeEquipamento.lendario:
+        return 'assets/armaduras/armadura_capacete_lendaria.png';
+      case RaridadeEquipamento.impossivel:
+        return 'assets/armaduras/armadura_capacete_impossivel.png';
+    }
+  }
+
+  /// Retorna o caminho do icone de luvas (bracos) baseado na raridade
+  String get iconeArmaduraLuvas {
+    switch (this) {
+      case RaridadeEquipamento.inferior:
+        return 'assets/armaduras/armadura_luvas_inferior.png';
+      case RaridadeEquipamento.normal:
+        return 'assets/armaduras/armadura_luvas_normal.png';
+      case RaridadeEquipamento.raro:
+        return 'assets/armaduras/armadura_luvas_rara.png';
+      case RaridadeEquipamento.epico:
+        return 'assets/armaduras/armadura_dorso_epica.png'; // Fallback para dorso
+      case RaridadeEquipamento.lendario:
+        return 'assets/armaduras/armadura_luvas_lendaria.png';
+      case RaridadeEquipamento.impossivel:
+        return 'assets/armaduras/armadura_luvas_impossivel.png';
+    }
+  }
+
+  /// Retorna o icone de armadura baseado no slot
+  String iconeArmaduraPorSlot(SlotEquipamento slot) {
+    switch (slot) {
+      case SlotEquipamento.cabeca:
+        return iconeArmaduraCapacete;
+      case SlotEquipamento.peito:
+        return iconeArmaduraDorso;
+      case SlotEquipamento.bracos:
+        return iconeArmaduraLuvas;
     }
   }
 }
@@ -308,6 +512,7 @@ class EquipamentoExplorador {
   final String nome;
   final SlotEquipamento slot;
   final Tipo tipoRequerido; // Tipo do monstro que pode usar
+  final RaridadeEquipamento raridade;
   final int tier; // Tier do equipamento (1-11)
 
   // Bonus de stats
@@ -317,24 +522,64 @@ class EquipamentoExplorador {
   final int defesa;
   final int agilidade;
 
+  // Durabilidade
+  final int durabilidadeMax;
+  final int durabilidadeAtual;
+
   // Preco em kills
   final int preco;
 
-  const EquipamentoExplorador({
+  EquipamentoExplorador({
     required this.id,
     required this.nome,
     required this.slot,
     required this.tipoRequerido,
+    this.raridade = RaridadeEquipamento.normal,
     this.tier = 1,
     this.vida = 0,
     this.energia = 0,
     this.ataque = 0,
     this.defesa = 0,
     this.agilidade = 0,
+    int? durabilidadeMax,
+    int? durabilidadeAtual,
     this.preco = 10,
-  });
+  }) : durabilidadeMax = durabilidadeMax ?? raridade.durabilidadeBase,
+       durabilidadeAtual = durabilidadeAtual ?? durabilidadeMax ?? raridade.durabilidadeBase;
+
+  /// Verifica se o equipamento esta quebrado
+  bool get estaQuebrado => durabilidadeAtual <= 0;
+
+  /// Porcentagem de durabilidade restante (0.0 a 1.0)
+  double get porcentagemDurabilidade => durabilidadeAtual / durabilidadeMax;
+
+  /// Retorna os stats ativos (0 se quebrado, senao normal)
+  int get vidaAtiva => estaQuebrado ? 0 : vida;
+  int get energiaAtiva => estaQuebrado ? 0 : energia;
+  int get ataqueAtivo => estaQuebrado ? 0 : ataque;
+  int get defesaAtiva => estaQuebrado ? 0 : defesa;
+  int get agilidadeAtiva => estaQuebrado ? 0 : agilidade;
+
+  /// Retorna o caminho do icone de armadura correto para este equipamento
+  /// (baseado no slot e na raridade)
+  String get iconeArmadura => raridade.iconeArmaduraPorSlot(slot);
+
+  /// Usa o equipamento em batalha (diminui durabilidade)
+  EquipamentoExplorador usarEmBatalha() {
+    if (estaQuebrado) return this;
+    return copyWith(durabilidadeAtual: durabilidadeAtual - 1);
+  }
+
+  /// Repara o equipamento (restaura durabilidade)
+  EquipamentoExplorador reparar() {
+    return copyWith(durabilidadeAtual: durabilidadeMax);
+  }
 
   factory EquipamentoExplorador.fromJson(Map<String, dynamic> json) {
+    final raridade = RaridadeEquipamento.values.firstWhere(
+      (r) => r.name == json['raridade'],
+      orElse: () => RaridadeEquipamento.normal,
+    );
     return EquipamentoExplorador(
       id: json['id'] ?? '',
       nome: json['nome'] ?? '',
@@ -346,12 +591,15 @@ class EquipamentoExplorador {
         (t) => t.name == json['tipoRequerido'],
         orElse: () => Tipo.normal,
       ),
+      raridade: raridade,
       tier: json['tier'] ?? 1,
       vida: json['vida'] ?? 0,
       energia: json['energia'] ?? 0,
       ataque: json['ataque'] ?? 0,
       defesa: json['defesa'] ?? 0,
       agilidade: json['agilidade'] ?? 0,
+      durabilidadeMax: json['durabilidadeMax'] ?? raridade.durabilidadeBase,
+      durabilidadeAtual: json['durabilidadeAtual'] ?? json['durabilidadeMax'] ?? raridade.durabilidadeBase,
       preco: json['preco'] ?? 10,
     );
   }
@@ -362,13 +610,50 @@ class EquipamentoExplorador {
       'nome': nome,
       'slot': slot.name,
       'tipoRequerido': tipoRequerido.name,
+      'raridade': raridade.name,
       'tier': tier,
       'vida': vida,
       'energia': energia,
       'ataque': ataque,
       'defesa': defesa,
       'agilidade': agilidade,
+      'durabilidadeMax': durabilidadeMax,
+      'durabilidadeAtual': durabilidadeAtual,
       'preco': preco,
     };
+  }
+
+  EquipamentoExplorador copyWith({
+    String? id,
+    String? nome,
+    SlotEquipamento? slot,
+    Tipo? tipoRequerido,
+    RaridadeEquipamento? raridade,
+    int? tier,
+    int? vida,
+    int? energia,
+    int? ataque,
+    int? defesa,
+    int? agilidade,
+    int? durabilidadeMax,
+    int? durabilidadeAtual,
+    int? preco,
+  }) {
+    return EquipamentoExplorador(
+      id: id ?? this.id,
+      nome: nome ?? this.nome,
+      slot: slot ?? this.slot,
+      tipoRequerido: tipoRequerido ?? this.tipoRequerido,
+      raridade: raridade ?? this.raridade,
+      tier: tier ?? this.tier,
+      vida: vida ?? this.vida,
+      energia: energia ?? this.energia,
+      ataque: ataque ?? this.ataque,
+      defesa: defesa ?? this.defesa,
+      agilidade: agilidade ?? this.agilidade,
+      durabilidadeMax: durabilidadeMax ?? this.durabilidadeMax,
+      durabilidadeAtual: durabilidadeAtual ?? this.durabilidadeAtual,
+      preco: preco ?? this.preco,
+    );
   }
 }

@@ -7,6 +7,7 @@ import '../../aventura/services/colecao_service.dart';
 import '../models/monstro_explorador.dart';
 import '../providers/equipe_explorador_provider.dart';
 import 'modal_selecao_monstro_explorador.dart';
+import 'widgets/modal_detalhes_monstro.dart';
 
 /// Tela de selecao de equipe do Modo Explorador
 /// Usa o mesmo padrao da Jaulinha para selecao de monstros
@@ -406,180 +407,13 @@ class _SelecaoEquipeScreenState extends ConsumerState<SelecaoEquipeScreen> {
   void _mostrarDetalhesMonstro(MonstroExplorador monstro, bool isAtivo, dynamic equipe) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey.shade900,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    monstro.imagem,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 60,
-                      height: 60,
-                      color: monstro.tipo.cor.withAlpha(50),
-                      child: Icon(monstro.tipo.icone, color: monstro.tipo.cor, size: 30),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        monstro.nome,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Text(
-                        monstro.tipo.displayName,
-                        style: TextStyle(color: monstro.tipo.cor),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withAlpha(50),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Lv.${monstro.level}',
-                    style: const TextStyle(
-                      color: Colors.purple,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Barra de XP
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.withAlpha(30),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('XP', style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold)),
-                      Text(
-                        '${monstro.xpAtual} / ${monstro.xpParaProximoLevel}',
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: monstro.porcentagemXp,
-                      backgroundColor: Colors.grey.shade800,
-                      valueColor: const AlwaysStoppedAnimation(Colors.purple),
-                      minHeight: 8,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Stats
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('HP', monstro.vidaTotal, Colors.green),
-                  _buildStatItem('ATK', monstro.ataqueTotal, Colors.orange),
-                  _buildStatItem('DEF', monstro.defesaTotal, Colors.blue),
-                  _buildStatItem('AGI', monstro.agilidadeTotal, Colors.teal),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            const Divider(color: Colors.grey),
-
-            // Opcoes
-            if (isAtivo && (equipe?.monstrosBanco.length ?? 0) < 3)
-              ListTile(
-                leading: const Icon(Icons.arrow_downward, color: Colors.teal),
-                title: const Text('Mover para Banco', style: TextStyle(color: Colors.white)),
-                subtitle: Text('Chance de +1 XP por vitoria', style: TextStyle(color: Colors.teal.shade300, fontSize: 11)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await ref.read(equipeExploradorProvider.notifier).moverParaBanco(monstro.id);
-                },
-              ),
-
-            if (!isAtivo && (equipe?.monstrosAtivos.length ?? 0) < 2)
-              ListTile(
-                leading: const Icon(Icons.arrow_upward, color: Colors.amber),
-                title: const Text('Mover para Ativo', style: TextStyle(color: Colors.white)),
-                subtitle: Text('Participa das batalhas', style: TextStyle(color: Colors.amber.shade300, fontSize: 11)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await ref.read(equipeExploradorProvider.notifier).moverParaAtivo(monstro.id);
-                },
-              ),
-
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Remover da Equipe', style: TextStyle(color: Colors.white)),
-              onTap: () async {
-                Navigator.pop(context);
-                await ref.read(equipeExploradorProvider.notifier).removerMonstro(monstro.id);
-              },
-            ),
-          ],
-        ),
+      builder: (context) => ModalDetalhesMonstro(
+        monstro: monstro,
+        isAtivo: isAtivo,
+        equipe: equipe,
       ),
-    );
-  }
-
-  Widget _buildStatItem(String label, int valor, Color cor) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: cor, fontSize: 10, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$valor',
-          style: TextStyle(color: cor, fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-      ],
     );
   }
 

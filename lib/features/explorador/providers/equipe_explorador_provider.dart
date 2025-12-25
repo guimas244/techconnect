@@ -395,4 +395,135 @@ class EquipeExploradorNotifier extends StateNotifier<EquipeExplorador?> {
   Future<void> reload() async {
     await _loadEquipe();
   }
+
+  // ==================== EQUIPAMENTOS ====================
+
+  /// Equipa um equipamento em um monstro
+  /// Retorna o equipamento anterior (se houver) para devolver ao inventario
+  Future<EquipamentoExplorador?> equiparEquipamento(
+    String monstroId,
+    EquipamentoExplorador equipamento,
+  ) async {
+    if (state == null) return null;
+
+    // Encontra o monstro
+    final monstros = state!.todosMonstros;
+    final index = monstros.indexWhere((m) => m.id == monstroId);
+    if (index == -1) return null;
+
+    final monstro = monstros[index];
+
+    // Verifica compatibilidade
+    if (!monstro.equipamentoCompativel(equipamento)) return null;
+
+    // Guarda equipamento anterior
+    final equipamentoAnterior = monstro.getEquipamento(equipamento.slot);
+
+    // Equipa o novo
+    final monstroAtualizado = monstro.equipar(equipamento);
+    if (monstroAtualizado == null) return null;
+
+    // Atualiza a lista de monstros
+    final novosMonstros = [...monstros];
+    novosMonstros[index] = monstroAtualizado;
+
+    // Atualiza state (monstros ativos e banco)
+    state = state!.copyWith(
+      monstrosAtivos: novosMonstros.where((m) => m.estaAtivo).toList(),
+      monstrosBanco: novosMonstros.where((m) => !m.estaAtivo).toList(),
+    );
+
+    await _salvar();
+    return equipamentoAnterior;
+  }
+
+  /// Desequipa um slot de um monstro
+  /// Retorna o equipamento removido para devolver ao inventario
+  Future<EquipamentoExplorador?> desequiparSlot(
+    String monstroId,
+    SlotEquipamento slot,
+  ) async {
+    if (state == null) return null;
+
+    // Encontra o monstro
+    final monstros = state!.todosMonstros;
+    final index = monstros.indexWhere((m) => m.id == monstroId);
+    if (index == -1) return null;
+
+    final monstro = monstros[index];
+    final equipamentoRemovido = monstro.getEquipamento(slot);
+    if (equipamentoRemovido == null) return null;
+
+    // Desequipa
+    final monstroAtualizado = monstro.desequipar(slot);
+
+    // Atualiza a lista de monstros
+    final novosMonstros = [...monstros];
+    novosMonstros[index] = monstroAtualizado;
+
+    // Atualiza state
+    state = state!.copyWith(
+      monstrosAtivos: novosMonstros.where((m) => m.estaAtivo).toList(),
+      monstrosBanco: novosMonstros.where((m) => !m.estaAtivo).toList(),
+    );
+
+    await _salvar();
+    return equipamentoRemovido;
+  }
+
+  /// Usa equipamentos em batalha (diminui durabilidade de todos os monstros ativos)
+  Future<bool> usarEquipamentosEmBatalha() async {
+    if (state == null) return false;
+
+    final novosAtivos = state!.monstrosAtivos
+        .map((m) => m.usarEquipamentosEmBatalha())
+        .toList();
+
+    state = state!.copyWith(monstrosAtivos: novosAtivos);
+    return await _salvar();
+  }
+
+  /// Repara equipamento de um monstro
+  Future<bool> repararEquipamento(String monstroId, SlotEquipamento slot) async {
+    if (state == null) return false;
+
+    final monstros = state!.todosMonstros;
+    final index = monstros.indexWhere((m) => m.id == monstroId);
+    if (index == -1) return false;
+
+    final monstro = monstros[index];
+    final monstroAtualizado = monstro.repararEquipamento(slot);
+
+    final novosMonstros = [...monstros];
+    novosMonstros[index] = monstroAtualizado;
+
+    state = state!.copyWith(
+      monstrosAtivos: novosMonstros.where((m) => m.estaAtivo).toList(),
+      monstrosBanco: novosMonstros.where((m) => !m.estaAtivo).toList(),
+    );
+
+    return await _salvar();
+  }
+
+  /// Repara todos os equipamentos de um monstro
+  Future<bool> repararTodosEquipamentos(String monstroId) async {
+    if (state == null) return false;
+
+    final monstros = state!.todosMonstros;
+    final index = monstros.indexWhere((m) => m.id == monstroId);
+    if (index == -1) return false;
+
+    final monstro = monstros[index];
+    final monstroAtualizado = monstro.repararTodosEquipamentos();
+
+    final novosMonstros = [...monstros];
+    novosMonstros[index] = monstroAtualizado;
+
+    state = state!.copyWith(
+      monstrosAtivos: novosMonstros.where((m) => m.estaAtivo).toList(),
+      monstrosBanco: novosMonstros.where((m) => !m.estaAtivo).toList(),
+    );
+
+    return await _salvar();
+  }
 }
